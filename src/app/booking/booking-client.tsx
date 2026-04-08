@@ -576,13 +576,13 @@ function BookingContent() {
 
                         <Button 
                           onClick={() => handlePaymentSubmit()} 
-                          className="w-full mt-6 h-12 text-lg" 
+                          className="w-full mt-6 h-12 text-lg bg-[#EAB308] hover:bg-[#CA8A04] text-black font-bold shadow-lg transition-all active:scale-95" 
                           disabled={
                             confirmAppointment.isPending || 
                             (paymentMethod === "card" && !isPrePaid && (
                               !cardInfo.name || 
-                              cardInfo.number.length < 19 || // 16 números + 3 espaços
-                              cardInfo.expiry.length < 5 || // MM/AA
+                              cardInfo.number.replace(/\s/g, "").length < 16 || 
+                              cardInfo.expiry.length < 5 || 
                               cardInfo.cvv.length < 3
                             ))
                           }
