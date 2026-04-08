@@ -128,6 +128,9 @@ export function Layout({ children }: { children: React.ReactNode }) {
                       <DropdownMenuItem asChild>
                         <Link href="/meu-perfil/historico"><History className="mr-2 h-4 w-4" /> Meus Agendamentos</Link>
                       </DropdownMenuItem>
+                      <DropdownMenuItem asChild>
+                        <Link href="/meu-perfil/settings"><SettingsIcon className="mr-2 h-4 w-4" /> Configurações</Link>
+                      </DropdownMenuItem>
                     </>
                   )}
                   <DropdownMenuSeparator />

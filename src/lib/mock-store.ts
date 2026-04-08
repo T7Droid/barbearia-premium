@@ -116,6 +116,7 @@ if (!global.MOCK_USERS_STORE) {
     phone: "(11) 98888-8888",
     role: "client",
     points: 100,
+    notificationsEnabled: true,
     createdAt: new Date().toISOString(),
   });
 }

@@ -45,7 +45,8 @@ export class AuthService {
         email: client.email,
         phone: client.phone,
         role: "client",
-        points: client.points
+        points: client.points,
+        notificationsEnabled: client.notificationsEnabled ?? true
       };
     } catch {
       return null;
@@ -65,5 +66,33 @@ export class AuthService {
     if (!user) return { authenticated: false };
 
     return { authenticated: true, user };
+  }
+  
+  static async updateProfile(request: any, updates: { name?: string, phone?: string, notificationsEnabled?: boolean }) {
+    const session = await this.verifySession(request);
+    if (!session.authenticated || !session.user) return { success: false, error: "Não autorizado" };
+
+    if (config.supabase.isConfigured && supabase) {
+      const { error } = await supabase
+        .from("profiles")
+        .update({
+          full_name: updates.name,
+          phone: updates.phone,
+          notifications_enabled: updates.notificationsEnabled
+        })
+        .eq("id", session.user.id);
+      
+      return { success: !error, error: error?.message };
+    }
+
+    const client = Array.from(USERS_STORE.values()).find((u: any) => u.email === session.user?.email) as any;
+    if (!client) return { success: false, error: "Usuário não encontrado" };
+
+    if (updates.name !== undefined) client.name = updates.name;
+    if (updates.phone !== undefined) client.phone = updates.phone;
+    if (updates.notificationsEnabled !== undefined) client.notificationsEnabled = updates.notificationsEnabled;
+
+    USERS_STORE.set(client.email, client);
+    return { success: true };
   }
 }
