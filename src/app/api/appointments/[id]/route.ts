@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { APPOINTMENTS_STORE } from "@/lib/mock-store";
+import { AppointmentService } from "@/lib/services/appointment.service";
 
 export async function GET(
   request: NextRequest,
@@ -8,15 +8,19 @@ export async function GET(
   const resolvedParams = await params;
   const id = parseInt(resolvedParams.id);
 
-  const db = process.env.DATABASE_URL;
+  if (isNaN(id)) {
+    return NextResponse.json({ error: "ID inválido" }, { status: 400 });
+  }
 
-  if (!db) {
-    const appointment = APPOINTMENTS_STORE.get(id);
+  try {
+    const appointment = await AppointmentService.getById(id);
+    
     if (!appointment) {
       return NextResponse.json({ error: "Agendamento não encontrado" }, { status: 404 });
     }
-    return NextResponse.json(appointment);
-  }
 
-  return NextResponse.json({ error: "DB not configured" }, { status: 501 });
+    return NextResponse.json(appointment);
+  } catch (error) {
+    return NextResponse.json({ error: "Erro interno ao buscar agendamento" }, { status: 500 });
+  }
 }

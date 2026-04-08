@@ -14,14 +14,28 @@ export default function Confirmation({ params }: { params: Promise<{ id: string 
   const resolvedParams = use(params);
   const id = resolvedParams.id ? parseInt(resolvedParams.id) : 0;
 
-  const { data: appointment, isLoading } = useGetAppointment(id, {
+  const { data: apiAppointment, isLoading } = useGetAppointment(id, {
     query: {
       enabled: !!id,
-      queryKey: ["appointments", id]
+      queryKey: ["appointments", id],
+      retry: false
     }
   });
 
+  const [fallbackAppointment, setFallbackAppointment] = useState<any>(null);
   const [isLogged, setIsLogged] = useState(false);
+
+  useEffect(() => {
+    // Se a API falhar em encontrar, tenta o localStorage
+    if (id && !apiAppointment && !isLoading) {
+      const saved = localStorage.getItem(`last_appointment_${id}`);
+      if (saved) {
+        setFallbackAppointment(JSON.parse(saved));
+      }
+    }
+  }, [id, apiAppointment, isLoading]);
+
+  const appointment = apiAppointment || fallbackAppointment;
 
   function downloadICS(appointment: any) {
     const icsContent = generateICS(appointment);

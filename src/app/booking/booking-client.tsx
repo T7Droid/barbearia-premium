@@ -191,6 +191,11 @@ function BookingContent() {
           : "Seu agendamento foi confirmado.",
       });
 
+      // Persistir localmente para fallback na Vercel (modo Demo)
+      if (typeof window !== "undefined") {
+        localStorage.setItem(`last_appointment_${appointment.id}`, JSON.stringify(appointment));
+      }
+
       router.push(`/confirmacao/${appointment.id}`);
     } catch (error) {
       toast({
