@@ -11,6 +11,15 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Dados incompletos" }, { status: 400 });
     }
 
+    if (password.length < 6) {
+      return NextResponse.json({ error: "Sua senha deve ter pelo menos 6 caracteres." }, { status: 400 });
+    }
+
+    const passwordRegex = /^(?=.*[a-zA-Z])(?=.*[0-9])/;
+    if (!passwordRegex.test(password)) {
+      return NextResponse.json({ error: "A senha deve conter pelo menos uma letra e um número." }, { status: 400 });
+    }
+
     // 1. Try Supabase Auth first if configured
     if (isSupabaseConfigured && supabase) {
       const { data, error } = await supabase.auth.signUp({
@@ -47,7 +56,7 @@ export async function POST(request: Request) {
     }
 
     // 2. Fallback to Mock
-    USERS_STORE.set(email, {
+    USERS_STORE.set(email.toLowerCase(), {
       name,
       email,
       phone: phone || "",

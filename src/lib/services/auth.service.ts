@@ -19,8 +19,10 @@ export class AuthService {
         id: user.id,
         name: profile?.full_name || user.email,
         email: user.email,
+        phone: profile?.phone || "",
         role: profile?.role || "client",
-        points: profile?.points || 0
+        points: profile?.points || 0,
+        notificationsEnabled: profile?.notifications_enabled ?? true
       };
     }
 
@@ -36,7 +38,9 @@ export class AuthService {
         return { name, email, role: "admin" };
       }
 
-      const client = Array.from(USERS_STORE.values()).find((u: any) => u.email === email) as any;
+      const client = USERS_STORE.get(email.toLowerCase()) || 
+                     Array.from(USERS_STORE.values()).find((u: any) => u.email.toLowerCase() === email.toLowerCase()) as any;
+      
       if (!client) return null;
 
       return {
@@ -85,7 +89,8 @@ export class AuthService {
       return { success: !error, error: error?.message };
     }
 
-    const client = Array.from(USERS_STORE.values()).find((u: any) => u.email === session.user?.email) as any;
+    const client = USERS_STORE.get(session.user?.email.toLowerCase()) || 
+                   Array.from(USERS_STORE.values()).find((u: any) => u.email.toLowerCase() === session.user?.email.toLowerCase()) as any;
     if (!client) return { success: false, error: "Usuário não encontrado" };
 
     if (updates.name !== undefined) client.name = updates.name;

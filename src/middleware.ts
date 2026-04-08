@@ -11,6 +11,7 @@ export async function middleware(request: NextRequest) {
                       pathname.startsWith("/api/checkout") ||
                       pathname.startsWith("/api/appointments") ||
                       pathname.startsWith("/api/settings") ||
+                      pathname.startsWith("/api/user") ||
                       pathname.startsWith("/api/webhooks");
 
   if (pathname.startsWith("/admin") || (pathname.startsWith("/api") && !isPublicApi)) {

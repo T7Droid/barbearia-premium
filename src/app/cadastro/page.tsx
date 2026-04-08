@@ -18,17 +18,38 @@ function CadastroContent() {
 
   const emailParam = searchParams.get("email") || "";
   const nameParam = searchParams.get("name") || "";
+  const phoneParam = searchParams.get("phone") || "";
 
   const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState({
     name: nameParam,
     email: emailParam,
+    phone: phoneParam,
     password: "",
     confirmPassword: ""
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (formData.password.length < 6) {
+      toast({
+        title: "Senha muito curta",
+        description: "A senha deve ter pelo menos 6 caracteres.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    const passwordRegex = /^(?=.*[a-zA-Z])(?=.*[0-9])/;
+    if (!passwordRegex.test(formData.password)) {
+      toast({
+        title: "Senha muito simples",
+        description: "A senha deve conter pelo menos uma letra e um número.",
+        variant: "destructive"
+      });
+      return;
+    }
 
     if (formData.password !== formData.confirmPassword) {
       toast({
@@ -48,7 +69,8 @@ function CadastroContent() {
         body: JSON.stringify({
           email: formData.email,
           password: formData.password,
-          name: formData.name
+          name: formData.name,
+          phone: formData.phone
         })
       });
 

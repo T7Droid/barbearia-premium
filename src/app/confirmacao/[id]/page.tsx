@@ -136,7 +136,7 @@ export default function Confirmation({ params }: { params: Promise<{ id: string 
                 </CardHeader>
                 <CardContent className="flex flex-col sm:flex-row gap-4 items-center">
                   <Button asChild className="w-full sm:w-auto gap-2" variant="default">
-                    <Link href={`/cadastro?email=${encodeURIComponent(appointment.customerEmail)}&name=${encodeURIComponent(appointment.customerName)}`}>
+                    <Link href={`/cadastro?email=${encodeURIComponent(appointment.customerEmail)}&name=${encodeURIComponent(appointment.customerName)}&phone=${encodeURIComponent(appointment.customerPhone)}`}>
                       Criar minha conta <ArrowRight className="w-4 h-4" />
                     </Link>
                   </Button>

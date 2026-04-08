@@ -23,6 +23,17 @@ export default function ClientSettingsPage() {
     notificationsEnabled: true,
   });
 
+  const formatPhone = (value: string) => {
+    let raw = value.replace(/\D/g, "");
+    if (raw.length > 11) raw = raw.slice(0, 11);
+
+    if (raw.length === 0) return "";
+    if (raw.length <= 2) return `(${raw}`;
+    if (raw.length <= 6) return `(${raw.slice(0, 2)}) ${raw.slice(2)}`;
+    if (raw.length <= 10) return `(${raw.slice(0, 2)}) ${raw.slice(2, 6)}-${raw.slice(6)}`;
+    return `(${raw.slice(0, 2)}) ${raw.slice(2, 7)}-${raw.slice(7)}`;
+  };
+
   useEffect(() => {
     fetch("/api/user/profile")
       .then(async (res) => {
@@ -37,7 +48,7 @@ export default function ClientSettingsPage() {
           setProfile({
             name: data.name || "",
             email: data.email || "",
-            phone: data.phone || "",
+            phone: data.phone ? formatPhone(data.phone) : "",
             notificationsEnabled: data.notificationsEnabled ?? true,
           });
         }
@@ -52,10 +63,16 @@ export default function ClientSettingsPage() {
   const handleSave = async () => {
     setSaving(true);
     try {
+      // Remover máscara antes de salvar no banco
+      const rawPhone = profile.phone.replace(/\D/g, "");
+
       const res = await fetch("/api/user/profile", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(profile),
+        body: JSON.stringify({
+          ...profile,
+          phone: rawPhone
+        }),
       });
 
       if (res.ok) {
@@ -118,10 +135,10 @@ export default function ClientSettingsPage() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="name" className="text-xs uppercase font-bold tracking-wider text-muted-foreground">Nome Completo</Label>
-                  <Input 
-                    id="name" 
-                    value={profile.name} 
-                    onChange={(e) => setProfile({...profile, name: e.target.value})}
+                  <Input
+                    id="name"
+                    value={profile.name}
+                    onChange={(e) => setProfile({ ...profile, name: e.target.value })}
                     placeholder="Seu nome"
                     className="bg-background/50 border-border/60 focus:border-primary/50 transition-all"
                   />
@@ -130,10 +147,10 @@ export default function ClientSettingsPage() {
                   <Label htmlFor="email" className="text-xs uppercase font-bold tracking-wider text-muted-foreground">E-mail</Label>
                   <div className="relative">
                     <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/50" />
-                    <Input 
-                      id="email" 
-                      value={profile.email} 
-                      disabled 
+                    <Input
+                      id="email"
+                      value={profile.email}
+                      disabled
                       className="pl-10 bg-accent/30 border-border/40 text-muted-foreground cursor-not-allowed italic"
                     />
                   </div>
@@ -142,10 +159,10 @@ export default function ClientSettingsPage() {
                   <Label htmlFor="phone" className="text-xs uppercase font-bold tracking-wider text-muted-foreground">Telefone / WhatsApp</Label>
                   <div className="relative">
                     <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/50" />
-                    <Input 
-                      id="phone" 
-                      value={profile.phone} 
-                      onChange={(e) => setProfile({...profile, phone: e.target.value})}
+                    <Input
+                      id="phone"
+                      value={profile.phone}
+                      onChange={(e) => setProfile({ ...profile, phone: formatPhone(e.target.value) })}
                       placeholder="(00) 00000-0000"
                       className="pl-10 bg-background/50 border-border/60 focus:border-primary/50 transition-all"
                     />
@@ -167,7 +184,7 @@ export default function ClientSettingsPage() {
               </div>
               <Switch
                 checked={profile.notificationsEnabled}
-                onCheckedChange={(val) => setProfile({...profile, notificationsEnabled: val})}
+                onCheckedChange={(val) => setProfile({ ...profile, notificationsEnabled: val })}
                 className="data-[state=checked]:bg-primary"
               />
             </CardHeader>
