@@ -39,6 +39,9 @@ export async function POST(request: NextRequest) {
     if (typeof newSettings.slotInterval === "number") {
       SETTINGS.slotInterval = newSettings.slotInterval;
     }
+    if (newSettings.weeklyHours) {
+      SETTINGS.weeklyHours = newSettings.weeklyHours;
+    }
 
     return NextResponse.json(SETTINGS);
   } catch (error) {

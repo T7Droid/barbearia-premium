@@ -250,61 +250,94 @@ export default function SettingsPage() {
             </div>
             <div className="flex-1">
               <CardTitle>Horário de Funcionamento</CardTitle>
-              <CardDescription>Defina o intervalo de horários de atendimento (30, 45 ou 60 min).</CardDescription>
+              <CardDescription>Configure os horários de atendimento para cada dia da semana.</CardDescription>
             </div>
           </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-lg">
-              <div className="space-y-2">
-                <Label>Início do Expediente</Label>
-                <Select
-                  value={settings.businessStartTime}
-                  onValueChange={(val) => {
-                    setSettings({...settings, businessStartTime: val});
+          <CardContent className="space-y-6">
+            <div className="space-y-4">
+              {Object.entries({
+                monday: "Segunda-feira",
+                tuesday: "Terça-feira",
+                wednesday: "Quarta-feira",
+                thursday: "Quinta-feira",
+                friday: "Sexta-feira",
+                saturday: "Sábado",
+                sunday: "Domingo"
+              }).map(([day, label]) => {
+                const dayConfig = (settings as any).weeklyHours?.[day] || { start: "09:00", end: "18:00", active: true };
+                
+                return (
+                  <div key={day} className={`p-4 rounded-lg border transition-all ${dayConfig.active ? 'bg-accent/30 border-border/50' : 'bg-muted/30 border-dashed opacity-60'}`}>
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                      <div className="flex items-center gap-3 w-40">
+                        <Switch 
+                          checked={dayConfig.active} 
+                          onCheckedChange={(val) => {
+                            const newWeekly = { ...((settings as any).weeklyHours || {}), [day]: { ...dayConfig, active: val } };
+                            setSettings({ ...settings, weeklyHours: newWeekly } as any);
+                          }}
+                        />
+                        <span className={`font-medium ${dayConfig.active ? 'text-foreground' : 'text-muted-foreground line-through'}`}>{label}</span>
+                      </div>
 
-                    if (settings.businessEndTime && settings.businessEndTime <= val) {
-                      setSettings(prev => ({...prev, businessStartTime: val, businessEndTime: ""}));
-                    }
-                  }}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione o início" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {generateTimeOptions().map(time => (
-                      <SelectItem key={time} value={time}>{time}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label>Fim do Expediente</Label>
-                <Select
-                  value={settings.businessEndTime}
-                  onValueChange={(val) => setSettings({...settings, businessEndTime: val})}
-                  disabled={!settings.businessStartTime}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder={!settings.businessStartTime ? "Selecione o início primeiro" : "Selecione o fim"} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {generateTimeOptions()
-                      .filter(time => !settings.businessStartTime || time > settings.businessStartTime)
-                      .map(time => (
-                        <SelectItem key={time} value={time}>{time}</SelectItem>
-                      ))
-                    }
-                  </SelectContent>
-                </Select>
-                {!settings.businessStartTime && (
-                  <p className="text-[10px] text-orange-500 font-medium">
-                    * Selecione o início para habilitar o fim do expediente.
-                  </p>
-                )}
-              </div>
+                      {dayConfig.active && (
+                        <div className="flex items-center gap-3 flex-1 justify-end">
+                          <div className="flex items-center gap-2">
+                            <span className="text-[10px] uppercase font-bold text-muted-foreground">Início</span>
+                            <Select
+                              value={dayConfig.start}
+                              onValueChange={(val) => {
+                                const newWeekly = { ...((settings as any).weeklyHours || {}), [day]: { ...dayConfig, start: val } };
+                                setSettings({ ...settings, weeklyHours: newWeekly } as any);
+                              }}
+                            >
+                              <SelectTrigger className="w-[100px] h-9 text-xs">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {generateTimeOptions().map(time => (
+                                  <SelectItem key={time} value={time}>{time}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          
+                          <div className="flex items-center gap-2">
+                            <span className="text-[10px] uppercase font-bold text-muted-foreground">Fim</span>
+                            <Select
+                              value={dayConfig.end}
+                              onValueChange={(val) => {
+                                const newWeekly = { ...((settings as any).weeklyHours || {}), [day]: { ...dayConfig, end: val } };
+                                setSettings({ ...settings, weeklyHours: newWeekly } as any);
+                              }}
+                            >
+                              <SelectTrigger className="w-[100px] h-9 text-xs">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {generateTimeOptions()
+                                  .filter(t => t > dayConfig.start)
+                                  .map(time => (
+                                    <SelectItem key={time} value={time}>{time}</SelectItem>
+                                  ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        </div>
+                      )}
+                      {!dayConfig.active && (
+                        <div className="flex-1 text-right italic text-xs text-muted-foreground">
+                          Fechado / Não haverá agendamentos
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
             </div>
-            <p className="text-xs text-muted-foreground mt-6 italic">
-              Nota: Os clientes verão apenas horários entre {settings.businessStartTime} e {settings.businessEndTime} que coincidam com intervalos de 30, 45 ou 60 minutos.
+            
+            <p className="text-xs text-muted-foreground italic mt-4 bg-muted/50 p-3 rounded border border-dashed border-border">
+              Configurando horários por dia da semana garantimos que o cliente veja apenas os horários reais disponíveis no momento do agendamento.
             </p>
           </CardContent>
         </Card>

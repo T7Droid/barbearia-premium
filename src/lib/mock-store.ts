@@ -25,7 +25,7 @@ export const DEFAULT_SERVICES = [
   },
   {
     id: 4,
-    name: "Coloração e Camuflagem",
+    name: "Coloração & Camuflagem",
     description: "Tratamento para cobrir fios brancos ou mudar o visual de forma natural.",
     price: 10000,
     durationMinutes: 60,
@@ -76,6 +76,9 @@ declare global {
     slotInterval: number;
     subscriptionStatus: "active" | "past_due" | "canceled" | "trialing";
     subscriptionNextPayment: string;
+    weeklyHours: {
+      [key: string]: { start: string; end: string; active: boolean };
+    };
   };
 }
 
@@ -131,6 +134,15 @@ if (!global.MOCK_SETTINGS_STORE) {
     slotInterval: 45,
     subscriptionStatus: "active", // past_due ou active
     subscriptionNextPayment: "2026-05-15",
+    weeklyHours: {
+      monday: { start: "09:00", end: "18:00", active: true },
+      tuesday: { start: "09:00", end: "18:00", active: true },
+      wednesday: { start: "09:00", end: "18:00", active: true },
+      thursday: { start: "09:00", end: "18:00", active: true },
+      friday: { start: "09:00", end: "18:00", active: true },
+      saturday: { start: "09:00", end: "15:00", active: true },
+      sunday: { start: "00:00", end: "00:00", active: false }
+    }
   };
 }
 

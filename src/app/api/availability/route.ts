@@ -29,19 +29,29 @@ export async function GET(request: NextRequest) {
       MOCK_AVAILABILITY_45,
       MOCK_AVAILABILITY_60
     } = require("@/lib/mock-store");
-    const { businessStartTime, businessEndTime, slotInterval } = currentSettings;
+    
+    const daysMap = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"];
+    const dayName = daysMap[d.getDay()];
+    const daySettings = currentSettings.weeklyHours?.[dayName] || { start: "00:00", end: "00:00", active: false };
+
+    if (!daySettings.active) {
+      return NextResponse.json([]);
+    }
+
+    const { slotInterval } = currentSettings;
+    const businessStartTime = daySettings.start;
+    const businessEndTime = daySettings.end;
 
     let availabilityList = MOCK_AVAILABILITY_45;
     if (slotInterval === 30) availabilityList = MOCK_AVAILABILITY_30;
     if (slotInterval === 60) availabilityList = MOCK_AVAILABILITY_60;
 
-    console.log(`Filtering availability for ${date} between ${businessStartTime} and ${businessEndTime} (Interval: ${slotInterval}min)`);
+    console.log(`Filtering availability for ${date} (${dayName}) between ${businessStartTime} and ${businessEndTime}`);
 
     const slots = availabilityList.filter((time: string) => {
-
       const paddedTime = time.padStart(5, "0");
-      const paddedStart = (businessStartTime || "00:00").padStart(5, "0");
-      const paddedEnd = (businessEndTime || "23:30").padStart(5, "0");
+      const paddedStart = (businessStartTime).padStart(5, "0");
+      const paddedEnd = (businessEndTime).padStart(5, "0");
 
       return paddedTime >= paddedStart && paddedTime <= paddedEnd;
     }).map((time: string) => {
