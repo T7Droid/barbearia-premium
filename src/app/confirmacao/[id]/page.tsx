@@ -9,6 +9,7 @@ import { CheckCircle2, Calendar, Clock, MapPin, Download, UserPlus, ArrowRight }
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { useEffect, useState } from "react";
+import { DemoStore } from "@/lib/persistence/demo-store";
 
 export default function Confirmation({ params }: { params: Promise<{ id: string }> }) {
   const resolvedParams = use(params);
@@ -26,11 +27,12 @@ export default function Confirmation({ params }: { params: Promise<{ id: string 
   const [authStatus, setAuthStatus] = useState<"loading" | "authenticated" | "unauthenticated">("loading");
 
   useEffect(() => {
-    // Se a API falhar em encontrar, tenta o localStorage
+    // Se a API falhar em encontrar, tenta o DemoStore (LocalStorage)
     if (id && !apiAppointment && !isLoading) {
-      const saved = localStorage.getItem(`last_appointment_${id}`);
-      if (saved) {
-        setFallbackAppointment(JSON.parse(saved));
+      const savedApps = DemoStore.getAppointments();
+      const match = savedApps.find((a: any) => a.id === id);
+      if (match) {
+        setFallbackAppointment(match);
       }
     }
   }, [id, apiAppointment, isLoading]);

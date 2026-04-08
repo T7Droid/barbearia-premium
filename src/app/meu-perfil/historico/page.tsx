@@ -11,6 +11,7 @@ import Link from "next/link";
 import { Loader2, Calendar, Clock, AlertCircle, RefreshCw, Scissors, History as HistoryIcon } from "lucide-react";
 import { format, isBefore, addDays, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { DemoStore } from "@/lib/persistence/demo-store";
 
 export default function AppointmentHistory() {
   const { toast } = useToast();
@@ -30,7 +31,24 @@ export default function AppointmentHistory() {
         return;
       }
 
-      setAppointments(Array.isArray(appointmentsData) ? appointmentsData : []);
+      const apiApps = Array.isArray(appointmentsData) ? appointmentsData : [];
+      const savedApps = DemoStore.getAppointments();
+      
+      // Mesclar e remover duplicatas pelo ID
+      const allApps = [...apiApps];
+      savedApps.forEach(saved => {
+        if (!allApps.some(api => api.id === saved.id)) {
+          allApps.push(saved);
+        }
+      });
+
+      // Ordenar por data (mais recentes primeiro)
+      allApps.sort((a: any, b: any) => {
+        return new Date(`${b.appointmentDate}T${b.appointmentTime}`).getTime() - 
+               new Date(`${a.appointmentDate}T${a.appointmentTime}`).getTime();
+      });
+
+      setAppointments(allApps);
       setSettings(settingsData);
       setLoading(false);
     }).catch(() => {
