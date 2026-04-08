@@ -23,7 +23,7 @@ export default function Confirmation({ params }: { params: Promise<{ id: string 
   });
 
   const [fallbackAppointment, setFallbackAppointment] = useState<any>(null);
-  const [isLogged, setIsLogged] = useState(false);
+  const [authStatus, setAuthStatus] = useState<"loading" | "authenticated" | "unauthenticated">("loading");
 
   useEffect(() => {
     // Se a API falhar em encontrar, tenta o localStorage
@@ -54,8 +54,10 @@ export default function Confirmation({ params }: { params: Promise<{ id: string 
   useEffect(() => {
     fetch("/api/auth/me")
       .then(res => res.json())
-      .then(data => setIsLogged(data.authenticated))
-      .catch(() => setIsLogged(false));
+      .then(data => {
+        setAuthStatus(data.authenticated ? "authenticated" : "unauthenticated");
+      })
+      .catch(() => setAuthStatus("unauthenticated"));
   }, []);
 
   return (
@@ -137,7 +139,7 @@ export default function Confirmation({ params }: { params: Promise<{ id: string 
             </div>
 
             {}
-            {!isLogged && (
+            {!isLoading && authStatus === "unauthenticated" && (
               <Card className="mt-10 bg-primary/5 border-primary/20 shadow-lg overflow-hidden relative">
                 <div className="absolute top-0 right-0 p-4 opacity-10">
                   <UserPlus className="w-24 h-24 text-primary" />
