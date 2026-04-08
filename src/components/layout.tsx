@@ -36,9 +36,30 @@ export function Layout({ children }: { children: React.ReactNode }) {
         const authData = await authRes.json();
         const settingsData = await settingsRes.json();
 
-        if (authData.authenticated) setUser(authData.user);
-        setIsPointsEnabled(settingsData.isPointsEnabled);
-      } catch (e) {}
+        // Autenticação e Sincronização
+        if (authData.authenticated) {
+          setUser(authData.user);
+          DemoStore.saveUser(authData.user);
+        } else {
+          const savedUser = DemoStore.getUser();
+          if (savedUser) setUser(savedUser);
+        }
+
+        // Configurações e Sincronização
+        if (settingsRes.ok) {
+          setIsPointsEnabled(settingsData.isPointsEnabled);
+          DemoStore.saveSettings(settingsData);
+        } else {
+          const savedSettings = DemoStore.getSettings();
+          if (savedSettings) setIsPointsEnabled(savedSettings.isPointsEnabled);
+        }
+      } catch (e) {
+        // Fallback total para LocalStorage em caso de erro de rede
+        const savedUser = DemoStore.getUser();
+        const savedSettings = DemoStore.getSettings();
+        if (savedUser) setUser(savedUser);
+        if (savedSettings) setIsPointsEnabled(savedSettings.isPointsEnabled);
+      }
     };
     fetchData();
   }, [pathname]);

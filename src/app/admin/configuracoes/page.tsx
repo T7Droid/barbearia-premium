@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, Save, Settings2, ShieldCheck, Ticket, CalendarClock, CreditCard, Clock, ExternalLink } from "lucide-react";
+import { DemoStore } from "@/lib/persistence/demo-store";
 import { formatDateBR } from "@/lib/format/date";
 import {
   Select,
@@ -53,10 +54,13 @@ export default function SettingsPage() {
       .then(res => res.json())
       .then(data => {
         setSettings(data);
+        // Sincronizar com DemoStore
+        DemoStore.saveSettings(data);
         setLoading(false);
       })
       .catch(() => {
-        toast({ title: "Erro", description: "Não foi possível carregar as configurações", variant: "destructive" });
+        const saved = DemoStore.getSettings();
+        if (saved) setSettings(saved);
         setLoading(false);
       });
   }, []);
@@ -71,13 +75,16 @@ export default function SettingsPage() {
       });
 
       if (res.ok) {
-        toast({ title: "Sucesso", description: "Configurações salvas com sucesso!" });
+        DemoStore.saveSettings(settings);
+        toast({ title: "Sucesso", description: "Configurações salvas e aplicadas (Modo Demo)." });
       } else {
-        const err = await res.json();
-        toast({ title: "Erro", description: err.error || "Falha ao salvar", variant: "destructive" });
+        // Fallback para DemoStore mesmo em erro da API (comum na Vercel modo Mock)
+        DemoStore.saveSettings(settings);
+        toast({ title: "Aviso", description: "Salvo localmente no navegador." });
       }
     } catch (e) {
-      toast({ title: "Erro", description: "Falha na conexão", variant: "destructive" });
+      DemoStore.saveSettings(settings);
+      toast({ title: "Aviso", description: "Salvo no navegador (Erro de conexão)." });
     } finally {
       setSaving(false);
     }

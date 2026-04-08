@@ -55,13 +55,16 @@ function BookingContent() {
   const { data: services, isLoading: isLoadingServices } = useListServices();
 
   useEffect(() => {
-
     Promise.all([
       fetch("/api/settings").then(res => res.json()),
       fetch("/api/auth/me").then(res => res.json())
     ]).then(([settingsData, authData]) => {
+      // Sincronizar configurações
       setSettings(settingsData);
+      DemoStore.saveSettings(settingsData);
       setMpPublicKey(settingsData.mpPublicKey || "");
+
+      // Sincronizar autenticação
       if (authData.authenticated) {
         setIsLogged(true);
         setCustomerInfo({
@@ -69,12 +72,26 @@ function BookingContent() {
           email: authData.user.email,
           phone: authData.user.phone || ""
         });
+      } else {
+        const savedUser = DemoStore.getUser();
+        if (savedUser) {
+          setIsLogged(true);
+          setCustomerInfo({
+            name: savedUser.name,
+            email: savedUser.email,
+            phone: savedUser.phone || ""
+          });
+        }
       }
 
       if (preSelectedServiceId && services) {
         const service = services.find(s => s.id === parseInt(preSelectedServiceId));
         if (service) setSelectedService(service);
       }
+    }).catch(() => {
+      // Fallback para configurações salvas se API falhar
+      const savedSettings = DemoStore.getSettings();
+      if (savedSettings) setSettings(savedSettings);
     });
   }, [services, preSelectedServiceId]);
 
