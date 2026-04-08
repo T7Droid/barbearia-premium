@@ -1,0 +1,32 @@
+uploads = []
+outputs = []
+
+[[generated]]
+id = "fHtvQhAb3D8uEXlN1JKuX"
+uri = "file://artifacts/barbearia/public/images/hero.png"
+type = "image"
+title = "Barbershop hero background"
+
+[[generated]]
+id = "YwcjM7zvtnyyVPQ_0eSxW"
+uri = "file://artifacts/barbearia/public/images/service-haircut.png"
+type = "image"
+title = "Haircut service"
+
+[[generated]]
+id = "QctwPPMpPCxqBPK8COTEn"
+uri = "file://artifacts/barbearia/public/images/service-beard.png"
+type = "image"
+title = "Beard trim service"
+
+[[generated]]
+id = "y8Lv_CA3jSsUWbAABqo2G"
+uri = "file://artifacts/barbearia/public/images/service-combo.png"
+type = "image"
+title = "Hair and beard service"
+
+[[generated]]
+id = "sXzNziHyUg8-cujcvdyOY"
+uri = "file://artifacts/barbearia/public/images/service-hydration.png"
+type = "image"
+title = "Hydration service"

@@ -1,0 +1,370 @@
+openapi: 3.1.0
+info:
+  # Do not change the title, if the title changes, the import paths will be broken
+  title: Api
+  version: 0.1.0
+  description: Barbearia Premium API
+servers:
+  - url: /api
+    description: Base API path
+tags:
+  - name: health
+    description: Health operations
+  - name: services
+    description: Barbershop services
+  - name: availability
+    description: Available time slots
+  - name: appointments
+    description: Appointment management
+  - name: payments
+    description: Payment processing
+paths:
+  /healthz:
+    get:
+      operationId: healthCheck
+      tags: [health]
+      summary: Health check
+      description: Returns server health status
+      responses:
+        "200":
+          description: Healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthStatus"
+
+  /services:
+    get:
+      operationId: listServices
+      tags: [services]
+      summary: List all available services
+      responses:
+        "200":
+          description: List of services
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Service"
+
+  /availability:
+    get:
+      operationId: getAvailability
+      tags: [availability]
+      summary: Get available time slots for a date
+      parameters:
+        - name: date
+          in: query
+          required: true
+          schema:
+            type: string
+            description: Date in YYYY-MM-DD format
+        - name: serviceId
+          in: query
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Available time slots
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/TimeSlot"
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /appointments:
+    get:
+      operationId: listAppointments
+      tags: [appointments]
+      summary: List all confirmed appointments
+      responses:
+        "200":
+          description: List of appointments
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Appointment"
+
+  /appointments/checkout:
+    post:
+      operationId: createCheckout
+      tags: [payments]
+      summary: Create a payment session for an appointment
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateCheckoutBody"
+      responses:
+        "200":
+          description: Payment session created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CheckoutSession"
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: Time slot no longer available
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /appointments/confirm:
+    post:
+      operationId: confirmAppointment
+      tags: [appointments]
+      summary: Confirm appointment after successful payment
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConfirmAppointmentBody"
+      responses:
+        "201":
+          description: Appointment confirmed and saved
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Appointment"
+        "400":
+          description: Bad request or invalid payment
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: Time slot no longer available
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /appointments/{id}:
+    get:
+      operationId: getAppointment
+      tags: [appointments]
+      summary: Get appointment by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Appointment details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Appointment"
+        "404":
+          description: Appointment not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /stats/summary:
+    get:
+      operationId: getStatsSummary
+      tags: [appointments]
+      summary: Get barbershop stats summary
+      responses:
+        "200":
+          description: Stats summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StatsSummary"
+
+components:
+  schemas:
+    HealthStatus:
+      type: object
+      properties:
+        status:
+          type: string
+      required:
+        - status
+
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+      required:
+        - error
+
+    Service:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        description:
+          type: string
+        price:
+          type: number
+        durationMinutes:
+          type: integer
+        imageUrl:
+          type: ["string", "null"]
+      required:
+        - id
+        - name
+        - description
+        - price
+        - durationMinutes
+        - imageUrl
+
+    TimeSlot:
+      type: object
+      properties:
+        time:
+          type: string
+          description: Time in HH:MM format
+        available:
+          type: boolean
+      required:
+        - time
+        - available
+
+    Appointment:
+      type: object
+      properties:
+        id:
+          type: integer
+        customerName:
+          type: string
+        customerEmail:
+          type: string
+        customerPhone:
+          type: string
+        serviceId:
+          type: integer
+        serviceName:
+          type: string
+        servicePrice:
+          type: number
+        appointmentDate:
+          type: string
+          description: Date in YYYY-MM-DD format
+        appointmentTime:
+          type: string
+          description: Time in HH:MM format
+        status:
+          type: string
+          enum: [pending, confirmed, cancelled]
+        paymentId:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+      required:
+        - id
+        - customerName
+        - customerEmail
+        - customerPhone
+        - serviceId
+        - serviceName
+        - servicePrice
+        - appointmentDate
+        - appointmentTime
+        - status
+        - paymentId
+        - createdAt
+
+    CreateCheckoutBody:
+      type: object
+      properties:
+        customerName:
+          type: string
+        customerEmail:
+          type: string
+        customerPhone:
+          type: string
+        serviceId:
+          type: integer
+        appointmentDate:
+          type: string
+          description: Date in YYYY-MM-DD format
+        appointmentTime:
+          type: string
+          description: Time in HH:MM format
+      required:
+        - customerName
+        - customerEmail
+        - customerPhone
+        - serviceId
+        - appointmentDate
+        - appointmentTime
+
+    CheckoutSession:
+      type: object
+      properties:
+        sessionId:
+          type: string
+        amount:
+          type: number
+        serviceName:
+          type: string
+        appointmentDate:
+          type: string
+        appointmentTime:
+          type: string
+        customerName:
+          type: string
+      required:
+        - sessionId
+        - amount
+        - serviceName
+        - appointmentDate
+        - appointmentTime
+        - customerName
+
+    ConfirmAppointmentBody:
+      type: object
+      properties:
+        sessionId:
+          type: string
+        paymentMethodId:
+          type: string
+      required:
+        - sessionId
+        - paymentMethodId
+
+    StatsSummary:
+      type: object
+      properties:
+        totalAppointments:
+          type: integer
+        todayAppointments:
+          type: integer
+        totalRevenue:
+          type: number
+        popularService:
+          type: ["string", "null"]
+      required:
+        - totalAppointments
+        - todayAppointments
+        - totalRevenue
+        - popularService

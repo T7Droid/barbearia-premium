@@ -1,0 +1,24 @@
+Copyright (c) 2026 Thyago Neves
+
+Todos os direitos reservados.
+
+Este software e todo o seu código-fonte são propriedade exclusiva de Thyago Neves.
+
+Este software é licensed, não vendido.
+
+É expressamente proibido, sem autorização prévia por escrito do autor:
+
+* Copiar, reproduzir ou redistribuir o código-fonte total ou parcialmente
+* Modificar, adaptar ou criar obras derivadas
+* Revender, sublicenciar ou explorar comercialmente o código
+* Tornar o código público ou acessível a terceiros
+
+USO PERMITIDO:
+
+O uso deste software é permitido apenas para clientes que adquirirem uma licença comercial válida, limitada ao acesso à plataforma como serviço (SaaS), sem direito ao código-fonte.
+
+LIMITAÇÃO DE RESPONSABILIDADE:
+
+Este software é fornecido "como está", sem garantias de qualquer tipo. Em nenhum caso o autor será responsável por quaisquer danos decorrentes do uso do software.
+
+Ao utilizar este software, você concorda com estes termos.
