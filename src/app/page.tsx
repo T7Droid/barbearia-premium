@@ -125,9 +125,15 @@ export default function Home() {
               <p className="text-muted-foreground">Seg a Sex: 09h às 21h<br />Sáb: 09h às 18h</p>
             </div>
             <div className="flex flex-col items-center p-6">
-              <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mb-4">
+              <a 
+                href={`https://wa.me/5513982046758?text=${encodeURIComponent("Olá! Acabei de testar o sistema de agendamento online para barbearias e gostei muito. Tenho uma barbearia e queria entender como posso implementar no meu negócio e os valores.")}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mb-4 hover:bg-primary/20 transition-colors"
+                title="Conversar no WhatsApp"
+              >
                 <Phone className="text-primary w-6 h-6" />
-              </div>
+              </a>
               <h3 className="font-serif text-xl font-semibold mb-2">Contato</h3>
               <p className="text-muted-foreground">(13) 98204-6758<br />contato@barbeariapremium.com</p>
             </div>

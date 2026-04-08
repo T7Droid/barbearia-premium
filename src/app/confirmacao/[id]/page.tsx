@@ -57,9 +57,19 @@ export default function Confirmation({ params }: { params: Promise<{ id: string 
     fetch("/api/auth/me")
       .then(res => res.json())
       .then(data => {
-        setAuthStatus(data.authenticated ? "authenticated" : "unauthenticated");
+        if (data.authenticated) {
+          setAuthStatus("authenticated");
+          DemoStore.saveUser(data.user);
+        } else {
+          // Verificar se o navegador lembra do usuário
+          const savedUser = DemoStore.getUser();
+          setAuthStatus(savedUser ? "authenticated" : "unauthenticated");
+        }
       })
-      .catch(() => setAuthStatus("unauthenticated"));
+      .catch(() => {
+        const savedUser = DemoStore.getUser();
+        setAuthStatus(savedUser ? "authenticated" : "unauthenticated");
+      });
   }, []);
 
   return (
