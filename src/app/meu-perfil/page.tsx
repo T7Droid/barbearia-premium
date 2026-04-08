@@ -161,7 +161,11 @@ export default function ClientDashboard() {
             </Link>
           </Button>
           <Button variant="outline" asChild className="h-20 justify-start px-6 border-dashed hover:border-primary">
-            <a href="https://wa.me/5513982046758" target="_blank" className="flex items-center gap-4">
+            <a 
+              href={`https://wa.me/5513982046758?text=${encodeURIComponent("Olá! Acabei de testar o sistema de agendamento online para barbearias e gostei muito. Tenho uma barbearia e queria entender como posso implementar no meu negócio e os valores.")}`} 
+              target="_blank" 
+              className="flex items-center gap-4"
+            >
               <div className="w-8 h-8 rounded-full bg-green-500/10 flex items-center justify-center"><ExternalLink className="w-4 h-4 text-green-500" /></div>
               <span>Suporte via WhatsApp</span>
             </a>
