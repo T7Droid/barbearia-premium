@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, Suspense } from "react";
+import { useEffect, useState, Suspense, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Layout } from "@/components/layout";
 import { Button } from "@/components/ui/button";
@@ -39,6 +39,8 @@ function BookingContent() {
   const [step, setStep] = useState(rescheduleId ? 2 : 1);
   const [settings, setSettings] = useState<any>(null);
   const [isLogged, setIsLogged] = useState(false);
+
+  const timeSectionRef = useRef<HTMLDivElement>(null);
 
   const [selectedService, setSelectedService] = useState<Service | null>(null);
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
@@ -142,6 +144,13 @@ function BookingContent() {
     if (date) {
       setSelectedDate(date);
       setSelectedTime(null);
+
+      // Scroll automático para horários no Mobile
+      if (window.innerWidth < 1024) {
+        setTimeout(() => {
+          timeSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+        }, 100);
+      }
     }
   };
 
@@ -341,7 +350,7 @@ function BookingContent() {
                   </div>
                 </div>
 
-                <div className="lg:col-span-2">
+                <div className="lg:col-span-2" ref={timeSectionRef}>
                   <Label className="mb-4 block text-lg font-medium text-foreground">2. Escolha o horário</Label>
                   {isLoadingAvailability ? (
                     <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
