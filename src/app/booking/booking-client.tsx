@@ -65,23 +65,24 @@ function BookingContent() {
       setMpPublicKey(settingsData.mpPublicKey || "");
 
       // Sincronizar autenticação
+      const savedUser = DemoStore.getUser();
       if (authData.authenticated) {
         setIsLogged(true);
+        const phone = authData.user.phone || savedUser?.phone || "";
         setCustomerInfo({
           name: authData.user.name,
           email: authData.user.email,
-          phone: authData.user.phone || ""
+          phone: phone ? formatPhone(phone) : ""
         });
-      } else {
-        const savedUser = DemoStore.getUser();
-        if (savedUser) {
-          setIsLogged(true);
-          setCustomerInfo({
-            name: savedUser.name,
-            email: savedUser.email,
-            phone: savedUser.phone || ""
-          });
-        }
+        // Sincronizar dados da API com o DemoStore
+        DemoStore.saveUser({ ...savedUser, ...authData.user, phone });
+      } else if (savedUser) {
+        setIsLogged(true);
+        setCustomerInfo({
+          name: savedUser.name,
+          email: savedUser.email,
+          phone: savedUser.phone ? formatPhone(savedUser.phone) : ""
+        });
       }
 
       if (preSelectedServiceId && services) {
