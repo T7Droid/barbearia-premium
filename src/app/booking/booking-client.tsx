@@ -166,8 +166,8 @@ function BookingContent() {
 
       if (result.isPaid) {
         setIsPrePaid(true);
-
-        setStep(4);
+        // Se já está pago, não vai para o checkout, confirma direto
+        handlePaymentSubmit(undefined, result.sessionId);
       } else {
         setIsPrePaid(false);
         handleNextStep();
@@ -181,14 +181,15 @@ function BookingContent() {
     }
   };
 
-  const handlePaymentSubmit = async (e?: React.FormEvent) => {
+  const handlePaymentSubmit = async (e?: React.FormEvent, overrideSessionId?: string) => {
     if (e) e.preventDefault();
-    if (!sessionId) return;
-
+    const sid = overrideSessionId || sessionId;
+    if (!sid) return;
+ 
     try {
       const appointment = await confirmAppointment.mutateAsync({
         data: {
-          sessionId,
+          sessionId: sid,
           paymentMethodId: isPrePaid ? "pre_paid" : (paymentMethod === "card" ? "mercado_pago" : "offline_local"),
 
           mp_data: paymentMethod === "card" && !isPrePaid ? {

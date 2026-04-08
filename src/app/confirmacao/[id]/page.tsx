@@ -120,6 +120,14 @@ export default function Confirmation({ params }: { params: Promise<{ id: string 
                     <p className="text-sm text-muted-foreground mb-1 text-foreground">Código da Reserva</p>
                     <p className="font-mono text-muted-foreground">#{appointment.id.toString().padStart(6, '0')}</p>
                   </div>
+
+                  <div className="border-t border-border/50 pt-4 mt-2">
+                    <p className="text-sm text-muted-foreground mb-1">Status do Pagamento</p>
+                    <div className="flex items-center gap-2 text-green-600 font-bold uppercase text-xs">
+                      <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+                      {(appointment as any).isReschedule || appointment.status === "confirmed" ? "Pago e Confirmado" : "Confirmado"}
+                    </div>
+                  </div>
                 </div>
 
                 <div className="bg-background rounded-lg p-6 border border-border flex flex-col justify-center">
@@ -132,8 +140,10 @@ export default function Confirmation({ params }: { params: Promise<{ id: string 
                   </div>
 
                   <div className="border-t border-border/50 pt-4 mt-2">
-                    <p className="text-sm text-muted-foreground text-center">
-                      Por favor, chegue com 5 minutos de antecedência.
+                    <p className="text-sm text-muted-foreground text-center italic">
+                      {(appointment as any).isReschedule 
+                        ? "Como esta é uma remarcação de um serviço já pago, seu crédito foi transferido automaticamente."
+                        : "Por favor, chegue com 5 minutos de antecedência."}
                     </p>
                   </div>
                 </div>
