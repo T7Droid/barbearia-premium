@@ -25,9 +25,26 @@ export default function AppointmentHistory() {
       fetch("/api/settings").then(res => res.json()),
       fetch("/api/auth/me").then(res => res.json())
     ]).then(([appointmentsData, settingsData, authData]) => {
-      
-      if (!authData.authenticated || (authData.user && authData.user.role === "admin")) {
-        window.location.href = authData.authenticated ? "/admin" : "/login";
+      let activeUser = null;
+
+      if (authData.authenticated) {
+        activeUser = authData.user;
+        DemoStore.saveUser(authData.user);
+      } else {
+        // Fallback para DemoStore se estiver na Vercel e o servidor resetou
+        const savedUser = DemoStore.getUser();
+        if (savedUser) {
+          activeUser = savedUser;
+        }
+      }
+
+      if (!activeUser) {
+        window.location.href = "/login";
+        return;
+      }
+
+      if (activeUser.role === "admin") {
+        window.location.href = "/admin";
         return;
       }
 
@@ -52,7 +69,12 @@ export default function AppointmentHistory() {
       setSettings(settingsData);
       setLoading(false);
     }).catch(() => {
-      window.location.href = "/login";
+      const savedUser = DemoStore.getUser();
+      if (savedUser && savedUser.role !== "admin") {
+        setLoading(false);
+      } else {
+        window.location.href = "/login";
+      }
     });
   }, []);
 
