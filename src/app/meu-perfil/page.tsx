@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import Link from "next/link";
 import { Loader2, Ticket, Calendar, History, Settings, ExternalLink } from "lucide-react";
-
+import { DemoStore } from "@/lib/persistence/demo-store";
 import { useRouter } from "next/navigation";
 
 export default function ClientDashboard() {
@@ -15,15 +15,27 @@ export default function ClientDashboard() {
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState<any>(null);
   const [settings, setSettings] = useState<any>(null);
+  const [appointments, setAppointments] = useState<any[]>([]);
+  const [nextAppointment, setNextAppointment] = useState<any>(null);
 
   useEffect(() => {
     Promise.all([
       fetch("/api/auth/me").then(res => res.json()),
       fetch("/api/settings").then(res => res.json())
     ]).then(([userData, settingsData]) => {
-      if (!userData.authenticated) {
-        router.push("/login");
-        return;
+      if (userData.authenticated) {
+        setData(userData);
+        // Salvar/Sincronizar no DemoStore
+        DemoStore.saveUser(userData.user);
+      } else {
+        // Fallback para DemoStore se estiver na Vercel e o servidor resetou
+        const savedUser = DemoStore.getUser();
+        if (savedUser) {
+          setData({ authenticated: true, user: savedUser });
+        } else {
+          router.push("/login");
+          return;
+        }
       }
       
       if (userData.user?.role === "admin") {
@@ -31,11 +43,26 @@ export default function ClientDashboard() {
         return;
       }
 
-      setData(userData);
       setSettings(settingsData);
+
+      // Carregar agendamentos (Mock + DemoStore)
+      const savedApps = DemoStore.getAppointments();
+      setAppointments(savedApps);
+      
+      if (savedApps.length > 0) {
+        // Pegar o agendamento mais futuro/recentemente criado
+        setNextAppointment(savedApps[0]);
+      }
+
       setLoading(false);
     }).catch(() => {
-      router.push("/login");
+      const savedUser = DemoStore.getUser();
+      if (savedUser) {
+        setData({ authenticated: true, user: savedUser });
+        setLoading(false);
+      } else {
+        router.push("/login");
+      }
     });
   }, [router]);
 
@@ -93,21 +120,28 @@ export default function ClientDashboard() {
               <Calendar className="w-6 h-6 text-primary" />
             </CardHeader>
             <CardContent>
-              {}
-              <div className="flex items-center justify-between p-4 bg-background border border-border rounded-lg">
-                <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold">
-                    12
+              {nextAppointment ? (
+                <div className="flex items-center justify-between p-4 bg-background border border-border rounded-lg">
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold">
+                      {nextAppointment.appointmentDate.split("-")[2]}
+                    </div>
+                    <div>
+                      <p className="font-medium">{nextAppointment.serviceName}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {nextAppointment.appointmentDate.split('-').reverse().join('/')} às {nextAppointment.appointmentTime}
+                      </p>
+                    </div>
                   </div>
-                  <div>
-                    <p className="font-medium">Corte de Cabelo Premium</p>
-                    <p className="text-sm text-muted-foreground">12/04/2026 às 14:30</p>
-                  </div>
+                  <Button variant="ghost" size="sm" asChild>
+                    <Link href="/meu-perfil/historico">Detalhes</Link>
+                  </Button>
                 </div>
-                <Button variant="ghost" size="sm" asChild>
-                  <Link href="/meu-perfil/historico">Detalhes</Link>
-                </Button>
-              </div>
+              ) : (
+                <div className="text-center py-6 text-muted-foreground italic">
+                  Nenhum agendamento futuro encontrado.
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>

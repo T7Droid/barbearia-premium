@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, Mail, Lock, ArrowRight } from "lucide-react";
+import { DemoStore } from "@/lib/persistence/demo-store";
 
 export function ClientLoginForm() {
   const router = useRouter();
@@ -34,6 +35,9 @@ export function ClientLoginForm() {
       const data = await response.json();
 
       if (response.ok) {
+        // Persistir para Modo Demo na Vercel
+        DemoStore.saveUser(data.user);
+
         toast({ title: "Bem-vindo!", description: `Olá, ${data.user.name}. Acessando seu perfil.` });
         router.push(data.redirectTo || from);
         router.refresh();

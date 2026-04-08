@@ -8,7 +8,8 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Save, User, Mail, Bell, ShieldCheck, Phone } from "lucide-react";
+import { Loader2, User, Mail, Phone, Bell, Save, ArrowLeft, ShieldCheck } from "lucide-react";
+import { DemoStore } from "@/lib/persistence/demo-store";
 import { useRouter } from "next/navigation";
 
 export default function ClientSettingsPage() {
@@ -38,6 +39,10 @@ export default function ClientSettingsPage() {
     fetch("/api/user/profile")
       .then(async (res) => {
         if (res.status === 401) {
+          // Tentar recuperar do DemoStore se a API falhar (Mock resetado)
+          const savedUser = DemoStore.getUser();
+          if (savedUser) return savedUser;
+          
           router.push("/login");
           return;
         }
@@ -51,11 +56,21 @@ export default function ClientSettingsPage() {
             phone: data.phone ? formatPhone(data.phone) : "",
             notificationsEnabled: data.notificationsEnabled ?? true,
           });
+          // Garantir que o DemoStore está sincronizado
+          DemoStore.saveUser(data);
         }
         setLoading(false);
       })
       .catch(() => {
-        toast({ title: "Erro", description: "Não foi possível carregar seu perfil", variant: "destructive" });
+        const savedUser = DemoStore.getUser();
+        if (savedUser) {
+          setProfile({
+            name: savedUser.name || "",
+            email: savedUser.email || "",
+            phone: savedUser.phone ? formatPhone(savedUser.phone) : "",
+            notificationsEnabled: savedUser.notificationsEnabled ?? true,
+          });
+        }
         setLoading(false);
       });
   }, [router, toast]);
@@ -65,24 +80,28 @@ export default function ClientSettingsPage() {
     try {
       // Remover máscara antes de salvar no banco
       const rawPhone = profile.phone.replace(/\D/g, "");
+      const updatedProfile = { ...profile, phone: rawPhone };
 
       const res = await fetch("/api/user/profile", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          ...profile,
-          phone: rawPhone
-        }),
+        body: JSON.stringify(updatedProfile),
       });
 
       if (res.ok) {
-        toast({ title: "Sucesso", description: "Configurações atualizadas com sucesso!" });
+        // Atualizar no DemoStore para persistir na Vercel
+        DemoStore.saveUser(updatedProfile);
+        
+        toast({ title: "Sucesso", description: "Configurações salvas!" });
       } else {
-        const err = await res.json();
-        toast({ title: "Erro", description: err.error || "Falha ao salvar", variant: "destructive" });
+        // Mesmo que a API falhe (ex: 403 Forbidden na Vercel), salvamos no DemoStore para a demonstração
+        DemoStore.saveUser(updatedProfile);
+        toast({ title: "Aviso", description: "Salvo localmente (Modo Demo)." });
       }
-    } catch (e) {
-      toast({ title: "Erro", description: "Falha na conexão", variant: "destructive" });
+    } catch (error) {
+      // Fallback para DemoStore em erro de rede
+      DemoStore.saveUser(profile);
+      toast({ title: "Aviso", description: "Salvo apenas no navegador (Modo Demo)." });
     } finally {
       setSaving(false);
     }

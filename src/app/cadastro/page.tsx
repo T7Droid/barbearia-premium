@@ -10,6 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { useToast } from "@/hooks/use-toast";
 import { UserPlus, ShieldCheck, ArrowRight, Loader2 } from "lucide-react";
 import Link from "next/link";
+import { DemoStore } from "@/lib/persistence/demo-store";
 
 function CadastroContent() {
   const router = useRouter();
@@ -75,6 +76,15 @@ function CadastroContent() {
       });
 
       if (response.ok) {
+        const userData = await response.json();
+        
+        // Persistência para Modo Demo na Vercel
+        DemoStore.saveUser({
+          ...userData.user,
+          phone: formData.phone,
+          points: 50
+        });
+
         toast({
           title: "Conta criada!",
           description: "Bem-vindo à Barbearia Premium. Você ganhou 50 pontos!"

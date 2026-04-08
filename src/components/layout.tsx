@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { config, getStatus } from "@/lib/config";
 import { AlertCircle } from "lucide-react";
+import { DemoStore } from "@/lib/persistence/demo-store";
 
 export function Layout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -45,6 +46,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
   const handleLogout = async () => {
     try {
       await fetch("/api/auth/logout", { method: "POST" });
+      DemoStore.clearUser();
       setUser(null);
       toast({ title: "Até logo!", description: "Você saiu da sua conta." });
       router.push("/");

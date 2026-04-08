@@ -11,7 +11,7 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { USERS_STORE } from "@/lib/mock-store";
+import { DemoStore } from "@/lib/persistence/demo-store";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -192,9 +192,7 @@ function BookingContent() {
       });
 
       // Persistir localmente para fallback na Vercel (modo Demo)
-      if (typeof window !== "undefined") {
-        localStorage.setItem(`last_appointment_${appointment.id}`, JSON.stringify(appointment));
-      }
+      DemoStore.saveAppointment(appointment);
 
       router.push(`/confirmacao/${appointment.id}`);
     } catch (error) {
