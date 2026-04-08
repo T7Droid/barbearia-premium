@@ -560,7 +560,19 @@ function BookingContent() {
                           </TabsContent>
                         )}
 
-                        <Button onClick={() => handlePaymentSubmit()} className="w-full mt-6 h-12 text-lg" disabled={confirmAppointment.isPending}>
+                        <Button 
+                          onClick={() => handlePaymentSubmit()} 
+                          className="w-full mt-6 h-12 text-lg" 
+                          disabled={
+                            confirmAppointment.isPending || 
+                            (paymentMethod === "card" && !isPrePaid && (
+                              !cardInfo.name || 
+                              cardInfo.number.length < 19 || // 16 números + 3 espaços
+                              cardInfo.expiry.length < 5 || // MM/AA
+                              cardInfo.cvv.length < 3
+                            ))
+                          }
+                        >
                           {confirmAppointment.isPending ? "Confirmando..." : (paymentMethod === "card" ? `Pagar ${formatCurrencyFromCents(selectedService?.price)}` : "Finalizar Agendamento")}
                         </Button>
                       </Tabs>
