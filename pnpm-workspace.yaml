@@ -1,0 +1,17 @@
+packages:
+  - 'libs/*'
+  - '.'
+
+catalogs:
+  default:
+    react: '19.1.0'
+    react-dom: '19.1.0'
+    zod: '^3.25.76'
+    drizzle-orm: '^0.45.1'
+    '@tanstack/react-query': '^5.90.21'
+    '@types/node': '^20'
+    '@types/react': '^19.2.0'
+    '@types/react-dom': '^19.2.0'
+    typescript: '^5'
+    tailwindcss: '^4'
+    '@tailwindcss/postcss': '^4'
