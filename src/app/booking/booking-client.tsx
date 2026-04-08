@@ -63,6 +63,11 @@ function BookingContent() {
       setSettings(settingsData);
       DemoStore.saveSettings(settingsData);
       setMpPublicKey(settingsData.mpPublicKey || "");
+      
+      // Definir método de pagamento inicial baseado nas configurações
+      if (!settingsData.isPrepaymentRequired) {
+        setPaymentMethod("local");
+      }
 
       // Sincronizar autenticação
       const savedUser = DemoStore.getUser();
