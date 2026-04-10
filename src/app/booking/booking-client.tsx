@@ -48,7 +48,7 @@ function BookingContent() {
 
   const [customerInfo, setCustomerInfo] = useState({ name: "", email: "", phone: "" });
   const [cardInfo, setCardInfo] = useState({ number: "", expiry: "", cvv: "", name: "" });
-  const [paymentMethod, setPaymentMethod] = useState<"card" | "local">("card");
+  const [paymentMethod, setPaymentMethod] = useState<"card" | "local">("local");
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [isPrePaid, setIsPrePaid] = useState(false);
   const [mpPublicKey, setMpPublicKey] = useState<string>("");
@@ -65,9 +65,11 @@ function BookingContent() {
       setSettings(settingsData);
       DemoStore.saveSettings(settingsData);
       setMpPublicKey(settingsData.mpPublicKey || "");
-      
+
       // Definir método de pagamento inicial baseado nas configurações
-      if (!settingsData.isPrepaymentRequired) {
+      if (settingsData.isPrepaymentRequired) {
+        setPaymentMethod("card");
+      } else {
         setPaymentMethod("local");
       }
 
@@ -126,7 +128,7 @@ function BookingContent() {
   const formatPhone = (value: string) => {
     let raw = value.replace(/\D/g, "");
     if (raw.length > 11) raw = raw.slice(0, 11);
-    
+
     if (raw.length === 0) return "";
     if (raw.length <= 2) return `(${raw}`;
     if (raw.length <= 6) return `(${raw.slice(0, 2)}) ${raw.slice(2)}`;
@@ -199,7 +201,7 @@ function BookingContent() {
     if (e) e.preventDefault();
     const sid = overrideSessionId || sessionId;
     if (!sid) return;
- 
+
     try {
       const appointment = await confirmAppointment.mutateAsync({
         data: {
@@ -266,7 +268,7 @@ function BookingContent() {
             </p>
           )}
 
-          {}
+          { }
           <div className="flex items-center justify-between relative mt-10">
             <div className="absolute left-0 top-1/2 -translate-y-1/2 w-full h-1 bg-border z-0"></div>
             <div
@@ -289,7 +291,7 @@ function BookingContent() {
         </div>
 
         <div className="bg-card border border-border/50 rounded-lg p-6 shadow-xl">
-          {}
+          { }
           {step === 1 && (
             <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4">
               <h2 className="text-xl font-serif font-semibold">Escolha o Serviço</h2>
@@ -321,7 +323,7 @@ function BookingContent() {
             </div>
           )}
 
-          {}
+          { }
           {step === 2 && (
             <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4">
               <div className="flex items-center justify-between">
@@ -398,7 +400,7 @@ function BookingContent() {
             </div>
           )}
 
-          {}
+          { }
           {step === 3 && (
             <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4">
               <div className="flex items-center justify-between">
@@ -460,7 +462,7 @@ function BookingContent() {
             </div>
           )}
 
-          {}
+          { }
           {step === 4 && (
             <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4">
               <div className="flex items-center justify-between">
@@ -471,7 +473,7 @@ function BookingContent() {
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
-                {}
+                { }
                 <div className="bg-background rounded-lg p-6 border border-border/50 h-fit">
                   <h3 className="font-medium text-lg mb-4 text-foreground">Resumo do Agendamento</h3>
                   <div className="space-y-3 text-sm">
@@ -498,7 +500,7 @@ function BookingContent() {
                   )}
                 </div>
 
-                {}
+
                 {isPrePaid ? (
                   <Card className="border-primary/20 bg-primary/5">
                     <CardHeader>
@@ -519,16 +521,14 @@ function BookingContent() {
                 ) : (
                   <Card className="border-border">
                     <CardContent className="pt-6">
-                      <Tabs defaultValue={settings?.isPrepaymentRequired ? "card" : "local"} onValueChange={(v) => setPaymentMethod(v as any)}>
-                        <TabsList className={`grid w-full mb-6 ${settings?.isPrepaymentRequired ? "grid-cols-1" : "grid-cols-2"}`}>
+                      <Tabs value={paymentMethod} onValueChange={(v) => setPaymentMethod(v as any)}>
+                        <TabsList className="grid w-full mb-6 grid-cols-2">
                           <TabsTrigger value="card" className="gap-2">
                             <CreditCard className="w-4 h-4" /> Online
                           </TabsTrigger>
-                          {!settings?.isPrepaymentRequired && (
-                            <TabsTrigger value="local" className="gap-2">
-                              <Wallet className="w-4 h-4" /> No Local
-                            </TabsTrigger>
-                          )}
+                          <TabsTrigger value="local" className="gap-2">
+                            <Wallet className="w-4 h-4" /> No Local
+                          </TabsTrigger>
                         </TabsList>
 
                         <TabsContent value="card" className="space-y-4">
@@ -536,7 +536,7 @@ function BookingContent() {
                             <div className="p-8 border border-dashed rounded-lg text-center bg-muted/50">
                               <p className="text-sm font-medium mb-2">Mercado Pago Card Brick Placeholder</p>
                               <p className="text-xs text-muted-foreground">O componente CardPayment Brick seria renderizado aqui usando a chave: {mpPublicKey}</p>
-                              {}
+                              { }
                               <Button variant="outline" size="sm" className="mt-4" onClick={() => setMpPaymentToken("mock_token_123")}>
                                 {mpPaymentToken ? "Cartão Validado ✓" : "Simular Validação de Cartão"}
                               </Button>
@@ -565,24 +565,22 @@ function BookingContent() {
                           )}
                         </TabsContent>
 
-                        {!settings?.isPrepaymentRequired && (
-                          <TabsContent value="local" className="space-y-4 py-4 text-center">
+                        <TabsContent value="local" className="space-y-4 py-4 text-center">
                             <div className="p-4 bg-muted/50 rounded-lg border border-dashed border-border mb-4">
                               <p className="text-sm font-medium">Você pagará diretamente na barbearia.</p>
                               <p className="text-xs text-muted-foreground mt-1 text-foreground">Aceitamos Dinheiro, Pix e Cartão de Débito/Crédito.</p>
                             </div>
                           </TabsContent>
-                        )}
 
-                        <Button 
-                          onClick={() => handlePaymentSubmit()} 
-                          className="w-full mt-6 h-12 text-lg bg-[#EAB308] hover:bg-[#CA8A04] text-black font-bold shadow-lg transition-all active:scale-95" 
+                        <Button
+                          onClick={() => handlePaymentSubmit()}
+                          className="w-full mt-6 h-12 text-lg bg-[#EAB308] hover:bg-[#CA8A04] text-black font-bold shadow-lg transition-all active:scale-95"
                           disabled={
-                            confirmAppointment.isPending || 
+                            confirmAppointment.isPending ||
                             (paymentMethod === "card" && !isPrePaid && (
-                              !cardInfo.name || 
-                              cardInfo.number.replace(/\s/g, "").length < 16 || 
-                              cardInfo.expiry.length < 5 || 
+                              !cardInfo.name ||
+                              cardInfo.number.replace(/\s/g, "").length < 16 ||
+                              cardInfo.expiry.length < 5 ||
                               cardInfo.cvv.length < 3
                             ))
                           }

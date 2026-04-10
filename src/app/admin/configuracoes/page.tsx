@@ -40,7 +40,7 @@ export default function SettingsPage() {
   const [settings, setSettings] = useState({
     isPointsEnabled: true,
     cancellationWindowDays: 2,
-    isPrepaymentRequired: true,
+    isPrepaymentRequired: false,
     businessStartTime: "09:00",
     businessEndTime: "18:00",
     slotInterval: 45,
@@ -67,24 +67,18 @@ export default function SettingsPage() {
 
   const handleSave = async () => {
     setSaving(true);
+    // Modo Demo: Sempre salvar na DemoStore e mostrar sucesso
+    DemoStore.saveSettings(settings);
+    toast({ title: "Sucesso", description: "Configurações salvas com sucesso!" });
+
     try {
       const res = await fetch("/api/settings", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(settings),
       });
-
-      if (res.ok) {
-        DemoStore.saveSettings(settings);
-        toast({ title: "Sucesso", description: "Configurações salvas e aplicadas (Modo Demo)." });
-      } else {
-        // Fallback para DemoStore mesmo em erro da API (comum na Vercel modo Mock)
-        DemoStore.saveSettings(settings);
-        toast({ title: "Aviso", description: "Salvo localmente no navegador." });
-      }
     } catch (e) {
-      DemoStore.saveSettings(settings);
-      toast({ title: "Aviso", description: "Salvo no navegador (Erro de conexão)." });
+      // Ignorar erro silenciosamente no modo demo
     } finally {
       setSaving(false);
     }

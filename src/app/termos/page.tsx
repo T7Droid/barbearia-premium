@@ -9,7 +9,7 @@ export default function TermosPage() {
           <section>
             <h2 className="text-2xl font-serif font-semibold text-foreground mb-4">1. Aceitação dos Termos</h2>
             <p>
-              Ao acessar e utilizar o sistema de agendamento da Barber Premium, você concorda em cumprir e estar vinculado a estes Termos de Uso. 
+              Ao acessar e utilizar o sistema de agendamento da Barber Premium, você concorda em cumprir e estar vinculado a estes Termos de Uso.
               Este sistema é destinado a facilitar a reserva de serviços de barbearia de forma prática e segura.
             </p>
           </section>
@@ -17,11 +17,11 @@ export default function TermosPage() {
           <section>
             <h2 className="text-2xl font-serif font-semibold text-foreground mb-4">2. Agendamentos e Cancelamentos</h2>
             <p>
-              Os agendamentos realizados através deste portal estão sujeitos à disponibilidade dos profissionais. 
+              Os agendamentos realizados através deste portal estão sujeitos à disponibilidade dos profissionais.
               Reservamo-nos o direito de cancelar ou reagendar serviços em casos de força maior, garantindo sempre a comunicação prévia ao cliente.
             </p>
             <ul className="list-disc pl-6 space-y-2">
-              <li>Cancelamentos devem ser feitos com no mínimo 2 horas de antecedência.</li>
+              <li>Cancelamentos devem ser feitos com no mínimo 2 dias de antecedência.</li>
               <li>O não comparecimento sem aviso prévio pode resultar na suspensão do direito de agendamento online.</li>
             </ul>
           </section>
@@ -29,7 +29,7 @@ export default function TermosPage() {
           <section>
             <h2 className="text-2xl font-serif font-semibold text-foreground mb-4">3. Pagamentos e Reembolsos</h2>
             <p>
-              Para serviços que exigem pagamento antecipado, o reembolso total será processado apenas para cancelamentos realizados dentro do prazo estipulado. 
+              Para serviços que exigem pagamento antecipado, o reembolso total será processado apenas para cancelamentos realizados dentro do prazo estipulado.
               Em casos de reagendamento, o crédito será transferido automaticamente para a nova data.
             </p>
           </section>
@@ -37,7 +37,7 @@ export default function TermosPage() {
           <section>
             <h2 className="text-2xl font-serif font-semibold text-foreground mb-4">4. Fidelidade e Pontos</h2>
             <p>
-              O sistema de pontos de fidelidade é um benefício exclusivo para clientes cadastrados. 
+              O sistema de pontos de fidelidade é um benefício exclusivo para clientes cadastrados.
               Os pontos são pessoais, intransferíveis e possuem validade de 12 meses a partir da data de aquisição.
             </p>
           </section>

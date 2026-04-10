@@ -8,11 +8,13 @@ import { Loader2 } from "lucide-react";
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
-  const [isAuthorized, setIsAuthorized] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isAuthorized, setIsAuthorized] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
-
+    // Auth check bypassed for demo version
+    return;
+    
     if (pathname === "/admin/login") {
       setIsAuthorized(true);
       setIsLoading(false);

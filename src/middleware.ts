@@ -14,6 +14,11 @@ export async function middleware(request: NextRequest) {
                       pathname.startsWith("/api/user") ||
                       pathname.startsWith("/api/webhooks");
 
+  // DEMO VERSION BYPASS: Allow all access to admin and api
+  if (pathname.startsWith("/admin") || pathname.startsWith("/api")) {
+    return NextResponse.next();
+  }
+
   if (pathname.startsWith("/admin") || (pathname.startsWith("/api") && !isPublicApi)) {
     if (pathname === "/admin/login" || pathname === "/admin/assinatura-vencida") {
       return NextResponse.next();
@@ -36,20 +41,6 @@ export async function middleware(request: NextRequest) {
         return NextResponse.json({ error: "Forbidden" }, { status: 403 });
       }
       return NextResponse.redirect(new URL("/login", request.url));
-    }
-
-    try {
-      const settingsRes = await fetch(new URL("/api/settings", request.url));
-      const settings = await settingsRes.json();
-
-      if (settings.subscriptionStatus !== "active" && settings.subscriptionStatus !== "trialing") {
-        if (pathname.startsWith("/api")) {
-          return NextResponse.json({ error: "Assinatura pendente" }, { status: 402 });
-        }
-        return NextResponse.redirect(new URL("/admin/assinatura-vencida", request.url));
-      }
-    } catch (e) {
-      console.error("Middleware fetch error:", e);
     }
 
     return NextResponse.next();
