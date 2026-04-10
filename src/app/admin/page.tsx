@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { useListAppointments, useGetStatsSummary } from "@workspace/api-client-react";
-import { Calendar, DollarSign, Scissors, Users, Settings } from "lucide-react";
+import { Calendar, DollarSign, Scissors, Users, Settings, CreditCard, Wallet, CheckCircle2, AlertCircle } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -105,6 +105,7 @@ export default function Admin() {
                   <TableHead className="text-foreground">Cliente</TableHead>
                   <TableHead className="text-foreground">Serviço</TableHead>
                   <TableHead className="text-foreground">Valor</TableHead>
+                  <TableHead className="text-foreground">Pagamento</TableHead>
                   <TableHead className="text-foreground">Status</TableHead>
                 </TableRow>
               </TableHeader>
@@ -116,12 +117,13 @@ export default function Admin() {
                       <TableCell><Skeleton className="h-5 w-40" /></TableCell>
                       <TableCell><Skeleton className="h-5 w-32" /></TableCell>
                       <TableCell><Skeleton className="h-5 w-16" /></TableCell>
+                      <TableCell><Skeleton className="h-5 w-24" /></TableCell>
                       <TableCell><Skeleton className="h-5 w-20" /></TableCell>
                     </TableRow>
                   ))
                 ) : appointments?.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                    <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
                       Nenhum agendamento encontrado.
                     </TableCell>
                   </TableRow>
@@ -137,6 +139,19 @@ export default function Admin() {
                       </TableCell>
                       <TableCell className="text-foreground">{app.serviceName || 'Serviço N/D'}</TableCell>
                       <TableCell className="text-foreground">{formatCurrencyFromCents(app.servicePrice)}</TableCell>
+                      <TableCell>
+                         {app.isPaid ? (
+                           <div className="flex items-center gap-1.5 text-green-500 font-medium text-xs">
+                             <CheckCircle2 className="w-3.5 h-3.5" />
+                             <span>Pago</span>
+                           </div>
+                         ) : (
+                           <div className="flex items-center gap-1.5 text-amber-500 font-medium text-xs">
+                             <Wallet className="w-3.5 h-3.5" />
+                             <span>No Local</span>
+                           </div>
+                         )}
+                       </TableCell>
                       <TableCell>{getStatusBadge(app.status || 'pending')}</TableCell>
                     </TableRow>
                   ))

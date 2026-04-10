@@ -1,12 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { ServiceService } from "@/lib/services/service.service";
-import { verifyToken } from "@/lib/auth";
+import { AuthService } from "@/lib/services/auth.service";
 
 async function checkAdmin(request: NextRequest) {
-  const token = request.cookies.get("session_token")?.value;
-  if (!token) return false;
-  const payload = await verifyToken(token);
-  return payload?.role === "admin";
+  const result = await AuthService.verifySession(request);
+  return result.authenticated && result.user?.role === "admin";
 }
 
 export async function PUT(
@@ -24,8 +22,9 @@ export async function PUT(
 
     const updatedService = await ServiceService.update(id, body);
     return NextResponse.json(updatedService);
-  } catch (error) {
-    return NextResponse.json({ error: "Erro ao atualizar serviço" }, { status: 400 });
+  } catch (error: any) {
+    console.error(`API Error (PUT /api/services/${(await params).id}):`, error);
+    return NextResponse.json({ error: "Erro ao atualizar serviço", details: error.message }, { status: 400 });
   }
 }
 
@@ -42,7 +41,8 @@ export async function DELETE(
     const id = parseInt(resolvedParams.id);
     await ServiceService.delete(id);
     return NextResponse.json({ success: true });
-  } catch (error) {
-    return NextResponse.json({ error: "Erro ao excluir serviço" }, { status: 400 });
+  } catch (error: any) {
+    console.error(`API Error (DELETE /api/services/${(await params).id}):`, error);
+    return NextResponse.json({ error: "Erro ao excluir serviço", details: error.message }, { status: 400 });
   }
 }

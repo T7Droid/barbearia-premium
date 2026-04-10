@@ -39,3 +39,7 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# local documentation
+MERCADO_PAGO_CARD_GUIDE.md
+MERCADO_PAGO_PIX_GUIDE.md

@@ -40,7 +40,7 @@ export async function POST(request: Request) {
           full_name: name,
           phone: phone || "",
           role: "client",
-          points: 50
+          points: 0
         });
 
         const response = NextResponse.json({ success: true, user: { name, email, role: "client" } });
@@ -60,7 +60,7 @@ export async function POST(request: Request) {
       name,
       email,
       phone: phone || "",
-      points: 50,
+      points: 0,
       registeredAt: new Date().toISOString(),
       role: "client"
     });

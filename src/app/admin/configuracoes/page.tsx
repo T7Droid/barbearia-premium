@@ -49,20 +49,23 @@ export default function SettingsPage() {
     pointsPerAppointment: 50,
   });
 
+  const fetchSettings = async () => {
+    try {
+      const res = await fetch("/api/settings");
+      const data = await res.json();
+      setSettings(data);
+      // Sincronizar com DemoStore
+      DemoStore.saveSettings(data);
+    } catch (error) {
+      const saved = DemoStore.getSettings();
+      if (saved) setSettings(saved);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    fetch("/api/settings")
-      .then(res => res.json())
-      .then(data => {
-        setSettings(data);
-        // Sincronizar com DemoStore
-        DemoStore.saveSettings(data);
-        setLoading(false);
-      })
-      .catch(() => {
-        const saved = DemoStore.getSettings();
-        if (saved) setSettings(saved);
-        setLoading(false);
-      });
+    fetchSettings();
   }, []);
 
   const handleSave = async () => {
@@ -75,10 +78,11 @@ export default function SettingsPage() {
       });
 
       if (res.ok) {
-        DemoStore.saveSettings(settings);
-        toast({ title: "Sucesso", description: "Configurações salvas e aplicadas (Modo Demo)." });
+        toast({ title: "Sucesso", description: "Configurações salvas no banco de dados." });
+        // RE-FETCH AFTER POST
+        await fetchSettings();
       } else {
-        // Fallback para DemoStore mesmo em erro da API (comum na Vercel modo Mock)
+        // Fallback para DemoStore mesmo em erro da API
         DemoStore.saveSettings(settings);
         toast({ title: "Aviso", description: "Salvo localmente no navegador." });
       }
@@ -126,9 +130,8 @@ export default function SettingsPage() {
             <div className="flex-1">
               <div className="flex items-center gap-2">
                 <CardTitle>Minha Assinatura</CardTitle>
-                <div className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
-                  settings.subscriptionStatus === 'active' ? 'bg-green-500/20 text-green-500' : 'bg-red-500/20 text-red-500'
-                }`}>
+                <div className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${settings.subscriptionStatus === 'active' ? 'bg-green-500/20 text-green-500' : 'bg-red-500/20 text-red-500'
+                  }`}>
                   {settings.subscriptionStatus === 'active' ? 'Ativa' : 'Pendente'}
                 </div>
               </div>
@@ -147,7 +150,7 @@ export default function SettingsPage() {
               </div>
             </div>
             <Button variant="outline" className="w-full gap-2 hover:bg-primary hover:text-white transition-all shadow-md active:scale-95"
-                    onClick={() => window.open('https://stripe.com', '_blank')}>
+              onClick={() => window.open('https://stripe.com', '_blank')}>
               Gerenciar Assinatura (Stripe) <ExternalLink className="w-4 h-4" />
             </Button>
           </CardContent>
@@ -164,7 +167,7 @@ export default function SettingsPage() {
             </div>
             <Switch
               checked={settings.isPointsEnabled}
-              onCheckedChange={(val) => setSettings({...settings, isPointsEnabled: val})}
+              onCheckedChange={(val) => setSettings({ ...settings, isPointsEnabled: val })}
             />
           </CardHeader>
           {settings.isPointsEnabled && (
@@ -176,7 +179,7 @@ export default function SettingsPage() {
                     type="number"
                     min={0}
                     value={settings.pointsPerAppointment || 50}
-                    onChange={(e) => setSettings({...settings, pointsPerAppointment: parseInt(e.target.value) || 0})}
+                    onChange={(e) => setSettings({ ...settings, pointsPerAppointment: parseInt(e.target.value) || 0 })}
                     className="text-lg font-medium"
                   />
                   <span className="text-muted-foreground">Pts</span>
@@ -202,7 +205,7 @@ export default function SettingsPage() {
                 type="number"
                 min={0}
                 value={settings.cancellationWindowDays}
-                onChange={(e) => setSettings({...settings, cancellationWindowDays: parseInt(e.target.value) || 0})}
+                onChange={(e) => setSettings({ ...settings, cancellationWindowDays: parseInt(e.target.value) || 0 })}
                 className="text-lg font-medium"
               />
               <span className="text-muted-foreground">Dias</span>
@@ -226,7 +229,7 @@ export default function SettingsPage() {
                 value={settings.slotInterval?.toString()}
                 onValueChange={(val) => {
                   const newInterval = parseInt(val);
-                  setSettings({...settings, slotInterval: newInterval});
+                  setSettings({ ...settings, slotInterval: newInterval });
 
                 }}
               >
@@ -265,13 +268,13 @@ export default function SettingsPage() {
                 sunday: "Domingo"
               }).map(([day, label]) => {
                 const dayConfig = (settings as any).weeklyHours?.[day] || { start: "09:00", end: "18:00", active: true };
-                
+
                 return (
                   <div key={day} className={`p-4 rounded-lg border transition-all ${dayConfig.active ? 'bg-accent/30 border-border/50' : 'bg-muted/30 border-dashed opacity-60'}`}>
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                       <div className="flex items-center gap-3 w-40">
-                        <Switch 
-                          checked={dayConfig.active} 
+                        <Switch
+                          checked={dayConfig.active}
                           onCheckedChange={(val) => {
                             const newWeekly = { ...((settings as any).weeklyHours || {}), [day]: { ...dayConfig, active: val } };
                             setSettings({ ...settings, weeklyHours: newWeekly } as any);
@@ -301,7 +304,7 @@ export default function SettingsPage() {
                               </SelectContent>
                             </Select>
                           </div>
-                          
+
                           <div className="flex items-center gap-2">
                             <span className="text-[10px] uppercase font-bold text-muted-foreground">Fim</span>
                             <Select
@@ -335,7 +338,7 @@ export default function SettingsPage() {
                 );
               })}
             </div>
-            
+
             <p className="text-xs text-muted-foreground italic mt-4 bg-muted/50 p-3 rounded border border-dashed border-border">
               Configurando horários por dia da semana garantimos que o cliente veja apenas os horários reais disponíveis no momento do agendamento.
             </p>
@@ -353,7 +356,7 @@ export default function SettingsPage() {
             </div>
             <Switch
               checked={settings.isPrepaymentRequired}
-              onCheckedChange={(val) => setSettings({...settings, isPrepaymentRequired: val})}
+              onCheckedChange={(val) => setSettings({ ...settings, isPrepaymentRequired: val })}
             />
           </CardHeader>
           <CardContent className="pt-0">

@@ -2,6 +2,7 @@
 
 import { useEffect, useState, Suspense, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import Script from "next/script";
 import { Layout } from "@/components/layout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -27,6 +28,24 @@ import type { Service, TimeSlot } from "@workspace/api-client-react";
 import Link from "next/link";
 import { Loader2 } from "lucide-react";
 import { formatCurrencyFromCents } from "@/lib/format";
+import { Copy, QrCode, Check } from "lucide-react";
+
+const formatCPF = (value: string) => {
+  return value
+    .replace(/\D/g, "")
+    .replace(/(\d{3})(\d)/, "$1.$2")
+    .replace(/(\d{3})(\d)/, "$1.$2")
+    .replace(/(\d{3})(\d{1,2})/, "$1-$2")
+    .replace(/(-\d{2})\d+?$/, "$1");
+};
+
+const formatPhone = (value: string) => {
+  return value
+    .replace(/\D/g, "")
+    .replace(/(\d{2})(\d)/, "($1) $2")
+    .replace(/(\d{5})(\d)/, "$1-$2")
+    .replace(/(-\d{4})\d+?$/, "$1");
+};
 
 function BookingContent() {
   const router = useRouter();
@@ -39,6 +58,7 @@ function BookingContent() {
   const [step, setStep] = useState(rescheduleId ? 2 : 1);
   const [settings, setSettings] = useState<any>(null);
   const [isLogged, setIsLogged] = useState(false);
+  const [currentUser, setCurrentUser] = useState<any>(null);
 
   const timeSectionRef = useRef<HTMLDivElement>(null);
 
@@ -46,26 +66,37 @@ function BookingContent() {
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
   const [selectedTime, setSelectedTime] = useState<string | null>(null);
 
-  const [customerInfo, setCustomerInfo] = useState({ name: "", email: "", phone: "" });
+  const [customerInfo, setCustomerInfo] = useState({ name: "", email: "", phone: "", cpf: "" });
+  const [pixData, setPixData] = useState<any>(null);
+  const [isGeneratingPix, setIsGeneratingPix] = useState(false);
   const [cardInfo, setCardInfo] = useState({ number: "", expiry: "", cvv: "", name: "" });
   const [paymentMethod, setPaymentMethod] = useState<"card" | "local">("card");
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [isPrePaid, setIsPrePaid] = useState(false);
   const [mpPublicKey, setMpPublicKey] = useState<string>("");
   const [mpPaymentToken, setMpPaymentToken] = useState<string | null>(null);
+  const [mpPaymentData, setMpPaymentData] = useState<any>(null);
+  const [busyDates, setBusyDates] = useState<string[]>([]);
+  const [isMpLoaded, setIsMpLoaded] = useState(typeof window !== "undefined" && !!(window as any).MercadoPago);
+  const paymentSubmitRef = useRef<any>(null);
 
   const { data: services, isLoading: isLoadingServices } = useListServices();
 
   useEffect(() => {
     Promise.all([
-      fetch("/api/settings").then(res => res.json()),
+      fetch(`/api/settings?t=${Date.now()}`).then(res => res.json()),
       fetch("/api/auth/me").then(res => res.json())
     ]).then(([settingsData, authData]) => {
+      console.log("DEBUG: Configurações carregadas da API:", settingsData);
+
       // Sincronizar configurações
       setSettings(settingsData);
       DemoStore.saveSettings(settingsData);
-      setMpPublicKey(settingsData.mpPublicKey || "");
-      
+
+      const publicKey = settingsData.mpPublicKey || "";
+      console.log("DEBUG: Definindo mpPublicKey como:", publicKey);
+      setMpPublicKey(publicKey);
+
       // Definir método de pagamento inicial baseado nas configurações
       if (!settingsData.isPrepaymentRequired) {
         setPaymentMethod("local");
@@ -75,21 +106,26 @@ function BookingContent() {
       const savedUser = DemoStore.getUser();
       if (authData.authenticated) {
         setIsLogged(true);
+        setCurrentUser(authData.user);
         const phone = authData.user.phone || savedUser?.phone || "";
-        setCustomerInfo({
-          name: authData.user.name,
-          email: authData.user.email,
-          phone: phone ? formatPhone(phone) : ""
-        });
+        
+        setCustomerInfo(prev => ({
+          ...prev,
+          name: authData.user.name || prev.name,
+          email: authData.user.email || prev.email,
+          phone: prev.phone || (phone ? formatPhone(phone) : "")
+        }));
+        
         // Sincronizar dados da API com o DemoStore
         DemoStore.saveUser({ ...savedUser, ...authData.user, phone });
       } else if (savedUser) {
         setIsLogged(true);
-        setCustomerInfo({
-          name: savedUser.name,
-          email: savedUser.email,
-          phone: savedUser.phone ? formatPhone(savedUser.phone) : ""
-        });
+        setCustomerInfo(prev => ({
+          ...prev,
+          name: savedUser.name || prev.name,
+          email: savedUser.email || prev.email,
+          phone: prev.phone || savedUser.phone || ""
+        }));
       }
 
       if (preSelectedServiceId && services) {
@@ -103,6 +139,19 @@ function BookingContent() {
     });
   }, [services, preSelectedServiceId]);
 
+  useEffect(() => {
+    // Buscar dias ocupados/fechados para os próximos 2 meses
+    const start = format(new Date(), "yyyy-MM-dd");
+    const end = format(new Date(Date.now() + 60 * 24 * 60 * 60 * 1000), "yyyy-MM-dd");
+
+    fetch(`/api/availability/busy-dates?start=${start}&end=${end}`)
+      .then(res => res.json())
+      .then(data => {
+        if (Array.isArray(data)) setBusyDates(data);
+      })
+      .catch(err => console.error("Error fetching busy dates:", err));
+  }, []);
+
   const dateStr = selectedDate ? format(selectedDate, "yyyy-MM-dd") : "";
   const { data: availability, isLoading: isLoadingAvailability } = useGetAvailability(
     { date: dateStr, serviceId: selectedService?.id || 0 },
@@ -114,6 +163,78 @@ function BookingContent() {
     }
   );
 
+  // Update ref to latest handlePaymentSubmit to avoid stale closures in useEffect
+  useEffect(() => {
+    paymentSubmitRef.current = handlePaymentSubmit;
+  }, [sessionId, mpPaymentToken, mpPaymentData, isPrePaid, paymentMethod, selectedService, customerInfo]);
+
+  useEffect(() => {
+    // Only proceed if all requirements are met
+    if (!isMpLoaded || !mpPublicKey || step !== 4 || paymentMethod !== "card" || isPrePaid) {
+      return;
+    }
+
+    let cardPaymentBrickController: any = null;
+
+    const initCardBrick = async () => {
+      try {
+        const mp = new (window as any).MercadoPago(mpPublicKey, {
+          locale: 'pt-BR'
+        });
+        const bricksBuilder = mp.bricks();
+
+        cardPaymentBrickController = await bricksBuilder.create(
+          'cardPayment',
+          'cardPaymentBrick_container',
+          {
+            initialization: {
+              amount: (selectedService?.price || 0) / 100,
+              payer: { email: customerInfo.email },
+            },
+            customization: {
+              visual: { style: { theme: 'dark' } },
+            },
+            callbacks: {
+              onReady: () => console.log("Card Brick Ready"),
+              onSubmit: (formData: any) => {
+                return new Promise(async (resolve, reject) => {
+                  try {
+                    console.log("Card Brick Submit", formData);
+                    setMpPaymentData(formData);
+                    setMpPaymentToken(formData.token);
+
+                    if (paymentSubmitRef.current) {
+                      await paymentSubmitRef.current(undefined, undefined, formData);
+                      resolve();
+                    } else {
+                      reject();
+                    }
+                  } catch (error) {
+                    console.error("Erro ao processar onSubmit do Brick:", error);
+                    // Rejeitar faz o botão ser reativado no formulário do Mercado Pago
+                    reject();
+                  }
+                });
+              },
+              onError: (error: any) => console.error("Card Brick Error:", error),
+            },
+          }
+        );
+      } catch (e) {
+        console.error("Error creating brick:", e);
+      }
+    };
+
+    initCardBrick();
+
+    return () => {
+      if (cardPaymentBrickController) {
+        console.log("Desmontando Card Brick...");
+        cardPaymentBrickController.unmount();
+      }
+    };
+  }, [isMpLoaded, mpPublicKey, step, paymentMethod, isPrePaid, selectedService, customerInfo.email]);
+
   const createCheckout = useCreateCheckout();
   const confirmAppointment = useConfirmAppointment();
 
@@ -122,17 +243,6 @@ function BookingContent() {
     if (rescheduleId && s === 2) return s;
     return Math.max(s - 1, 1);
   });
-
-  const formatPhone = (value: string) => {
-    let raw = value.replace(/\D/g, "");
-    if (raw.length > 11) raw = raw.slice(0, 11);
-    
-    if (raw.length === 0) return "";
-    if (raw.length <= 2) return `(${raw}`;
-    if (raw.length <= 6) return `(${raw.slice(0, 2)}) ${raw.slice(2)}`;
-    if (raw.length <= 10) return `(${raw.slice(0, 2)}) ${raw.slice(2, 6)}-${raw.slice(6)}`;
-    return `(${raw.slice(0, 2)}) ${raw.slice(2, 7)}-${raw.slice(7)}`;
-  };
 
   const handleServiceSelect = (service: Service) => {
     setSelectedService(service);
@@ -145,7 +255,6 @@ function BookingContent() {
       setSelectedDate(date);
       setSelectedTime(null);
 
-      // Scroll automático para horários no Mobile
       if (window.innerWidth < 1024) {
         setTimeout(() => {
           timeSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -169,10 +278,11 @@ function BookingContent() {
           customerName: customerInfo.name,
           customerEmail: customerInfo.email,
           customerPhone: customerInfo.phone,
+          customerCpf: customerInfo.cpf,
           serviceId: selectedService.id,
           appointmentDate: format(selectedDate, "yyyy-MM-dd"),
           appointmentTime: selectedTime,
-
+          userId: currentUser?.id,
           rescheduleId: rescheduleId ? parseInt(rescheduleId) : undefined
         } as any
       }) as any;
@@ -180,7 +290,6 @@ function BookingContent() {
 
       if (result.isPaid) {
         setIsPrePaid(true);
-        // Se já está pago, não vai para o checkout, confirma direto
         handlePaymentSubmit(undefined, result.sessionId);
       } else {
         setIsPrePaid(false);
@@ -195,25 +304,73 @@ function BookingContent() {
     }
   };
 
-  const handlePaymentSubmit = async (e?: React.FormEvent, overrideSessionId?: string) => {
-    if (e) e.preventDefault();
-    const sid = overrideSessionId || sessionId;
-    if (!sid) return;
- 
+  const handleGeneratePix = async () => {
+    if (!sessionId || !customerInfo.cpf) {
+      toast({
+        title: "Dados incompletos",
+        description: "Por favor, preencha o seu CPF na etapa anterior.",
+        variant: "destructive"
+      });
+      setStep(3);
+      return;
+    }
+
+    setIsGeneratingPix(true);
     try {
+      const response = await fetch("/api/appointments/pix", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          sessionId,
+          payer: {
+            name: customerInfo.name,
+            email: customerInfo.email,
+            identification: { type: "CPF", number: customerInfo.cpf }
+          }
+        }),
+      });
+
+      if (!response.ok) throw new Error("Falha ao gerar Pix");
+      const data = await response.json();
+      setPixData(data);
+    } catch (error) {
+      toast({
+        title: "Erro no Pix",
+        description: "Não foi possível gerar o código Pix. Tente outro método.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsGeneratingPix(false);
+    }
+  };
+
+  const handlePaymentSubmit = async (e?: any, overrideSessionId?: string, directMpData?: any) => {
+    if (e && typeof e.preventDefault === "function") {
+      e.preventDefault();
+    }
+    const sid = overrideSessionId || sessionId;
+    if (!sid) return null;
+
+    try {
+      const currentMpData = directMpData ? {
+        ...directMpData,
+        transaction_amount: directMpData.transaction_amount * 100,
+        description: selectedService?.name,
+        payer: { email: customerInfo.email }
+      } : (paymentMethod === "card" && !isPrePaid ? {
+        token: mpPaymentToken,
+        payment_method_id: mpPaymentData?.payment_method_id || "master",
+        installments: mpPaymentData?.installments || 1,
+        transaction_amount: selectedService?.price || 0,
+        description: selectedService?.name,
+        payer: { email: customerInfo.email }
+      } : undefined);
+
       const appointment = await confirmAppointment.mutateAsync({
         data: {
           sessionId: sid,
-          paymentMethodId: isPrePaid ? "pre_paid" : (paymentMethod === "card" ? "mercado_pago" : "offline_local"),
-
-          mp_data: paymentMethod === "card" && !isPrePaid ? {
-            token: mpPaymentToken || "mock_token_" + Math.random().toString(36).substr(2, 9),
-            payment_method_id: "master",
-            installments: 1,
-            transaction_amount: selectedService?.price || 0,
-            description: selectedService?.name,
-            payer: { email: customerInfo.email }
-          } : undefined
+          paymentMethodId: isPrePaid ? "pre_paid" : (paymentMethod === "card" ? "mercado_pago" : (paymentMethod === "pix" ? "pix" : "offline_local")),
+          mp_data: paymentMethod === "pix" ? pixData : currentMpData
         } as any
       });
 
@@ -224,33 +381,28 @@ function BookingContent() {
           : "Seu agendamento foi confirmado.",
       });
 
-      // Persistir localmente para fallback na Vercel (modo Demo)
       DemoStore.saveAppointment(appointment);
-
       router.push(`/confirmacao/${appointment.id}`);
-    } catch (error) {
+    } catch (error: any) {
+      // Traduzir mensagens técnicas do Mercado Pago
+      let errorMessage = error.response?.data?.error || error.message || "Não foi possível confirmar o agendamento.";
+      
+      if (errorMessage === "pending_waiting_transfer") {
+        errorMessage = "Aguardando o pagamento do Pix. Por favor, realize o pagamento no app do seu banco e clique em 'Verificar Pagamento' novamente.";
+      } else if (errorMessage === "Pagamento não aprovado") {
+        errorMessage = "O pagamento ainda não foi aprovado. Se você já pagou, aguarde alguns segundos e tente novamente.";
+      }
+
       toast({
-        title: "Erro na confirmação",
-        description: "Não foi possível confirmar o agendamento.",
+        title: "Aguardando Pagamento",
+        description: errorMessage,
         variant: "destructive"
       });
+      
+      // Não lançamos mais o erro aqui para evitar 'unhandledRejection' no console do navegador,
+      // a menos que seja um erro crítico que precise travar o Card Brick.
+      if (paymentMethod === "card") throw error;
     }
-  };
-
-  const handleCardNumberChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    let value = e.target.value.replace(/\D/g, "");
-    if (value.length > 16) value = value.slice(0, 16);
-    const formatted = value.replace(/(\d{4})/g, "$1 ").trim();
-    setCardInfo({ ...cardInfo, number: formatted });
-  };
-
-  const handleExpiryChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    let value = e.target.value.replace(/\D/g, "");
-    if (value.length > 4) value = value.slice(0, 4);
-    if (value.length > 2) {
-      value = `${value.slice(0, 2)}/${value.slice(2)}`;
-    }
-    setCardInfo({ ...cardInfo, expiry: value });
   };
 
   return (
@@ -266,7 +418,6 @@ function BookingContent() {
             </p>
           )}
 
-          {}
           <div className="flex items-center justify-between relative mt-10">
             <div className="absolute left-0 top-1/2 -translate-y-1/2 w-full h-1 bg-border z-0"></div>
             <div
@@ -289,7 +440,6 @@ function BookingContent() {
         </div>
 
         <div className="bg-card border border-border/50 rounded-lg p-6 shadow-xl">
-          {}
           {step === 1 && (
             <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4">
               <h2 className="text-xl font-serif font-semibold">Escolha o Serviço</h2>
@@ -321,7 +471,6 @@ function BookingContent() {
             </div>
           )}
 
-          {}
           {step === 2 && (
             <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4">
               <div className="flex items-center justify-between">
@@ -341,8 +490,9 @@ function BookingContent() {
                       disabled={(date) => {
                         const today = new Date();
                         today.setHours(0, 0, 0, 0);
-                        if (date.getDay() === 0) return true;
+                        const dateStr = format(date, "yyyy-MM-dd");
                         if (date < today) return true;
+                        if (busyDates.includes(dateStr)) return true;
                         return false;
                       }}
                       className="w-full"
@@ -398,7 +548,6 @@ function BookingContent() {
             </div>
           )}
 
-          {}
           {step === 3 && (
             <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4">
               <div className="flex items-center justify-between">
@@ -414,38 +563,52 @@ function BookingContent() {
               )}
 
               <form onSubmit={handleInfoSubmit} className="space-y-4 max-w-md mx-auto">
-                <div className="space-y-2">
-                  <Label htmlFor="name">Nome Completo</Label>
-                  <Input
-                    id="name"
-                    required
-                    value={customerInfo.name}
-                    onChange={e => setCustomerInfo({ ...customerInfo, name: e.target.value })}
-                    placeholder="João Silva"
-                    disabled={isLogged}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="email">E-mail</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    required
-                    value={customerInfo.email}
-                    onChange={e => setCustomerInfo({ ...customerInfo, email: e.target.value })}
-                    placeholder="joao@exemplo.com"
-                    disabled={isLogged}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="phone">Telefone / WhatsApp</Label>
-                  <Input
-                    id="phone"
-                    required
-                    value={customerInfo.phone}
-                    onChange={e => setCustomerInfo({ ...customerInfo, phone: formatPhone(e.target.value) })}
-                    placeholder="(11) 99999-9999"
-                  />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="name">Nome Completo</Label>
+                    <Input
+                      id="name"
+                      placeholder="Seu nome"
+                      value={customerInfo.name}
+                      onChange={(e) => setCustomerInfo(prev => ({ ...prev, name: e.target.value }))}
+                      required
+                      className="bg-background/50 border-border h-11"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="email">E-mail</Label>
+                    <Input
+                      id="email"
+                      type="email"
+                      placeholder="seu@email.com"
+                      value={customerInfo.email}
+                      onChange={(e) => setCustomerInfo(prev => ({ ...prev, email: e.target.value }))}
+                      required
+                      className="bg-background/50 border-border h-11"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="phone">Telefone</Label>
+                    <Input
+                      id="phone"
+                      placeholder="(11) 99999-9999"
+                      value={customerInfo.phone}
+                      onChange={(e) => setCustomerInfo(prev => ({ ...prev, phone: formatPhone(e.target.value) }))}
+                      required
+                      className="bg-background/50 border-border h-11"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="cpf">CPF (Obrigatório para Pix)</Label>
+                    <Input
+                      id="cpf"
+                      placeholder="000.000.000-00"
+                      value={customerInfo.cpf}
+                      onChange={(e) => setCustomerInfo(prev => ({ ...prev, cpf: formatCPF(e.target.value) }))}
+                      required={paymentMethod === "pix"}
+                      className="bg-background/50 border-border h-11"
+                    />
+                  </div>
                 </div>
 
                 <Button
@@ -460,7 +623,7 @@ function BookingContent() {
             </div>
           )}
 
-          {}
+          { }
           {step === 4 && (
             <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4">
               <div className="flex items-center justify-between">
@@ -471,7 +634,7 @@ function BookingContent() {
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
-                {}
+                { }
                 <div className="bg-background rounded-lg p-6 border border-border/50 h-fit">
                   <h3 className="font-medium text-lg mb-4 text-foreground">Resumo do Agendamento</h3>
                   <div className="space-y-3 text-sm">
@@ -498,7 +661,7 @@ function BookingContent() {
                   )}
                 </div>
 
-                {}
+                { }
                 {isPrePaid ? (
                   <Card className="border-primary/20 bg-primary/5">
                     <CardHeader>
@@ -520,9 +683,12 @@ function BookingContent() {
                   <Card className="border-border">
                     <CardContent className="pt-6">
                       <Tabs defaultValue={settings?.isPrepaymentRequired ? "card" : "local"} onValueChange={(v) => setPaymentMethod(v as any)}>
-                        <TabsList className={`grid w-full mb-6 ${settings?.isPrepaymentRequired ? "grid-cols-1" : "grid-cols-2"}`}>
+                        <TabsList className={`grid w-full mb-6 ${settings?.isPrepaymentRequired ? "grid-cols-2" : "grid-cols-3"}`}>
                           <TabsTrigger value="card" className="gap-2">
-                            <CreditCard className="w-4 h-4" /> Online
+                            <CreditCard className="w-4 h-4" /> Cartão
+                          </TabsTrigger>
+                          <TabsTrigger value="pix" className="gap-2" onClick={handleGeneratePix}>
+                            <QrCode className="w-4 h-4" /> Pix
                           </TabsTrigger>
                           {!settings?.isPrepaymentRequired && (
                             <TabsTrigger value="local" className="gap-2">
@@ -533,34 +699,85 @@ function BookingContent() {
 
                         <TabsContent value="card" className="space-y-4">
                           {mpPublicKey ? (
-                            <div className="p-8 border border-dashed rounded-lg text-center bg-muted/50">
-                              <p className="text-sm font-medium mb-2">Mercado Pago Card Brick Placeholder</p>
-                              <p className="text-xs text-muted-foreground">O componente CardPayment Brick seria renderizado aqui usando a chave: {mpPublicKey}</p>
-                              {}
-                              <Button variant="outline" size="sm" className="mt-4" onClick={() => setMpPaymentToken("mock_token_123")}>
-                                {mpPaymentToken ? "Cartão Validado ✓" : "Simular Validação de Cartão"}
-                              </Button>
+                            <div className="min-h-[400px]">
+                              <div id="cardPaymentBrick_container"></div>
+                              <Script
+                                src="https://sdk.mercadopago.com/js/v2"
+                                strategy="afterInteractive"
+                                onLoad={() => setIsMpLoaded(true)}
+                              />
                             </div>
                           ) : (
-                            <div className="space-y-4">
-                              <div className="space-y-2">
-                                <Label htmlFor="cardName">Nome no Cartão</Label>
-                                <Input id="cardName" required value={cardInfo.name} onChange={e => setCardInfo({ ...cardInfo, name: e.target.value.toUpperCase() })} placeholder="JOÃO M SILVA" />
+                            <div className="p-8 border border-dashed rounded-lg text-center bg-muted/50">
+                              <p className="text-sm font-medium mb-2 text-destructive">Configuração Necessária</p>
+                              <p className="text-xs text-muted-foreground">O Mercado Pago não está configurado corretamente (chave pública ausente).</p>
+                            </div>
+                          )}
+                        </TabsContent>
+
+                        <TabsContent value="pix" className="space-y-6 py-4">
+                          {isGeneratingPix ? (
+                            <div className="flex flex-col items-center justify-center p-12 space-y-4">
+                              <Loader2 className="w-8 h-8 animate-spin text-primary" />
+                              <p className="text-sm text-muted-foreground">Gerando QR Code...</p>
+                            </div>
+                          ) : pixData ? (
+                            <div className="flex flex-col items-center space-y-6">
+                              <div className="bg-white p-4 rounded-xl shadow-inner">
+                                <img 
+                                  src={`data:image/png;base64,${pixData.qr_code_base64}`} 
+                                  alt="QR Code Pix" 
+                                  className="w-48 h-48"
+                                />
                               </div>
-                              <div className="space-y-2">
-                                <Label htmlFor="cardNumber">Número do Cartão</Label>
-                                <Input id="cardNumber" required value={cardInfo.number} onChange={handleCardNumberChange} placeholder="0000 0000 0000 0000" />
-                              </div>
-                              <div className="grid grid-cols-2 gap-4">
-                                <div className="space-y-2">
-                                  <Label htmlFor="expiry">Validade</Label>
-                                  <Input id="expiry" required value={cardInfo.expiry} onChange={handleExpiryChange} placeholder="MM/AA" />
+                              
+                              <div className="w-full space-y-3">
+                                <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Código Pix Copia e Cola</Label>
+                                <div className="flex gap-2">
+                                  <Input 
+                                    readOnly 
+                                    value={pixData.qr_code} 
+                                    className="font-mono text-[10px] bg-muted h-10"
+                                  />
+                                  <Button 
+                                    variant="outline" 
+                                    size="icon" 
+                                    className="shrink-0"
+                                    onClick={() => {
+                                      navigator.clipboard.writeText(pixData.qr_code);
+                                      toast({ title: "Copiado!", description: "Código Pix copiado para a área de transferência." });
+                                    }}
+                                  >
+                                    <Copy className="w-4 h-4" />
+                                  </Button>
                                 </div>
-                                <div className="space-y-2">
-                                  <Label htmlFor="cvv">CVV</Label>
-                                  <Input id="cvv" required maxLength={3} value={cardInfo.cvv} onChange={e => setCardInfo({ ...cardInfo, cvv: e.target.value.replace(/\D/g, "") })} placeholder="123" type="password" />
+                              </div>
+
+                              <div className="bg-primary/10 p-4 rounded-lg border border-primary/20 w-full text-center space-y-4">
+                                <p className="text-sm font-medium text-primary">Após pagar, clique no botão abaixo para concluir!</p>
+                                <div className="space-y-2 w-full">
+                                  <Button 
+                                    onClick={() => handlePaymentSubmit(undefined, sessionId, pixData)}
+                                    className="w-full bg-secondary hover:bg-secondary/90 text-secondary-foreground gap-2"
+                                  >
+                                    <Check className="w-4 h-4" /> Verificar Pagamento
+                                  </Button>
+                                  
+                                  {process.env.NODE_ENV === "development" && (
+                                    <Button 
+                                      variant="outline"
+                                      onClick={() => handlePaymentSubmit(undefined, sessionId, { ...pixData, status: "approved" })}
+                                      className="w-full border-dashed border-primary text-primary hover:bg-primary/5 gap-2"
+                                    >
+                                      <Scissors className="w-4 h-4" /> 🧪 Simular Sucesso (Só Dev)
+                                    </Button>
+                                  )}
                                 </div>
                               </div>
+                            </div>
+                          ) : (
+                            <div className="text-center p-8">
+                              <Button onClick={handleGeneratePix} variant="outline">Tentar Gerar Novamente</Button>
                             </div>
                           )}
                         </TabsContent>
@@ -574,21 +791,21 @@ function BookingContent() {
                           </TabsContent>
                         )}
 
-                        <Button 
-                          onClick={() => handlePaymentSubmit()} 
-                          className="w-full mt-6 h-12 text-lg bg-[#EAB308] hover:bg-[#CA8A04] text-black font-bold shadow-lg transition-all active:scale-95" 
-                          disabled={
-                            confirmAppointment.isPending || 
-                            (paymentMethod === "card" && !isPrePaid && (
-                              !cardInfo.name || 
-                              cardInfo.number.replace(/\s/g, "").length < 16 || 
-                              cardInfo.expiry.length < 5 || 
-                              cardInfo.cvv.length < 3
-                            ))
-                          }
-                        >
-                          {confirmAppointment.isPending ? "Confirmando..." : (paymentMethod === "card" ? `Pagar ${formatCurrencyFromCents(selectedService?.price)}` : "Finalizar Agendamento")}
-                        </Button>
+                        {paymentMethod !== "card" || isPrePaid ? (
+                          <Button
+                            onClick={() => handlePaymentSubmit()}
+                            className="w-full mt-6 h-12 text-lg bg-[#EAB308] hover:bg-[#CA8A04] text-black font-bold shadow-lg transition-all active:scale-95"
+                            disabled={confirmAppointment.isPending}
+                          >
+                            {confirmAppointment.isPending ? "Confirmando..." : "Finalizar Agendamento"}
+                          </Button>
+                        ) : (
+                          <div className="mt-4 text-center">
+                            <p className="text-xs text-muted-foreground flex items-center justify-center gap-1">
+                              <CheckCircle2 className="w-3 h-3 text-green-500" /> Use o botão do Mercado Pago acima para finalizar
+                            </p>
+                          </div>
+                        )}
                       </Tabs>
                     </CardContent>
                   </Card>

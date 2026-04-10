@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { AppointmentService } from "@/lib/services/appointment.service";
 import { PaymentService } from "@/lib/services/payment.service";
+import { supabaseAdmin } from "@/lib/supabase";
 
 export async function POST(request: NextRequest) {
   try {
@@ -8,11 +9,34 @@ export async function POST(request: NextRequest) {
     const { sessionId, paymentMethodId, mp_data } = body;
 
     let paymentResult: any = { status: "approved" };
+    
+    // 1. Buscar a sessão para obter o valor real (segurança e correção de centavos)
+    const { data: sessionRecord } = await supabaseAdmin
+      .from("checkout_sessions")
+      .select("data")
+      .eq("id", sessionId)
+      .single();
 
-    if (mp_data && paymentMethodId === "mercado_pago") {
-      paymentResult = await PaymentService.processCardPayment(mp_data, sessionId);
+    if (!sessionRecord || !sessionRecord.data) {
+      return NextResponse.json({ error: "Sessão não encontrada" }, { status: 404 });
     }
 
+    const sessionData = sessionRecord.data;
+    const amountInCents = sessionData.amount;
+
+    // 2. Processar pagamento com o valor real do banco
+    if (mp_data && paymentMethodId === "mercado_pago") {
+      paymentResult = await PaymentService.processCardPayment(mp_data, sessionId, amountInCents);
+    } else if (mp_data && paymentMethodId === "pix") {
+      // Para o Pix, consultamos o status REAL no Mercado Pago usando o ID
+      if (mp_data.id) {
+        paymentResult = await PaymentService.getPaymentStatus(mp_data.id);
+      } else {
+        paymentResult = mp_data;
+      }
+    }
+
+    // 3. Confirmar agendamento
     if (paymentResult.status === "approved") {
       const appointment = await AppointmentService.confirm(sessionId, {
         paymentMethodId,
@@ -25,8 +49,9 @@ export async function POST(request: NextRequest) {
         detail: (paymentResult as any).detail
       }, { status: 400 });
     }
-  } catch (error) {
+  } catch (error: any) {
     console.error("Confirmation Error:", error);
-    return NextResponse.json({ error: "Erro ao confirmar agendamento" }, { status: 500 });
+    const message = error.message || "Erro ao confirmar agendamento";
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }

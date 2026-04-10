@@ -20,13 +20,21 @@ export async function GET() {
   // CamelCase conversion for consistency with the rest of the app
   const settings = {
     isPointsEnabled: data.is_points_enabled,
+    pointsPerAppointment: data.points_per_appointment,
     cancellationWindowDays: data.cancellation_window_days,
     isPrepaymentRequired: data.is_prepayment_required,
     businessStartTime: data.business_start_time,
     businessEndTime: data.business_end_time,
     slotInterval: data.slot_interval,
     weeklyHours: data.weekly_hours,
+    mpPublicKey: process.env.NEXT_PUBLIC_MERCADOPAGO_PUBLIC_KEY || "",
   };
+
+  console.log("Diagnóstico Mercado Pago:", {
+    hasPublicKey: !!process.env.NEXT_PUBLIC_MERCADOPAGO_PUBLIC_KEY,
+    publicKeyStart: process.env.NEXT_PUBLIC_MERCADOPAGO_PUBLIC_KEY?.substring(0, 10),
+    nodeEnv: process.env.NODE_ENV
+  });
 
   return NextResponse.json(settings);
 }
@@ -42,11 +50,16 @@ export async function POST(request: NextRequest) {
 
     const updateData: any = {};
     if (typeof input.isPointsEnabled === "boolean") updateData.is_points_enabled = input.isPointsEnabled;
-    if (typeof input.cancellationWindowDays === "number") updateData.cancellation_window_days = input.cancellation_window_days;
+
+    // Convert numbers to ensure persistence
+    if (input.pointsPerAppointment !== undefined) updateData.points_per_appointment = parseInt(input.pointsPerAppointment);
+    if (input.cancellationWindowDays !== undefined) updateData.cancellation_window_days = parseInt(input.cancellationWindowDays);
+
     if (typeof input.isPrepaymentRequired === "boolean") updateData.is_prepayment_required = input.isPrepaymentRequired;
     if (input.businessStartTime) updateData.business_start_time = input.businessStartTime;
     if (input.businessEndTime) updateData.business_end_time = input.businessEndTime;
-    if (typeof input.slotInterval === "number") updateData.slot_interval = input.slotInterval;
+
+    if (input.slotInterval !== undefined) updateData.slot_interval = parseInt(input.slotInterval);
     if (input.weeklyHours) updateData.weekly_hours = input.weeklyHours;
 
     updateData.updated_at = new Date().toISOString();
@@ -62,6 +75,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       isPointsEnabled: updated.is_points_enabled,
+      pointsPerAppointment: updated.points_per_appointment,
       cancellationWindowDays: updated.cancellation_window_days,
       isPrepaymentRequired: updated.is_prepayment_required,
       businessStartTime: updated.business_start_time,

@@ -84,7 +84,11 @@ CREATE POLICY "Admins can view all appointments" ON public.appointments
   );
 
 CREATE POLICY "Users can view their own appointments" ON public.appointments
-  FOR SELECT USING (auth.uid() = user_id OR customer_email = (SELECT email FROM auth.users WHERE id = auth.uid()));
+  FOR SELECT USING (
+    auth.uid() = user_id 
+    OR 
+    customer_email = (auth.jwt() ->> 'email')
+  );
 
 CREATE POLICY "Users can create their own appointments" ON public.appointments
   FOR INSERT WITH CHECK (true); -- Allow guest/authenticated insertion, further validation on server
@@ -112,6 +116,7 @@ CREATE TABLE IF NOT EXISTS public.settings (
   business_start_time TEXT DEFAULT '09:00',
   business_end_time TEXT DEFAULT '18:00',
   slot_interval INTEGER DEFAULT 45,
+  points_per_appointment INTEGER DEFAULT 50,
   weekly_hours JSONB DEFAULT '{
     "monday": {"start": "09:00", "end": "18:00", "active": true},
     "tuesday": {"start": "09:00", "end": "18:00", "active": true},

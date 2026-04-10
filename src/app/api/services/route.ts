@@ -1,12 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { ServiceService } from "@/lib/services/service.service";
-import { verifyToken } from "@/lib/auth";
+import { AuthService } from "@/lib/services/auth.service";
 
 async function checkAdmin(request: NextRequest) {
-  const token = request.cookies.get("session_token")?.value;
-  if (!token) return false;
-  const payload = await verifyToken(token);
-  return payload?.role === "admin";
+  const result = await AuthService.verifySession(request);
+  return result.authenticated && result.user?.role === "admin";
 }
 
 export async function GET() {
@@ -38,7 +36,11 @@ export async function POST(request: NextRequest) {
       imageUrl: body.imageUrl,
     });
     return NextResponse.json(newService, { status: 201 });
-  } catch (error) {
-    return NextResponse.json({ error: "Erro ao criar serviço" }, { status: 400 });
+  } catch (error: any) {
+    console.error("API Error (POST /api/services):", error);
+    return NextResponse.json({ 
+      error: "Erro ao criar serviço", 
+      details: error.message 
+    }, { status: 400 });
   }
 }
