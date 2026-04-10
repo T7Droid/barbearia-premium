@@ -2,7 +2,14 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { Scissors, LogOut, User, Settings as SettingsIcon, History, LayoutGrid } from "lucide-react";
+import { Scissors, LogOut, User, Settings as SettingsIcon, History, LayoutGrid, Menu } from "lucide-react";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
@@ -81,10 +88,68 @@ export function Layout({ children }: { children: React.ReactNode }) {
     <div className="min-h-screen bg-background flex flex-col font-sans">
       <header className="border-b border-border/40 bg-card/50 backdrop-blur-md sticky top-0 z-50">
         <div className="container mx-auto px-4 h-16 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-2 group">
-            <Scissors className="w-6 h-6 text-primary group-hover:text-primary/80 transition-colors" />
-            <span className="font-serif text-xl font-bold tracking-wide uppercase">Barber<span className="text-primary font-black">.</span></span>
-          </Link>
+          <div className="flex items-center gap-2">
+            <div className="md:hidden">
+              <Sheet>
+                <SheetTrigger asChild>
+                  <Button variant="ghost" size="icon" className="h-10 w-10">
+                    <Menu className="w-6 h-6" />
+                  </Button>
+                </SheetTrigger>
+                <SheetContent side="left" className="bg-background/95 backdrop-blur-md border-r border-border/40">
+                  <SheetHeader className="text-left pb-6 border-b border-border/40">
+                    <SheetTitle className="flex items-center gap-2">
+                      <Scissors className="w-5 h-5 text-primary" />
+                      <span className="font-serif text-xl font-bold tracking-wide uppercase">Barber<span className="text-primary font-black">.</span></span>
+                    </SheetTitle>
+                  </SheetHeader>
+                  <nav className="flex flex-col gap-4 mt-8">
+                    <Link href="/" className={`text-lg font-medium transition-colors hover:text-primary ${pathname === '/' ? 'text-primary' : 'text-muted-foreground'}`}>Início</Link>
+                    <Link href="/booking" className={`text-lg font-medium transition-colors hover:text-primary ${pathname.startsWith('/booking') ? 'text-primary' : 'text-muted-foreground'}`}>Agendar</Link>
+                    <Link href="/admin" className={`text-lg font-medium transition-colors hover:text-primary ${pathname.startsWith('/admin') ? 'text-primary' : 'text-muted-foreground'}`}>Administração</Link>
+                    
+                    {user?.role === 'client' && (
+                      <Link href="/meu-perfil/historico" className={`text-lg font-medium transition-colors hover:text-primary ${pathname.startsWith('/meu-perfil/historico') ? 'text-primary' : 'text-muted-foreground'}`}>Meus Agendamentos</Link>
+                    )}
+
+                    <div className="pt-4 mt-4 border-t border-border/40 flex flex-col gap-4">
+                      {user ? (
+                        <>
+                          <div className="flex items-center gap-3 px-2 py-2">
+                            <div className="flex flex-col">
+                              <span className="text-sm font-bold">{user.name}</span>
+                              <span className="text-xs text-muted-foreground">{user.role === 'admin' ? 'Administrador' : 'Cliente Premium'}</span>
+                            </div>
+                          </div>
+                          {user.role === 'admin' ? (
+                            <>
+                              <Link href="/admin" className="flex items-center gap-2 text-muted-foreground hover:text-primary"><LayoutGrid className="w-4 h-4" /> Dashboard</Link>
+                              <Link href="/admin/configuracoes" className="flex items-center gap-2 text-muted-foreground hover:text-primary"><SettingsIcon className="w-4 h-4" /> Configurações</Link>
+                            </>
+                          ) : (
+                            <>
+                              <Link href="/meu-perfil" className="flex items-center gap-2 text-muted-foreground hover:text-primary"><User className="w-4 h-4" /> Meu Perfil</Link>
+                              <Link href="/meu-perfil/settings" className="flex items-center gap-2 text-muted-foreground hover:text-primary"><SettingsIcon className="w-4 h-4" /> Configurações</Link>
+                            </>
+                          )}
+                          <Button variant="ghost" size="sm" className="justify-start px-0 text-destructive hover:text-destructive hover:bg-destructive/10" onClick={handleLogout}>
+                            <LogOut className="w-4 h-4 mr-2" /> Sair
+                          </Button>
+                        </>
+                      ) : (
+                        <></>
+                      )}
+                    </div>
+                  </nav>
+                </SheetContent>
+              </Sheet>
+            </div>
+
+            <Link href="/" className="flex items-center gap-2 group">
+              <Scissors className="w-6 h-6 text-primary group-hover:text-primary/80 transition-colors" />
+              <span className="font-serif text-xl font-bold tracking-wide uppercase">Barber<span className="text-primary font-black">.</span></span>
+            </Link>
+          </div>
 
           {config.useMocks && (
             <Link 
@@ -103,9 +168,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
             <Link href="/" className={`text-sm font-medium transition-colors hover:text-primary ${pathname === '/' ? 'text-primary' : 'text-muted-foreground'}`}>Início</Link>
             <Link href="/booking" className={`text-sm font-medium transition-colors hover:text-primary ${pathname.startsWith('/booking') ? 'text-primary' : 'text-muted-foreground'}`}>Agendar</Link>
 
-            {user?.role === 'admin' && (
-              <Link href="/admin" className={`text-sm font-medium transition-colors hover:text-primary ${pathname.startsWith('/admin') ? 'text-primary' : 'text-muted-foreground'}`}>Administração</Link>
-            )}
+            <Link href="/admin" className={`text-sm font-medium transition-colors hover:text-primary ${pathname.startsWith('/admin') || pathname.startsWith('/admin/login') ? 'text-primary' : 'text-muted-foreground'}`}>Administração</Link>
 
             {user?.role === 'client' && (
               <Link href="/meu-perfil/historico" className={`text-sm font-medium transition-colors hover:text-primary ${pathname.startsWith('/meu-perfil/historico') ? 'text-primary' : 'text-muted-foreground'}`}>Meus Agendamentos</Link>
@@ -117,6 +180,12 @@ export function Layout({ children }: { children: React.ReactNode }) {
               <div className="hidden sm:flex items-center gap-2 bg-primary/10 text-primary px-3 py-1 rounded-full border border-primary/20">
                 <span className="text-xs font-bold">{user.points} pts</span>
               </div>
+            )}
+
+            {!user && (
+              <Button asChild size="sm" variant="default" className="hidden sm:flex bg-primary hover:bg-primary/90 text-primary-foreground font-bold shadow-lg shadow-primary/20">
+                <Link href="/admin/login">Ver Painel Demo</Link>
+              </Button>
             )}
 
             {user ? (

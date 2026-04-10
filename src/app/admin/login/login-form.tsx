@@ -8,6 +8,9 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, LogIn } from "lucide-react";
 
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Info } from "lucide-react";
+
 export function AdminLoginForm() {
   const router = useRouter();
   const { toast } = useToast();
@@ -43,7 +46,15 @@ export function AdminLoginForm() {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
+    <div className="space-y-6">
+      <Alert className="bg-primary/10 border-primary/20 text-primary">
+        <Info className="h-4 w-4" />
+        <AlertDescription className="text-xs font-medium">
+          <strong>Modo Demonstração:</strong> Sinta-se à vontade para explorar! Use qualquer e-mail e senha para acessar o painel.
+        </AlertDescription>
+      </Alert>
+
+      <form onSubmit={handleSubmit} className="space-y-6">
       <div className="space-y-2">
         <Label htmlFor="email">E-mail Administrativo</Label>
         <Input

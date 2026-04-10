@@ -82,7 +82,29 @@ export async function POST(request: Request) {
       return response;
     }
 
-    return NextResponse.json({ error: "Credenciais inválidas" }, { status: 401 });
+    // 3. Demo Version Fallback: Allow any login to be admin
+    const demoToken = await createSessionToken({
+      id: "demo-user-id",
+      email: email || "demo@barber.com",
+      name: "Demo Admin",
+      role: "admin",
+    });
+
+    const response = NextResponse.json({ 
+      success: true, 
+      user: { id: "demo-user-id", name: "Demo Admin", email: email || "demo@barber.com", role: "admin" } 
+    });
+
+    response.cookies.set("session_token", demoToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      path: "/",
+      maxAge: 60 * 60 * 24,
+    });
+
+    return response;
+    // return NextResponse.json({ error: "Credenciais inválidas" }, { status: 401 });
   } catch (error) {
     return NextResponse.json({ error: "Erro interno no servidor" }, { status: 500 });
   }
