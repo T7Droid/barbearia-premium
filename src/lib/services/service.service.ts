@@ -13,88 +13,75 @@ export interface BarberService {
 
 export class ServiceService {
   static async list(): Promise<BarberService[]> {
-    if (config.supabase.isConfigured && supabase) {
-      const { data, error } = await supabase
-        .from("services")
-        .select("*")
-        .order("id", { ascending: true });
-
-      if (error) throw error;
-      return data as BarberService[];
+    if (!config.supabase.isConfigured || !supabase) {
+      throw new Error("Supabase is missing.");
     }
 
-    return Array.from(SERVICES_STORE.values());
+    const { data, error } = await supabase
+      .from("services")
+      .select("*")
+      .order("id", { ascending: true });
+
+    if (error) throw error;
+    return data as BarberService[];
   }
 
   static async getById(id: number): Promise<BarberService | null> {
-    if (config.supabase.isConfigured && supabase) {
-      const { data, error } = await supabase
-        .from("services")
-        .select("*")
-        .eq("id", id)
-        .single();
-
-      if (error) return null;
-      return data as BarberService;
+    if (!config.supabase.isConfigured || !supabase) {
+      throw new Error("Supabase is missing.");
     }
 
-    return SERVICES_STORE.get(id) || null;
+    const { data, error } = await supabase
+      .from("services")
+      .select("*")
+      .eq("id", id)
+      .single();
+
+    if (error) return null;
+    return data as BarberService;
   }
 
   static async create(data: Omit<BarberService, "id">): Promise<BarberService> {
-    if (config.supabase.isConfigured && supabase) {
-      const { data: newService, error } = await supabase
-        .from("services")
-        .insert(data)
-        .select()
-        .single();
-
-      if (error) throw error;
-      return newService as BarberService;
+    if (!config.supabase.isConfigured || !supabase) {
+      throw new Error("Supabase is missing.");
     }
 
-    const id = Math.max(0, ...Array.from(SERVICES_STORE.keys())) + 1;
-    const newService = { id, ...data, price: Math.round(data.price) };
-    SERVICES_STORE.set(id, newService);
-    return newService;
+    const { data: newService, error } = await supabase
+      .from("services")
+      .insert(data)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return newService as BarberService;
   }
 
   static async update(id: number, data: Partial<BarberService>): Promise<BarberService> {
-    if (config.supabase.isConfigured && supabase) {
-      const { data: updatedService, error } = await supabase
-        .from("services")
-        .update(data)
-        .eq("id", id)
-        .select()
-        .single();
-
-      if (error) throw error;
-      return updatedService as BarberService;
+    if (!config.supabase.isConfigured || !supabase) {
+      throw new Error("Supabase is missing.");
     }
 
-    const existing = SERVICES_STORE.get(id);
-    if (!existing) throw new Error("Service not found");
-    const updated = {
-      ...existing,
-      ...data,
-      id,
-      price: data.price !== undefined ? Math.round(data.price) : existing.price
-    };
-    SERVICES_STORE.set(id, updated);
-    return updated;
+    const { data: updatedService, error } = await supabase
+      .from("services")
+      .update(data)
+      .eq("id", id)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return updatedService as BarberService;
   }
 
   static async delete(id: number): Promise<void> {
-    if (config.supabase.isConfigured && supabase) {
-      const { error } = await supabase
-        .from("services")
-        .delete()
-        .eq("id", id);
-
-      if (error) throw error;
-      return;
+    if (!config.supabase.isConfigured || !supabase) {
+      throw new Error("Supabase is missing.");
     }
 
-    SERVICES_STORE.delete(id);
+    const { error } = await supabase
+      .from("services")
+      .delete()
+      .eq("id", id);
+
+    if (error) throw error;
   }
 }

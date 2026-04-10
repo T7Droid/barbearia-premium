@@ -41,126 +41,95 @@ export class AppointmentService {
       serviceName: service.name
     };
 
-    if (config.supabase.isConfigured && supabase) {
-      const sessionId = randomUUID();
-      const { error } = await supabase
-        .from("checkout_sessions")
-        .insert({
-          id: sessionId,
-          ...sessionData,
-          expires_at: new Date(Date.now() + 30 * 60 * 1000).toISOString()
-        });
-
-      if (error) throw error;
-      return { sessionId, ...sessionData };
+    if (!config.supabase.isConfigured || !supabase) {
+      throw new Error("Supabase is missing.");
     }
 
     const sessionId = randomUUID();
-    const mockSession = { sessionId, ...sessionData };
-    SESSIONS_STORE.set(sessionId, mockSession);
-    return mockSession;
+    const { error } = await supabase
+      .from("checkout_sessions")
+      .insert({
+        id: sessionId,
+        data: sessionData,
+        expires_at: new Date(Date.now() + 30 * 60 * 1000).toISOString()
+      });
+
+    if (error) throw error;
+    return { sessionId, ...sessionData };
   }
 
   static async getById(id: number): Promise<Appointment | null> {
-    if (config.supabase.isConfigured && supabase) {
-      const { data, error } = await supabase
-        .from("appointments")
-        .select("*")
-        .eq("id", id)
-        .single();
-
-      if (error) return null;
-      return data as Appointment;
+    if (!config.supabase.isConfigured || !supabase) {
+      throw new Error("Supabase is not configured.");
     }
 
-    return APPOINTMENTS_STORE.get(id) || null;
+    const { data, error } = await supabase
+      .from("appointments")
+      .select("*")
+      .eq("id", id)
+      .single();
+
+    if (error) return null;
+    return data as Appointment;
   }
 
   static async confirm(sessionId: string, paymentData: any): Promise<Appointment> {
-    if (config.supabase.isConfigured && supabaseAdmin) {
-      const { data: session, error: sessionError } = await supabaseAdmin
-        .from("checkout_sessions")
-        .select("*")
-        .eq("id", sessionId)
-        .single();
-
-      if (sessionError || !session) throw new Error("Session not found");
-
-      if (session.rescheduleId) {
-        await supabaseAdmin.from("appointments").delete().eq("id", session.rescheduleId);
-      }
-
-      const appointmentData = {
-        serviceId: session.serviceId,
-        serviceName: session.serviceName,
-        servicePrice: session.amount,
-        appointmentDate: session.appointmentDate,
-        appointmentTime: session.appointmentTime,
-        customerName: session.customerName,
-        customerEmail: session.customerEmail,
-        customerPhone: session.customerPhone,
-        status: "confirmed",
-        isPaid: session.isPaid || paymentData.status === "approved",
-        isReschedule: !!session.rescheduleId,
-        createdAt: new Date().toISOString()
-      };
-
-      const { data: appointment, error: appError } = await supabaseAdmin
-        .from("appointments")
-        .insert(appointmentData)
-        .select()
-        .single();
-
-      if (appError) throw appError;
-
-      await supabaseAdmin.from("checkout_sessions").delete().eq("id", sessionId);
-
-      return appointment as Appointment;
+    if (!config.supabase.isConfigured || !supabaseAdmin) {
+      throw new Error("Supabase Admin is required for appointment confirmation.");
     }
 
-    const session = SESSIONS_STORE.get(sessionId);
-    if (!session) throw new Error("Sessão não encontrada");
+    const { data: session, error: sessionError } = await supabaseAdmin
+      .from("checkout_sessions")
+      .select("*")
+      .eq("id", sessionId)
+      .single();
+
+    if (sessionError || !session) throw new Error("Session not found");
 
     if (session.rescheduleId) {
-      APPOINTMENTS_STORE.delete(session.rescheduleId);
+      await supabaseAdmin.from("appointments").delete().eq("id", session.rescheduleId);
     }
 
-    const appointmentId = Math.floor(Math.random() * 1000000);
-    const appointment: Appointment = {
-      id: appointmentId,
+    const appointmentData = {
       serviceId: session.serviceId,
       serviceName: session.serviceName,
-      servicePrice: Math.round(session.amount),
+      servicePrice: session.amount,
       appointmentDate: session.appointmentDate,
       appointmentTime: session.appointmentTime,
       customerName: session.customerName,
       customerEmail: session.customerEmail,
       customerPhone: session.customerPhone,
       status: "confirmed",
-      isPaid: session.isPaid || paymentData.paymentMethodId === "mercado_pago" || paymentData.paymentMethodId === "pre_paid",
+      isPaid: session.isPaid || paymentData.status === "approved",
       isReschedule: !!session.rescheduleId,
       createdAt: new Date().toISOString()
     };
 
-    APPOINTMENTS_STORE.set(appointmentId, appointment);
+    const { data: appointment, error: appError } = await supabaseAdmin
+      .from("appointments")
+      .insert(appointmentData)
+      .select()
+      .single();
 
-    SESSIONS_STORE.delete(sessionId);
+    if (appError) throw appError;
 
-    return appointment;
+    await supabaseAdmin.from("checkout_sessions").delete().eq("id", sessionId);
+
+    return appointment as Appointment;
   }
 
   static async list(): Promise<Appointment[]> {
-    if (config.supabase.isConfigured && supabase) {
-      const { data, error } = await supabase
-        .from("appointments")
-        .select("*")
-        .order("createdAt", { ascending: false });
-
-      if (error) throw error;
-      return data as Appointment[];
+    if (!config.supabase.isConfigured || !supabase) {
+      throw new Error("Supabase is missing.");
     }
 
-    return Array.from(APPOINTMENTS_STORE.values()) as Appointment[];
+    const { data, error } = await supabase
+      .from("appointments")
+      .select("*")
+      .order("createdAt", { ascending: false });
+
+    if (error) throw error;
+    return data as Appointment[];
   }
 
   static async getStats(): Promise<any> {

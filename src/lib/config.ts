@@ -12,7 +12,7 @@ export const config = {
     isConfigured: !!process.env.RESEND_API_KEY && !process.env.RESEND_API_KEY.includes("your-api-key"),
   },
   isDevMode: process.env.NODE_ENV === "development",
-  useMocks: !isSupabaseConfigured, // Main toggle based on Supabase
+  useMocks: false, // Enforced for production branch
 };
 
 export const getStatus = () => ({

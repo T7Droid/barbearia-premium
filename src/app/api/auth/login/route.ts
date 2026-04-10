@@ -7,80 +7,48 @@ export async function POST(request: Request) {
   try {
     const { email, password } = await request.json();
 
-    // 1. Try Supabase Auth first if configured
-    if (isSupabaseConfigured && supabase) {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-
-      if (!error && data.user) {
-        const response = NextResponse.json({ 
-          success: true, 
-          user: { 
-            name: data.user.user_metadata?.full_name || data.user.email, 
-            email: data.user.email, 
-            role: "client" // Normally we'd fetch profile here
-          } 
-        });
-
-        response.cookies.set("session_token", data.session?.access_token || "", {
-          httpOnly: true,
-          secure: process.env.NODE_ENV === "production",
-          sameSite: "lax",
-          path: "/",
-          maxAge: 60 * 60 * 24,
-        });
-
-        return response;
-      }
+    // 1. Supabase Auth (Mandatory for Production)
+    if (!isSupabaseConfigured || !supabase) {
+      return NextResponse.json({ error: "Serviço de autenticação indísponível" }, { status: 503 });
     }
 
-    // 2. Fallback to Mock Auth
-    if (email === ADMIN_USER.email && password === ADMIN_USER.password) {
-      const token = await createSessionToken({
-        email: ADMIN_USER.email,
-        name: ADMIN_USER.name,
-        role: "admin",
-      });
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
 
-      const response = NextResponse.json({ success: true, user: { name: ADMIN_USER.name, email: ADMIN_USER.email, role: "admin" } });
-
-      response.cookies.set("session_token", token, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === "production",
-        sameSite: "lax",
-        path: "/",
-        maxAge: 60 * 60 * 24,
-      });
-
-      return response;
+    if (error || !data.user) {
+      return NextResponse.json({ error: "Credenciais inválidas" }, { status: 401 });
     }
 
-    const client = Array.from(USERS_STORE.values()).find((u: any) => u.email === email) as any;
-    if (client) {
-      const token = await createSessionToken({
-        email: client.email,
-        name: client.name,
-        role: "client",
-      });
+    // 2. Fetch User Profile for Role verification
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("role, full_name")
+      .eq("id", data.user.id)
+      .single();
 
-      const response = NextResponse.json({
-        success: true,
-        user: { name: client.name, email: client.email, role: "client" },
-        redirectTo: "/meu-perfil"
-      });
+    const userRole = profile?.role || "client";
 
-      response.cookies.set("session_token", token, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === "production",
-        sameSite: "lax",
-        path: "/",
-        maxAge: 60 * 60 * 24,
-      });
+    const response = NextResponse.json({ 
+      success: true, 
+      user: { 
+        name: profile?.full_name || data.user.user_metadata?.full_name || data.user.email, 
+        email: data.user.email, 
+        role: userRole
+      },
+      redirectTo: userRole === "admin" ? "/admin" : "/meu-perfil"
+    });
 
-      return response;
-    }
+    response.cookies.set("session_token", data.session?.access_token || "", {
+      httpOnly: true,
+      secure: true, // Enforcement for production
+      sameSite: "lax",
+      path: "/",
+      maxAge: 60 * 60 * 24,
+    });
+
+    return response;
 
     return NextResponse.json({ error: "Credenciais inválidas" }, { status: 401 });
   } catch (error) {

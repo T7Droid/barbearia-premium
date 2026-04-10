@@ -5,10 +5,7 @@ import { jwtVerify, SignJWT } from "jose";
 const getSecret = () => {
   const secret = process.env.JWT_SECRET;
   if (!secret) {
-    if (process.env.NODE_ENV === "production") {
-      throw new Error("CRITICAL: JWT_SECRET environment variable is not set!");
-    }
-    return "dev-only-insecure-fallback-barber-premium";
+    throw new Error("CRITICAL: JWT_SECRET environment variable is not set!");
   }
   return secret;
 };
