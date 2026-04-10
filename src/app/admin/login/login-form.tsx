@@ -88,6 +88,7 @@ export function AdminLoginForm() {
           </>
         )}
       </Button>
-    </form>
+      </form>
+    </div>
   );
 }
