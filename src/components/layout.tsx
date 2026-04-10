@@ -108,6 +108,12 @@ export function Layout({ children }: { children: React.ReactNode }) {
                     <Link href="/booking" className={`text-lg font-medium transition-colors hover:text-primary ${pathname.startsWith('/booking') ? 'text-primary' : 'text-muted-foreground'}`}>Agendar</Link>
                     <Link href="/admin" className={`text-lg font-medium transition-colors hover:text-primary ${pathname.startsWith('/admin') ? 'text-primary' : 'text-muted-foreground'}`}>Administração</Link>
                     
+                    {!user && (
+                      <Button asChild variant="default" className="bg-primary hover:bg-primary/90 text-primary-foreground font-bold shadow-lg shadow-primary/20 w-fit">
+                        <Link href="/admin/login">Ver Painel Demo</Link>
+                      </Button>
+                    )}
+                    
                     {user?.role === 'client' && (
                       <Link href="/meu-perfil/historico" className={`text-lg font-medium transition-colors hover:text-primary ${pathname.startsWith('/meu-perfil/historico') ? 'text-primary' : 'text-muted-foreground'}`}>Meus Agendamentos</Link>
                     )}
