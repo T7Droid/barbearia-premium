@@ -34,11 +34,11 @@ export class ServiceService {
   }
 
   static async list(): Promise<BarberService[]> {
-    if (!config.supabase.isConfigured || !supabase) {
+    if (!config.supabase.isConfigured || !supabaseAdmin) {
       throw new Error("Supabase is missing.");
     }
 
-    const { data, error } = await supabase
+    const { data, error } = await supabaseAdmin
       .from("services")
       .select("*")
       .order("id", { ascending: true });
@@ -48,11 +48,11 @@ export class ServiceService {
   }
 
   static async getById(id: number): Promise<BarberService | null> {
-    if (!config.supabase.isConfigured || !supabase) {
+    if (!config.supabase.isConfigured || !supabaseAdmin) {
       throw new Error("Supabase is missing.");
     }
 
-    const { data, error } = await supabase
+    const { data, error } = await supabaseAdmin
       .from("services")
       .select("*")
       .eq("id", id)

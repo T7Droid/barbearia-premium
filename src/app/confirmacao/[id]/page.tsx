@@ -24,7 +24,15 @@ export default function Confirmation({ params }: { params: Promise<{ id: string 
   });
 
   const [fallbackAppointment, setFallbackAppointment] = useState<any>(null);
+  const [settings, setSettings] = useState<any>(null);
   const [authStatus, setAuthStatus] = useState<"loading" | "authenticated" | "unauthenticated">("loading");
+
+  useEffect(() => {
+    fetch("/api/settings")
+      .then(res => res.json())
+      .then(data => setSettings(data))
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     // Se a API falhar em encontrar, tenta o DemoStore (LocalStorage)
@@ -179,7 +187,7 @@ export default function Confirmation({ params }: { params: Promise<{ id: string 
                   <CardTitle className="text-xl flex items-center gap-2">
                     <UserPlus className="w-5 h-5 text-primary" /> Salvar meus dados?
                   </CardTitle>
-                  <CardDescription>Crie sua conta agora e ganhe 50 pontos de fidelidade!</CardDescription>
+                  <CardDescription>Crie sua conta agora e ganhe {settings?.initialPoints || 50} pontos de fidelidade!</CardDescription>
                 </CardHeader>
                 <CardContent className="flex flex-col sm:flex-row gap-4 items-center">
                   <Button asChild className="w-full sm:w-auto gap-2" variant="default">

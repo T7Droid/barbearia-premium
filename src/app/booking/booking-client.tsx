@@ -120,11 +120,12 @@ function BookingContent() {
         DemoStore.saveUser({ ...savedUser, ...authData.user, phone });
       } else if (savedUser) {
         setIsLogged(true);
+        setCurrentUser(savedUser); // Garantir que o estado do usuário logado seja restaurado
         setCustomerInfo(prev => ({
           ...prev,
           name: savedUser.name || prev.name,
           email: savedUser.email || prev.email,
-          phone: prev.phone || savedUser.phone || ""
+          phone: prev.phone || (savedUser.phone ? formatPhone(savedUser.phone) : "")
         }));
       }
 

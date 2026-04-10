@@ -11,7 +11,7 @@ export async function POST(request: NextRequest) {
     let paymentResult: any = { status: "approved" };
     
     // 1. Buscar a sessão para obter o valor real (segurança e correção de centavos)
-    const { data: sessionRecord } = await supabaseAdmin
+    const { data: sessionRecord } = await supabaseAdmin!
       .from("checkout_sessions")
       .select("data")
       .eq("id", sessionId)

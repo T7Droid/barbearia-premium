@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { USERS_STORE } from "@/lib/mock-store";
-import { supabase, isSupabaseConfigured } from "@/lib/supabase";
+import { supabase, supabaseAdmin, isSupabaseConfigured } from "@/lib/supabase";
 import { createToken } from "@/lib/auth";
 
 export async function POST(request: Request) {
@@ -34,14 +34,29 @@ export async function POST(request: Request) {
       });
 
       if (!error && data.user) {
-        // Create profile in DB (normally done via trigger, but we'll be safe)
-        await supabase.from("profiles").insert({
+        // Usar supabaseAdmin para bypassar RLS e garantir a criação do perfil
+        const { data: settingsData } = await supabaseAdmin!.from("settings").select("is_points_enabled, initial_points").eq("id", 1).single();
+
+        // Fallback para 20 pontos iniciais se a consulta falhar
+        const settings = settingsData || { is_points_enabled: true, initial_points: 20 };
+        const initialPoints = (settings.is_points_enabled) ? (settings.initial_points || 0) : 0;
+
+        // Create profile in DB (using upsert to handle potential race conditions with DB triggers)
+        console.log(`[AUTH REGISTER] Atribuindo ${initialPoints} pontos iniciais para usuário ${data.user.id}`);
+        
+        const { error: profileError } = await supabaseAdmin!.from("profiles").upsert({
           id: data.user.id,
           full_name: name,
           phone: phone || "",
           role: "client",
-          points: 0
+          points: initialPoints
         });
+
+        if (profileError) {
+          console.error("[AUTH REGISTER] Erro ao criar/atualizar perfil:", profileError);
+        } else {
+          console.log("[AUTH REGISTER] Perfil criado/atualizado com sucesso com pontos iniciais.");
+        }
 
         const response = NextResponse.json({ success: true, user: { name, email, role: "client" } });
         response.cookies.set("session_token", data.session?.access_token || "", {
@@ -56,11 +71,17 @@ export async function POST(request: Request) {
     }
 
     // 2. Fallback to Mock
+    const { data: settingsData } = await supabaseAdmin!.from("settings").select("is_points_enabled, initial_points").eq("id", 1).single();
+
+    // Fallback para 20 pontos iniciais se a consulta falhar
+    const settings = settingsData || { is_points_enabled: true, initial_points: 20 };
+    const initialPoints = (settings.is_points_enabled) ? (settings.initial_points || 0) : 0;
+
     USERS_STORE.set(email.toLowerCase(), {
       name,
       email,
       phone: phone || "",
-      points: 0,
+      points: initialPoints,
       registeredAt: new Date().toISOString(),
       role: "client"
     });

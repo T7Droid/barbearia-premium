@@ -128,10 +128,13 @@ export class AppointmentService {
     const session = sessionDataRaw.data;
 
     if (session.rescheduleId) {
-      await supabaseAdmin.from("appointments").delete().eq("id", session.rescheduleId);
+      await supabaseAdmin!.from("appointments").delete().eq("id", session.rescheduleId);
     }
 
-    const isPaid = session.isPaid || (paymentData.paymentMethodId === "mercado_pago" && paymentData.paymentResult.status === "approved");
+    const isPaid = session.isPaid || (
+      (paymentData.paymentMethodId === "mercado_pago" || paymentData.paymentMethodId === "pix") &&
+      paymentData.paymentResult.status === "approved"
+    );
 
     const appointmentData = this.mapToSupabase({
       serviceId: session.serviceId,
@@ -149,7 +152,7 @@ export class AppointmentService {
       createdAt: new Date().toISOString()
     });
 
-    const { data: appointment, error: appError } = await supabaseAdmin
+    const { data: appointment, error: appError } = await supabaseAdmin!
       .from("appointments")
       .insert(appointmentData)
       .select()
@@ -160,39 +163,54 @@ export class AppointmentService {
     // --- LOYALTY POINTS LOGIC ---
     // Only award points if points are enabled AND the appointment is paid AND there is a user
     if (session.userId && isPaid) {
-      // 1. Fetch current settings
-      const { data: settings } = await supabaseAdmin
+      // 1. Fetch current settings with fallback
+      const { data: settingsData } = await supabaseAdmin
         .from("settings")
         .select("is_points_enabled, points_per_appointment")
         .eq("id", 1)
         .single();
 
-      if (settings?.is_points_enabled) {
+      // Fallback para valores padrão caso a consulta falhe
+      const settings = settingsData || { is_points_enabled: true, points_per_appointment: 5 };
+
+      console.log(`[LOYALTY CHECK] Configurações: enabled=${settings.is_points_enabled}, ptsPerApp=${settings.points_per_appointment}`);
+
+      if (settings.is_points_enabled) {
         const pointsToAdd = settings.points_per_appointment || 0;
-        
-        // 2. Fetch current user points
+
+        // 2. Usar UPSERT para garantir que o perfil exista e atualizar os pontos
+        // Usamos supabaseAdmin para bypassar RLS e garantir a atualização
         const { data: profile } = await supabaseAdmin
           .from("profiles")
-          .select("points")
+          .select("points, full_name")
           .eq("id", session.userId)
           .single();
 
-        if (profile) {
-          const newPoints = (profile.points || 0) + pointsToAdd;
-          
-          // 3. Update profile with new points
-          await supabaseAdmin
-            .from("profiles")
-            .update({ points: newPoints })
-            .eq("id", session.userId);
-          
-          console.log(`Pontos atribuídos ao usuário ${session.userId}: ${pointsToAdd}. Novo total: ${newPoints}`);
+        const currentPoints = profile?.points || 0;
+        const newPoints = currentPoints + pointsToAdd;
+
+        const { error: upsertError } = await supabaseAdmin
+          .from("profiles")
+          .upsert({
+            id: session.userId,
+            points: newPoints,
+            full_name: profile?.full_name || session.customerName
+          });
+
+        if (upsertError) {
+          console.error(`[LOYALTY] Erro ao atualizar pontos para o usuário ${session.userId}:`, upsertError);
+        } else {
+          console.log(`[LOYALTY] Sucesso! Usuário ${session.userId} recebeu ${pointsToAdd} pontos. Novo total: ${newPoints}`);
         }
+      } else {
+        console.log(`[LOYALTY] Sistema de pontos desativado nas configurações.`);
       }
+    } else {
+      console.log(`[LOYALTY] Pontos NÃO atribuídos: userId=${session.userId}, isPaid=${isPaid}`);
     }
     // ----------------------------
 
-    await supabaseAdmin.from("checkout_sessions").delete().eq("id", sessionId);
+    await supabaseAdmin!.from("checkout_sessions").delete().eq("id", sessionId);
 
     return this.mapFromSupabase(appointment);
   }

@@ -13,28 +13,33 @@ export async function GET() {
     .eq("id", 1)
     .single();
 
-  if (error) {
-    return NextResponse.json({ error: "Falha ao carregar configurações" }, { status: 500 });
-  }
-
-  // CamelCase conversion for consistency with the rest of the app
-  const settings = {
-    isPointsEnabled: data.is_points_enabled,
-    pointsPerAppointment: data.points_per_appointment,
-    cancellationWindowDays: data.cancellation_window_days,
-    isPrepaymentRequired: data.is_prepayment_required,
-    businessStartTime: data.business_start_time,
-    businessEndTime: data.business_end_time,
-    slotInterval: data.slot_interval,
-    weeklyHours: data.weekly_hours,
-    mpPublicKey: process.env.NEXT_PUBLIC_MERCADOPAGO_PUBLIC_KEY || "",
+  // Se houver erro ou não houver dados, usamos valores padrão seguros
+  const defaultData = {
+    is_points_enabled: true,
+    points_per_appointment: 5,
+    initial_points: 20,
+    cancellation_window_days: 2,
+    is_prepayment_required: false,
+    business_start_time: "09:00",
+    business_end_time: "18:00",
+    slot_interval: 45,
+    weekly_hours: null
   };
 
-  console.log("Diagnóstico Mercado Pago:", {
-    hasPublicKey: !!process.env.NEXT_PUBLIC_MERCADOPAGO_PUBLIC_KEY,
-    publicKeyStart: process.env.NEXT_PUBLIC_MERCADOPAGO_PUBLIC_KEY?.substring(0, 10),
-    nodeEnv: process.env.NODE_ENV
-  });
+  const finalData = data || defaultData;
+
+  const settings = {
+    isPointsEnabled: finalData.is_points_enabled,
+    pointsPerAppointment: finalData.points_per_appointment,
+    initialPoints: finalData.initial_points || 0,
+    cancellationWindowDays: finalData.cancellation_window_days,
+    isPrepaymentRequired: finalData.is_prepayment_required,
+    businessStartTime: finalData.business_start_time,
+    businessEndTime: finalData.business_end_time,
+    slotInterval: finalData.slot_interval,
+    weeklyHours: finalData.weekly_hours,
+    mpPublicKey: process.env.NEXT_PUBLIC_MERCADOPAGO_PUBLIC_KEY || "",
+  };
 
   return NextResponse.json(settings);
 }
@@ -53,6 +58,7 @@ export async function POST(request: NextRequest) {
 
     // Convert numbers to ensure persistence
     if (input.pointsPerAppointment !== undefined) updateData.points_per_appointment = parseInt(input.pointsPerAppointment);
+    if (input.initialPoints !== undefined) updateData.initial_points = parseInt(input.initialPoints);
     if (input.cancellationWindowDays !== undefined) updateData.cancellation_window_days = parseInt(input.cancellationWindowDays);
 
     if (typeof input.isPrepaymentRequired === "boolean") updateData.is_prepayment_required = input.isPrepaymentRequired;
@@ -76,6 +82,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       isPointsEnabled: updated.is_points_enabled,
       pointsPerAppointment: updated.points_per_appointment,
+      initialPoints: updated.initial_points,
       cancellationWindowDays: updated.cancellation_window_days,
       isPrepaymentRequired: updated.is_prepayment_required,
       businessStartTime: updated.business_start_time,

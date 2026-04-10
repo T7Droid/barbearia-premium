@@ -81,13 +81,12 @@ function CadastroContent() {
         // Persistência para Modo Demo na Vercel
         DemoStore.saveUser({
           ...userData.user,
-          phone: formData.phone,
-          points: 50
+          phone: formData.phone
         });
 
         toast({
           title: "Conta criada!",
-          description: "Bem-vindo à Barbearia Premium. Você ganhou 50 pontos!"
+          description: "Bem-vindo à Barbearia Premium! Agende seu primeiro serviço agora."
         });
         router.push("/meu-perfil");
         router.refresh();

@@ -47,6 +47,7 @@ export default function SettingsPage() {
     subscriptionStatus: "active" as "active" | "past_due" | "canceled" | "trialing",
     subscriptionNextPayment: "2026-05-15",
     pointsPerAppointment: 50,
+    initialPoints: 0,
   });
 
   const fetchSettings = async () => {
@@ -184,6 +185,21 @@ export default function SettingsPage() {
                   />
                   <span className="text-muted-foreground">Pts</span>
                 </div>
+              </div>
+
+              <div className="flex flex-col gap-2 max-w-xs mt-4">
+                <Label className="text-[10px] text-muted-foreground uppercase font-bold">Pontos Iniciais (Boas-vindas)</Label>
+                <div className="flex items-center gap-4">
+                  <Input
+                    type="number"
+                    min={0}
+                    value={settings.initialPoints || 0}
+                    onChange={(e) => setSettings({ ...settings, initialPoints: parseInt(e.target.value) || 0 })}
+                    className="text-lg font-medium"
+                  />
+                  <span className="text-muted-foreground">Pts</span>
+                </div>
+                <p className="text-[10px] text-muted-foreground italic">Pontos atribuídos automaticamente ao criar a conta.</p>
               </div>
             </CardContent>
           )}

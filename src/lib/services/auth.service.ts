@@ -1,5 +1,5 @@
 import { USERS_STORE } from "@/lib/mock-store";
-import { supabase, isSupabaseConfigured } from "@/lib/supabase";
+import { supabase, supabaseAdmin, isSupabaseConfigured } from "@/lib/supabase";
 import { verifyToken, SECRET } from "@/lib/auth";
 import { config } from "@/lib/config";
 
@@ -12,7 +12,8 @@ export class AuthService {
     const { data: { user }, error } = await supabase.auth.getUser(token);
     if (error || !user) return null;
 
-    const { data: profile } = await supabase
+    // Usar supabaseAdmin para buscar o perfil e bypassar RLS
+    const { data: profile } = await supabaseAdmin!
       .from("profiles")
       .select("*")
       .eq("id", user.id)

@@ -1,5 +1,6 @@
 import { payment, isMercadoPagoConfigured } from "@/lib/mercadopago";
 import { config } from "@/lib/config";
+import { randomUUID } from "crypto";
 
 export class PaymentService {
   static async processCardPayment(paymentData: any, sessionId: string, amountInCents: number) {
@@ -32,7 +33,7 @@ export class PaymentService {
         const result = await payment.create({
           body,
           requestOptions: {
-            idempotencyKey: paymentData.token, // Use the token as the unique identifier for this specific attempt
+            idempotencyKey: randomUUID(), // Sempre usar um UUID V4 para evitar erros 10102 de idempotência no MP
           }
         });
 
