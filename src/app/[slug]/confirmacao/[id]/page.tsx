@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { CheckCircle2, Calendar, Clock, MapPin, Share2, Wallet, Scissors, ExternalLink, Download, Award } from "lucide-react";
+import { CheckCircle2, Calendar, Clock, MapPin, Share2, Wallet, Scissors, ExternalLink, Download, Award, CalendarPlus } from "lucide-react";
 import { useGetAppointment } from "@workspace/api-client-react";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
@@ -87,6 +87,50 @@ END:VCARD`;
     window.URL.revokeObjectURL(url);
   }
 
+  const handleAddToCalendar = () => {
+    const dateStr = appointment.appointment_date || appointment.appointmentDate;
+    const timeStr = appointment.appointment_time || appointment.appointmentTime;
+    const serviceName = appointment.service_name || appointment.serviceName;
+    const shopName = settings?.shopName || 'Barbearia Premium';
+    const address = settings?.address || '';
+
+    if (!dateStr || !timeStr) return;
+
+    try {
+      const startDateTime = new Date(`${dateStr}T${timeStr}`);
+      const formatICSDate = (date: Date) => {
+        return date.toISOString().replace(/-|:|\.\d+/g, '');
+      };
+
+      const endDateTime = new Date(startDateTime.getTime() + (settings?.slot_interval || 45) * 60000);
+
+      const icsContent = [
+        'BEGIN:VCALENDAR',
+        'VERSION:2.0',
+        'BEGIN:VEVENT',
+        `DTSTART:${formatICSDate(startDateTime)}`,
+        `DTEND:${formatICSDate(endDateTime)}`,
+        `SUMMARY:Agendamento: ${serviceName}`,
+        `LOCATION:${address}`,
+        `DESCRIPTION:Agendamento na ${shopName}`,
+        'END:VEVENT',
+        'END:VCALENDAR'
+      ].join('\n');
+
+      const blob = new Blob([icsContent], { type: 'text/calendar;charset=utf-8' });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', 'agendamento.ics');
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (e) {
+      toast({ title: 'Erro', description: 'Não foi possível gerar o calendário.' });
+    }
+  };
+
   if (isLoading) {
     return (
       <Layout>
@@ -156,7 +200,7 @@ END:VCARD`;
                   <div>
                     <p className="text-sm text-muted-foreground uppercase font-bold tracking-wider mb-1">Data e Hora</p>
                     <p className="text-lg font-bold">
-                      {appointment.appointment_date ? format(new Date(appointment.appointment_date + 'T12:00:00'), "EEEE, d 'de' MMMM", { locale: ptBR }) : 'Data N/D'}
+                      {(appointment.appointment_date || appointment.appointmentDate) ? format(new Date((appointment.appointment_date || appointment.appointmentDate) + 'T12:00:00'), "EEEE, d 'de' MMMM", { locale: ptBR }) : 'Data N/D'}
                     </p>
                     <p className="text-primary font-black text-xl">{appointment.appointment_time || appointment.appointmentTime}</p>
                   </div>
@@ -229,9 +273,9 @@ END:VCARD`;
                    Ver Meus Horários
                 </Link>
               </Button>
-              <Button variant="outline" onClick={handleDownloadVCard} className="flex-1 h-12 text-md border-primary/20 hover:bg-primary/5 text-primary">
-                <Download className="w-5 h-5 mr-3" />
-                Salvar Contato
+              <Button variant="outline" onClick={handleAddToCalendar} className="flex-1 h-12 text-md border-primary/20 hover:bg-primary/5 text-primary">
+                <CalendarPlus className="w-5 h-5 mr-3" />
+                Adicionar ao Calendário
               </Button>
             </div>
           </CardContent>
