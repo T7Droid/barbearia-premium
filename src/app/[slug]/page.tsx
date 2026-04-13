@@ -5,9 +5,8 @@ import { Layout } from "@/components/layout";
 import { Button } from "@/components/ui/button";
 import { useListServices } from "@workspace/api-client-react";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Clock, MapPin, Phone, MessageCircle } from "lucide-react";
+import { Clock, MapPin, Phone } from "lucide-react";
 import { formatCurrencyFromCents } from "@/lib/format";
-import { useEffect } from "react";
 import { useTenant } from "@/hooks/use-tenant";
 
 export default function Home() {

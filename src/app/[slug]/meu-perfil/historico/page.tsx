@@ -17,13 +17,11 @@ import { Calendar, Clock, History as HistoryIcon, RefreshCw, Scissors, AlertCirc
 import { useToast } from "@/hooks/use-toast";
 import Link from "next/link";
 import { format, isBefore, addDays, parseISO } from "date-fns";
-import { ptBR } from "date-fns/locale";
 import { DemoStore } from "@/lib/persistence/demo-store";
 import { useTenant } from "@/hooks/use-tenant";
 import { useRouter } from "next/navigation";
 
 export default function AppointmentHistory() {
-  const { toast } = useToast();
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const tenant = useTenant();

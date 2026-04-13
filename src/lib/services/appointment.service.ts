@@ -290,7 +290,7 @@ export class AppointmentService {
     return (data || []).map(a => a.appointment_time);
   }
 
-  static async getBookedSlotsInRange(startDate: string, endDate: string) {
+  static async getBookedSlotsInRange(startDate: string, endDate: string, tenantId: string) {
     if (!config.supabase.isConfigured || !supabaseAdmin) {
       throw new Error("Supabase Admin is required for availability checks.");
     }
@@ -298,6 +298,7 @@ export class AppointmentService {
     const { data, error } = await supabaseAdmin
       .from("appointments")
       .select("appointment_date, appointment_time")
+      .eq("tenant_id", tenantId)
       .gte("appointment_date", startDate)
       .lte("appointment_date", endDate)
       .not("status", "eq", "cancelled");

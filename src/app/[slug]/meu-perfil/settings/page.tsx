@@ -11,10 +11,12 @@ import { useToast } from "@/hooks/use-toast";
 import { Loader2, User, Mail, Phone, Bell, Save, ArrowLeft, ShieldCheck } from "lucide-react";
 import { DemoStore } from "@/lib/persistence/demo-store";
 import { useRouter } from "next/navigation";
+import { useTenant } from "@/hooks/use-tenant";
 
 export default function ClientSettingsPage() {
   const { toast } = useToast();
   const router = useRouter();
+  const tenant = useTenant();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [profile, setProfile] = useState({
@@ -43,7 +45,7 @@ export default function ClientSettingsPage() {
           const savedUser = DemoStore.getUser();
           if (savedUser) return savedUser;
           
-          router.push("/login");
+          router.push(`/${tenant.slug}/login`);
           return;
         }
         return res.json();

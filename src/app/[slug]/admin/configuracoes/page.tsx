@@ -4,13 +4,10 @@ import { useEffect, useState } from "react";
 import { Layout } from "@/components/layout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
-import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Save, Settings2, ShieldCheck, Ticket, CalendarClock, CreditCard, Clock, ExternalLink } from "lucide-react";
+import { Loader2, Save, ShieldCheck, CalendarClock, CreditCard, Clock } from "lucide-react";
 import { DemoStore } from "@/lib/persistence/demo-store";
-import { formatDateBR } from "@/lib/format/date";
 import { useTenant } from "@/hooks/use-tenant";
 import {
   Select,

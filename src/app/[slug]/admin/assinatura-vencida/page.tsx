@@ -3,14 +3,16 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { AlertCircle, CreditCard, ExternalLink, LogOut } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { useRouter, useParams } from "next/navigation";
 
 export default function SubscriptionExpiredPage() {
   const router = useRouter();
+  const params = useParams();
+  const slug = params?.slug as string;
 
   const handleLogout = async () => {
     await fetch("/api/auth/logout", { method: "POST" });
-    router.push("/admin/login");
+    router.push(`/${slug}/admin/login`);
   };
 
   return (

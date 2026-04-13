@@ -1,9 +1,11 @@
-import { NextRequest, NextResponse } from "next/server";
-import { supabaseAdmin, isSupabaseConfigured } from "@/lib/supabase";
-import { AppointmentService } from "@/lib/services/appointment.service";
-import { format, eachDayOfInterval, parseISO } from "date-fns";
+import { TenantContext } from "@/lib/services/tenant-context";
 
 export async function GET(request: NextRequest) {
+  const tenant = await TenantContext.getTenant(request);
+  if (!tenant) {
+    return NextResponse.json({ error: "Tenant não identificado" }, { status: 400 });
+  }
+
   const { searchParams } = new URL(request.url);
   const start = searchParams.get("start");
   const end = searchParams.get("end");
@@ -17,11 +19,11 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    // 1. Buscar configurações
+    // 1. Buscar configurações do tenant
     const { data: settings, error: settingsError } = await supabaseAdmin
       .from("settings")
       .select("*")
-      .eq("id", 1)
+      .eq("tenant_id", tenant.id)
       .single();
 
     if (settingsError || !settings) throw new Error("Configurações não encontradas");

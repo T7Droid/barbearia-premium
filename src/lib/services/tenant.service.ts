@@ -9,9 +9,9 @@ export interface Tenant {
 
 export class TenantService {
   static async getTenantBySlug(slug: string): Promise<Tenant | null> {
-    if (!supabase) return null;
+    if (!supabaseAdmin) return null;
 
-    const { data, error } = await supabase
+    const { data, error } = await supabaseAdmin
       .from("tenants")
       .select("*")
       .eq("slug", slug)

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -10,6 +10,8 @@ import { Loader2, LogIn } from "lucide-react";
 
 export function AdminLoginForm() {
   const router = useRouter();
+  const params = useParams();
+  const slug = params?.slug as string;
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState({
@@ -30,7 +32,7 @@ export function AdminLoginForm() {
 
       if (response.ok) {
         toast({ title: "Bem-vindo de volta!", description: "Acessando o painel de gestão." });
-        router.push("/admin");
+        router.push(`/${slug}/admin`);
         router.refresh();
       } else {
         toast({ title: "Falha no login", description: "Credenciais administrativas inválidas.", variant: "destructive" });

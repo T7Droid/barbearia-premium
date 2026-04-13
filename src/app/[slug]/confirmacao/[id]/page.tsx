@@ -4,6 +4,8 @@ import { useEffect, useState, use } from "react";
 import { Layout } from "@/components/layout";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
 import { CheckCircle2, Calendar, Clock, MapPin, Share2, Wallet, Scissors, ExternalLink, Download, Award } from "lucide-react";
 import { useGetAppointment } from "@workspace/api-client-react";
 import { useToast } from "@/hooks/use-toast";

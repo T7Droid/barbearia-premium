@@ -17,7 +17,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useTenant } from "@/hooks/use-tenant";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { CheckCircle2, ChevronRight, Clock, CreditCard, User, Scissors, Wallet, UserPlus, ArrowRight } from "lucide-react";
+import { CheckCircle2, ChevronRight, Clock, CreditCard, User, Scissors, Wallet } from "lucide-react";
 import {
   useListServices,
   useGetAvailability,
@@ -63,6 +63,7 @@ function BookingContent() {
   
   // Obter contexto do tenant
   const tenant = useTenant();
+  const getLink = (path: string) => `/${tenant.slug}${path}`;
 
   const rescheduleId = searchParams.get("reschedule");
   const preSelectedServiceId = searchParams.get("serviceId");
@@ -441,7 +442,7 @@ function BookingContent() {
       });
 
       DemoStore.saveAppointment(appointment);
-      router.push(`/confirmacao/${appointment.id}`);
+      router.push(getLink(`/confirmacao/${appointment.id}`));
     } catch (error: any) {
       // Traduzir mensagens técnicas do Mercado Pago
       let errorMessage = error.response?.data?.error || error.message || "Não foi possível confirmar o agendamento.";
