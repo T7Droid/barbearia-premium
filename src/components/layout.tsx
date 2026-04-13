@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { Scissors, LogOut, User, Settings as SettingsIcon, History, LayoutGrid } from "lucide-react";
+import { Scissors, LogOut, User, Settings as SettingsIcon, History, LayoutGrid, Award } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
@@ -17,6 +17,7 @@ import {
 import { config } from "@/lib/config";
 import { DemoStore } from "@/lib/persistence/demo-store";
 import { useTenant } from "@/components/tenant-provider";
+import { useUserStore } from "@/lib/store/user-store";
 
 export function Layout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -31,7 +32,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
     // Fora de um contexto de tenant (ex: landing page global)
   }
 
-  const [user, setUser] = useState<{name: string, role: string, points?: number} | null>(null);
+  const { user, setUser } = useUserStore();
   const [isPointsEnabled, setIsPointsEnabled] = useState(true);
 
   useEffect(() => {
@@ -43,8 +44,8 @@ export function Layout({ children }: { children: React.ReactNode }) {
         }
 
         const [authRes, settingsRes] = await Promise.all([
-          fetch("/api/auth/me", { headers }),
-          fetch("/api/settings", { headers })
+          fetch("/api/auth/me", { headers, cache: "no-store" }),
+          fetch("/api/settings", { headers, cache: "no-store" })
         ]);
         const authData = await authRes.json();
         const settingsData = await settingsRes.json();
@@ -132,9 +133,10 @@ export function Layout({ children }: { children: React.ReactNode }) {
           </nav>
 
           <div className="flex items-center gap-4">
-            {user && isPointsEnabled && user.points !== undefined && (
-              <div className="hidden sm:flex items-center gap-2 bg-primary/10 text-primary px-3 py-1 rounded-full border border-primary/20">
-                <span className="text-xs font-bold">{user.points} pts</span>
+            {user && isPointsEnabled && (
+              <div className="flex items-center gap-1.5 bg-primary/10 text-primary px-3 py-1.5 rounded-full border border-primary/20 shadow-sm hover:scale-105 transition-transform cursor-default">
+                <Award className="w-4 h-4" />
+                <span className="text-xs font-black tracking-tight">{user.points || 0} pts</span>
               </div>
             )}
 

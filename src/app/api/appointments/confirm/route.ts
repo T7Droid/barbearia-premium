@@ -13,7 +13,7 @@ export async function POST(request: NextRequest) {
     // 1. Buscar a sessão para obter o valor real (segurança e correção de centavos)
     const { data: sessionRecord } = await supabaseAdmin!
       .from("checkout_sessions")
-      .select("data")
+      .select("data, tenant_id")
       .eq("id", sessionId)
       .single();
 
@@ -25,12 +25,13 @@ export async function POST(request: NextRequest) {
     const amountInCents = sessionData.amount;
 
     // 2. Processar pagamento com o valor real do banco
+    const tenantId = sessionRecord.tenant_id;
     if (mp_data && paymentMethodId === "mercado_pago") {
-      paymentResult = await PaymentService.processCardPayment(mp_data, sessionId, amountInCents);
+      paymentResult = await PaymentService.processCardPayment(mp_data, sessionId, amountInCents, tenantId);
     } else if (mp_data && paymentMethodId === "pix") {
       // Para o Pix, consultamos o status REAL no Mercado Pago usando o ID
       if (mp_data.id) {
-        paymentResult = await PaymentService.getPaymentStatus(mp_data.id);
+        paymentResult = await PaymentService.getPaymentStatus(mp_data.id, tenantId);
       } else {
         paymentResult = mp_data;
       }

@@ -6,9 +6,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Save, ShieldCheck, CalendarClock, CreditCard, Clock } from "lucide-react";
+import { Loader2, Save, ShieldCheck, CalendarClock, CreditCard, Clock, Settings, ExternalLink, Ticket, Wallet, AlertCircle } from "lucide-react";
 import { DemoStore } from "@/lib/persistence/demo-store";
 import { useTenant } from "@/hooks/use-tenant";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import { formatDateBR } from "@/lib/format";
 import {
   Select,
   SelectContent,
@@ -36,6 +39,7 @@ export default function SettingsPage() {
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [connectingMP, setConnectingMP] = useState(false);
   const [settings, setSettings] = useState({
     isPointsEnabled: true,
     cancellationWindowDays: 2,
@@ -47,6 +51,9 @@ export default function SettingsPage() {
     subscriptionNextPayment: "2026-05-15",
     pointsPerAppointment: 50,
     initialPoints: 0,
+    mpConnected: false,
+    mpPublicKey: "",
+    mpConnectionError: null as string | null
   });
 
   const fetchSettings = async () => {
@@ -69,7 +76,58 @@ export default function SettingsPage() {
     if (tenant?.slug) {
       fetchSettings();
     }
+    
+    // Verificar se voltou do redirecionamento do Mercado Pago
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("mp_success") === "true") {
+      toast({ title: "Sucesso!", description: "Sua conta do Mercado Pago foi conectada com sucesso." });
+      window.history.replaceState({}, '', window.location.pathname);
+    }
+    const mpError = params.get("mp_error");
+    if (mpError) {
+      toast({ title: "Erro na conexão", description: decodeURIComponent(mpError), variant: "destructive" });
+      window.history.replaceState({}, '', window.location.pathname);
+    }
   }, [tenant]);
+
+  const handleConnectMP = async () => {
+    setConnectingMP(true);
+    try {
+      const res = await fetch("/api/auth/mercadopago/url", {
+        headers: { "x-tenant-slug": tenant.slug }
+      });
+      const data = await res.json();
+      if (data.url) {
+        window.location.href = data.url;
+      } else {
+        toast({ title: "Erro", description: "Falha ao gerar URL de conexão.", variant: "destructive" });
+      }
+    } catch (e) {
+      toast({ title: "Erro", description: "Erro de conexão.", variant: "destructive" });
+    } finally {
+      setConnectingMP(false);
+    }
+  };
+
+  const handleDisconnectMP = async () => {
+    if (!confirm("Tem certeza que deseja desconectar sua conta do Mercado Pago? Você não poderá receber pagamentos online até conectar novamente.")) return;
+    
+    setSaving(true);
+    try {
+      const res = await fetch("/api/auth/mercadopago/disconnect", {
+        method: "POST",
+        headers: { "x-tenant-slug": tenant.slug }
+      });
+      if (res.ok) {
+        toast({ title: "Desconectado", description: "Sua conta foi desconectada com sucesso." });
+        fetchSettings();
+      }
+    } catch (e) {
+      toast({ title: "Erro", description: "Falha ao desconectar.", variant: "destructive" });
+    } finally {
+      setSaving(false);
+    }
+  };
 
   const handleSave = async () => {
     setSaving(true);
@@ -113,7 +171,7 @@ export default function SettingsPage() {
       <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-8 gap-4 md:gap-0">
         <div>
           <h1 className="text-4xl font-serif font-bold text-foreground flex items-center gap-3">
-            <Settings2 className="w-8 h-8 text-primary" /> Configurações
+            <Settings className="w-8 h-8 text-primary" /> Configurações
           </h1>
           <p className="text-muted-foreground mt-2">Gerencie as regras de negócio da sua barbearia.</p>
         </div>
@@ -363,6 +421,67 @@ export default function SettingsPage() {
             <p className="text-xs text-muted-foreground italic mt-4 bg-muted/50 p-3 rounded border border-dashed border-border">
               Configurando horários por dia da semana garantimos que o cliente veja apenas os horários reais disponíveis no momento do agendamento.
             </p>
+          </CardContent>
+        </Card>
+
+        <Card className={`bg-card border-border/50 shadow-lg border-l-4 ${settings.mpConnected ? 'border-l-green-500' : 'border-l-blue-500'}`}>
+          <CardHeader className="flex flex-row items-center gap-4 pb-2">
+            <div className={`w-10 h-10 rounded-full flex items-center justify-center ${settings.mpConnected ? 'bg-green-500/10' : 'bg-blue-500/10'}`}>
+              <Wallet className={`w-5 h-5 ${settings.mpConnected ? 'text-green-500' : 'text-blue-500'}`} />
+            </div>
+            <div className="flex-1">
+              <div className="flex items-center gap-2">
+                <CardTitle>Integração com Mercado Pago</CardTitle>
+                {settings.mpConnected && (
+                  <span className="bg-green-500/20 text-green-600 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase">Conectado</span>
+                )}
+              </div>
+              <CardDescription>Receba pagamentos via PIX e Cartão de Crédito.</CardDescription>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {!settings.mpConnected ? (
+              <>
+                {settings.mpConnectionError ? (
+                  <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-3 text-sm text-destructive flex gap-3 animate-in shake-1 duration-500">
+                    <AlertCircle className="w-5 h-5 shrink-0" />
+                    <div>
+                      <p className="font-bold">Atenção: Conta Desconectada</p>
+                      <p className="opacity-90">{settings.mpConnectionError}</p>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="bg-blue-500/5 border border-blue-500/20 rounded-lg p-3 text-sm text-blue-700 flex gap-3">
+                    <AlertCircle className="w-5 h-5 shrink-0" />
+                    <p>É necessário conectar sua conta do Mercado Pago para poder receber dos clientes no momento do agendamento online.</p>
+                  </div>
+                )}
+                <Button 
+                  className="w-full gap-2 bg-[#009EE3] hover:bg-[#007EB5] text-white border-none shadow-md"
+                  onClick={handleConnectMP}
+                  disabled={connectingMP}
+                >
+                  {connectingMP ? <Loader2 className="w-4 h-4 animate-spin" /> : <Wallet className="w-4 h-4" />}
+                  {settings.mpConnectionError ? "Reconectar Conta" : "Conectar sua conta do Mercado Pago"}
+                </Button>
+              </>
+            ) : (
+              <div className="space-y-4">
+                <div className="bg-green-500/5 border border-green-500/20 rounded-lg p-3 text-sm text-green-700">
+                  <p className="flex items-center gap-2 font-medium">
+                    <ShieldCheck className="w-4 h-4" /> Sua conta está vinculada com sucesso.
+                  </p>
+                  <p className="mt-1 opacity-80 text-xs">Os pagamentos dos seus clientes cairão diretamente na sua conta do Mercado Pago.</p>
+                </div>
+                <Button 
+                  variant="outline" 
+                  className="w-full gap-2 border-destructive/20 text-destructive hover:bg-destructive/5"
+                  onClick={handleDisconnectMP}
+                >
+                  Desconectar Conta
+                </Button>
+              </div>
+            )}
           </CardContent>
         </Card>
 

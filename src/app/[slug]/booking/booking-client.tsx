@@ -15,6 +15,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DemoStore } from "@/lib/persistence/demo-store";
 import { useToast } from "@/hooks/use-toast";
 import { useTenant } from "@/hooks/use-tenant";
+import { userStore } from "@/lib/store/user-store";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { CheckCircle2, ChevronRight, Clock, CreditCard, User, Scissors, Wallet } from "lucide-react";
@@ -441,6 +442,11 @@ function BookingContent() {
           : "Seu agendamento foi confirmado.",
       });
 
+      if ((paymentMethod === "card" || paymentMethod === "pix") && settings?.isPointsEnabled) {
+        const pts = settings?.pointsPerAppointment || settings?.points_per_appointment || 0;
+        userStore.addPoints(pts);
+      }
+
       DemoStore.saveAppointment(appointment);
       router.push(getLink(`/confirmacao/${appointment.id}`));
     } catch (error: any) {
@@ -865,16 +871,6 @@ function BookingContent() {
                                   >
                                     <Check className="w-4 h-4" /> Verificar Pagamento
                                   </Button>
-                                  
-                                  {process.env.NODE_ENV === "development" && (
-                                    <Button 
-                                      variant="outline"
-                                      onClick={() => handlePaymentSubmit(undefined, sessionId, { ...pixData, status: "approved" })}
-                                      className="w-full border-dashed border-primary text-primary hover:bg-primary/5 gap-2"
-                                    >
-                                      <Scissors className="w-4 h-4" /> 🧪 Simular Sucesso (Só Dev)
-                                    </Button>
-                                  )}
                                 </div>
                               </div>
                             </div>
@@ -894,7 +890,7 @@ function BookingContent() {
                           </TabsContent>
                         )}
 
-                        {paymentMethod !== "card" || isPrePaid ? (
+                        {paymentMethod === "local" || (paymentMethod === "card" && isPrePaid) ? (
                           <Button
                             onClick={() => handlePaymentSubmit()}
                             className="w-full mt-6 h-12 text-lg bg-[#EAB308] hover:bg-[#CA8A04] text-black font-bold shadow-lg transition-all active:scale-95"
@@ -902,13 +898,13 @@ function BookingContent() {
                           >
                             {confirmAppointment.isPending ? "Confirmando..." : "Finalizar Agendamento"}
                           </Button>
-                        ) : (
+                        ) : paymentMethod === "card" ? (
                           <div className="mt-4 text-center">
                             <p className="text-xs text-muted-foreground flex items-center justify-center gap-1">
                               <CheckCircle2 className="w-3 h-3 text-green-500" /> Use o botão do Mercado Pago acima para finalizar
                             </p>
                           </div>
-                        )}
+                        ) : null}
                       </Tabs>
                     </CardContent>
                   </Card>

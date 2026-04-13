@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { CheckCircle2, Calendar, Clock, MapPin, Share2, Wallet, Scissors, ExternalLink, Download, Award, CalendarPlus } from "lucide-react";
+import { CheckCircle2, Calendar, Clock, MapPin, Share2, Wallet, Scissors, ExternalLink, Download, Award, CalendarPlus, UserPlus, ArrowRight } from "lucide-react";
 import { useGetAppointment } from "@workspace/api-client-react";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
@@ -49,10 +49,14 @@ export default function ConfirmationPage(props: { params: Promise<{ slug: string
           setAuthStatus("authenticated");
           DemoStore.saveUser(data.user);
         } else {
-          setAuthStatus("unauthenticated");
+          const savedUser = DemoStore.getUser();
+          setAuthStatus(savedUser ? "authenticated" : "unauthenticated");
         }
       })
-      .catch(() => setAuthStatus("unauthenticated"));
+      .catch(() => {
+        const savedUser = DemoStore.getUser();
+        setAuthStatus(savedUser ? "authenticated" : "unauthenticated");
+      });
   }, [tenant]);
 
   // Se a API falhar em encontrar, tenta o DemoStore (LocalStorage)
@@ -166,142 +170,203 @@ END:VCARD`;
     );
   }
 
+  const downloadICS = (appt: any) => {
+    const icsString = generateICS(appt, settings);
+    if (!icsString) return;
+    const blob = new Blob([icsString], { type: 'text/calendar;charset=utf-8' });
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', 'agendamento.ics');
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(url);
+  };
+
   const getLink = (path: string) => `/${tenant.slug}${path}`;
 
+  const dateValue = appointment.appointmentDate || appointment.appointment_date || "";
+  const timeValue = appointment.appointmentTime || appointment.appointment_time || "";
+  const displayDate = dateValue ? dateValue.split('-').reverse().join('/') : "N/D";
+  
   return (
     <Layout>
-      <div className="container mx-auto px-4 py-12 max-w-2xl">
-        <div className="text-center mb-10">
-          <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-green-500/10 mb-6 ring-8 ring-green-500/5">
-            <CheckCircle2 className="w-12 h-12 text-green-500" />
+      <div className="container mx-auto px-4 py-16 max-w-3xl flex flex-col items-center">
+        {isLoading ? (
+          <div className="w-full max-w-md space-y-6">
+            <div className="w-24 h-24 rounded-full mx-auto bg-muted animate-pulse" />
+            <div className="h-10 w-3/4 mx-auto bg-muted animate-pulse" />
+            <div className="h-64 w-full rounded-xl bg-muted animate-pulse" />
           </div>
-          <h1 className="text-4xl font-serif font-bold text-foreground mb-3">Agendamento Confirmado!</h1>
-          <p className="text-muted-foreground text-lg">
-            Tudo certo, {appointment.customer_name || appointment.customerName}. Seu horário foi reservado com sucesso.
-          </p>
-        </div>
-
-        <Card className="border-border/40 shadow-xl overflow-hidden mb-8">
-          <CardHeader className="bg-primary/5 border-b border-primary/10">
-            <div className="flex justify-between items-center">
-              <CardTitle className="text-lg font-serif">Detalhes do Agendamento</CardTitle>
-              <Badge variant="outline" className="bg-green-500/10 text-green-600 border-green-500/20 px-3 py-1">
-                Confirmado
-              </Badge>
-            </div>
-          </CardHeader>
-          <CardContent className="pt-8 space-y-8">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              <div className="space-y-6">
-                <div className="flex items-start gap-4">
-                  <div className="p-2.5 rounded-xl bg-accent/50 text-primary">
-                    <Calendar className="w-6 h-6" />
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground uppercase font-bold tracking-wider mb-1">Data e Hora</p>
-                    <p className="text-lg font-bold">
-                      {(appointment.appointment_date || appointment.appointmentDate) ? format(new Date((appointment.appointment_date || appointment.appointmentDate) + 'T12:00:00'), "EEEE, d 'de' MMMM", { locale: ptBR }) : 'Data N/D'}
-                    </p>
-                    <p className="text-primary font-black text-xl">{appointment.appointment_time || appointment.appointmentTime}</p>
-                  </div>
-                </div>
-
-                <div className="flex items-start gap-4">
-                  <div className="p-2.5 rounded-xl bg-accent/50 text-primary">
-                    <Scissors className="w-6 h-6" />
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground uppercase font-bold tracking-wider mb-1">Serviço</p>
-                    <p className="text-lg font-bold">{appointment.service_name || appointment.serviceName}</p>
-                    <p className="text-primary font-bold">{formatCurrencyFromCents(appointment.service_price || appointment.servicePrice)}</p>
-                  </div>
-                </div>
+        ) : !appointment ? (
+          <div className="text-center space-y-4">
+            <h1 className="text-2xl font-serif text-destructive">Agendamento não encontrado</h1>
+            <p className="text-muted-foreground">Não foi possível localizar as informações deste agendamento.</p>
+            <Button asChild><Link href={getLink("/")}>Voltar para o Início</Link></Button>
+          </div>
+        ) : (
+          <div className="w-full animate-in zoom-in-95 duration-500">
+            <div className="text-center mb-10">
+              <div className="w-20 h-20 bg-primary/20 rounded-full flex items-center justify-center mx-auto mb-6">
+                <CheckCircle2 className="w-10 h-10 text-primary" />
               </div>
+              <h1 className="text-3xl md:text-4xl font-serif font-bold mb-4 text-foreground">
+                {(appointment as any).isReschedule || appointment.is_reschedule ? "Reagendamento Confirmado!" : "Agendamento Confirmado!"}
+              </h1>
+              <p className="text-muted-foreground text-lg">
+                Obrigado, {appointment.customerName || appointment.customer_name}. {(appointment as any).isReschedule || appointment.is_reschedule ? "Sua nova data foi reservada com sucesso." : "Seu horário foi reservado com sucesso."}
+              </p>
+            </div>
 
-              <div className="space-y-6">
-                <div className="flex items-start gap-4">
-                  <div className="p-2.5 rounded-xl bg-accent/50 text-primary">
-                    <MapPin className="w-6 h-6" />
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground uppercase font-bold tracking-wider mb-1">Endereço</p>
-                    <p className="text-lg font-bold font-serif">{settings?.shopName || 'Barbearia Premium'}</p>
-                    <p className="text-sm text-muted-foreground leading-relaxed">
-                      {settings?.address || 'Av. Bernardino de Campos, 123\nSantos, SP - 11065-001'}
-                    </p>
-                  </div>
-                </div>
+            <div className="bg-card border border-border/50 rounded-xl p-8 shadow-2xl relative overflow-hidden">
+              <div className="absolute top-0 left-0 w-2 h-full bg-primary" />
 
-                <div className="flex items-start gap-4">
-                  <div className="p-2.5 rounded-xl bg-accent/50 text-primary">
-                    <Wallet className="w-6 h-6" />
-                  </div>
+              <div className="grid gap-8 md:grid-cols-2">
+                <div className="space-y-6">
                   <div>
-                    <p className="text-sm text-muted-foreground uppercase font-bold tracking-wider mb-1">Pagamento</p>
-                    <div className="flex items-center gap-2">
-                      <p className="text-lg font-bold">{appointment.is_paid || appointment.isPaid ? 'Pago via PIX/Cartão' : 'Pagamento no Local'}</p>
-                      { (appointment.is_paid || appointment.isPaid) && <CheckCircle2 className="w-4 h-4 text-green-500" /> }
+                    <p className="text-sm text-muted-foreground mb-1">Serviço</p>
+                    <p className="text-xl font-medium text-foreground">{appointment.serviceName || appointment.service_name}</p>
+                  </div>
+
+                  <div>
+                    <p className="text-sm text-muted-foreground mb-1">Data e Horário</p>
+                    <div className="flex items-center gap-4">
+                      <div className="flex items-center gap-2 text-lg text-foreground">
+                        <Calendar className="w-5 h-5 text-primary" />
+                        {displayDate}
+                      </div>
+                      <div className="flex items-center gap-2 text-lg text-foreground">
+                        <Clock className="w-5 h-5 text-primary" />
+                        {timeValue}
+                      </div>
                     </div>
-                    <p className="text-xs text-muted-foreground">Valor total: {formatCurrencyFromCents(appointment.service_price || appointment.servicePrice)}</p>
+                  </div>
+
+                  <div>
+                    <p className="text-sm text-muted-foreground mb-1 text-foreground">Código da Reserva</p>
+                    <p className="font-mono text-muted-foreground">#{appointment.id.toString().padStart(6, '0')}</p>
+                  </div>
+
+                  <div className="border-t border-border/50 pt-4 mt-2">
+                    <p className="text-sm text-muted-foreground mb-1">Status do Pagamento</p>
+                    {((appointment as any).isReschedule || appointment.is_reschedule || appointment.isPaid || appointment.is_paid) ? (
+                      <div className="flex items-center gap-2 text-green-600 font-bold uppercase text-xs">
+                        <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+                        Pago e Confirmado
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-2 text-amber-500 font-bold uppercase text-xs">
+                        <div className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
+                        Pagar no Local
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <div className="bg-background rounded-lg p-6 border border-border flex flex-col justify-center">
+                  <div className="flex items-start gap-3 mb-4">
+                    <MapPin className="w-5 h-5 text-primary shrink-0 mt-1" />
+                    <div>
+                      <p className="font-medium text-foreground">{settings?.shopName || "Barbearia Premium"}</p>
+                      <p className="text-sm text-muted-foreground">{settings?.address || "Endereço não informado"}</p>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-start gap-3 mb-4">
+                    <Award className="w-5 h-5 text-primary shrink-0 mt-1" />
+                    <div>
+                      <p className="font-medium text-foreground">Profissional</p>
+                      <p className="text-sm text-muted-foreground">{appointment.barberName || appointment.barber_name || "Qualquer Especialista"}</p>
+                    </div>
+                  </div>
+
+                  <div className="border-t border-border/50 pt-4 mt-2">
+                    <p className="text-sm text-muted-foreground text-center italic">
+                      {(appointment as any).isReschedule || appointment.is_reschedule
+                        ? "Como esta é uma remarcação de um serviço, seu crédito foi mantido."
+                        : "Por favor, chegue com 5 minutos de antecedência."}
+                    </p>
                   </div>
                 </div>
               </div>
             </div>
 
-            { (appointment.is_paid || appointment.isPaid || (settings?.isPointsEnabled)) && (
-               <div className="p-4 rounded-2xl bg-primary/5 border border-primary/10 flex items-center justify-between gap-4">
-                 <div className="flex items-center gap-3">
-                   <Award className="w-8 h-8 text-primary" />
-                   <div>
-                     <p className="text-sm font-bold uppercase tracking-tight text-primary">Pontos de Fidelidade</p>
-                     <p className="text-xs text-muted-foreground">Você ganhou pontos com este agendamento!</p>
-                   </div>
-                 </div>
-                 <div className="text-right">
-                    <p className="text-2xl font-black text-primary">+{settings?.points_per_appointment || 10}</p>
-                    <p className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest">Acumulados</p>
-                 </div>
-               </div>
+            {!isLoading && authStatus === "unauthenticated" && (
+              <Card className="mt-10 bg-primary/5 border-primary/20 shadow-lg overflow-hidden relative">
+                <div className="absolute top-0 right-0 p-4 opacity-10">
+                  <Share2 className="w-24 h-24 text-primary" />
+                </div>
+                <CardHeader>
+                  <CardTitle className="text-xl flex items-center gap-2">
+                    <Award className="w-5 h-5 text-primary" /> Salvar meus dados?
+                  </CardTitle>
+                  <CardDescription>Crie sua conta agora e comece a ganhar pontos de fidelidade!</CardDescription>
+                </CardHeader>
+                <CardContent className="flex flex-col sm:flex-row gap-4 items-center">
+                  <Button asChild className="w-full sm:w-auto gap-2" variant="default">
+                    <Link href={getLink(`/cadastro?email=${encodeURIComponent(appointment.customerEmail || appointment.customer_email || "")}&name=${encodeURIComponent(appointment.customerName || appointment.customer_name || "")}&phone=${encodeURIComponent(appointment.customerPhone || appointment.customer_phone || "")}`)}>
+                      Criar minha conta
+                    </Link>
+                  </Button>
+                  <p className="text-xs text-muted-foreground">
+                    Próximos agendamentos em apenas 2 cliques.
+                  </p>
+                </CardContent>
+              </Card>
             )}
 
-            <Separator className="bg-border/40" />
-            
-            <div className="flex flex-col sm:flex-row gap-4 pt-2">
-              <Button asChild className="flex-1 h-12 text-md shadow-lg shadow-primary/20">
-                <Link href={getLink("/meu-perfil/historico")}>
-                   <Clock className="w-5 h-5 mr-3" />
-                   Ver Meus Horários
-                </Link>
+            <div className="flex flex-col sm:flex-row justify-center gap-4 mt-10">
+              <Button
+                onClick={() => downloadICS(appointment)}
+                variant="outline"
+                className="gap-2">
+                <Download className="w-4 h-4" /> Adicionar ao Calendário
               </Button>
-              <Button variant="outline" onClick={handleAddToCalendar} className="flex-1 h-12 text-md border-primary/20 hover:bg-primary/5 text-primary">
-                <CalendarPlus className="w-5 h-5 mr-3" />
-                Adicionar ao Calendário
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-
-        {authStatus === "unauthenticated" && (
-          <div className="bg-accent/30 rounded-2xl p-8 border border-border/50 text-center">
-            <h3 className="text-xl font-serif font-bold mb-3">Deseja acompanhar seus agendamentos?</h3>
-            <p className="text-muted-foreground mb-6">Crie uma conta para gerenciar seus horários, acumular pontos fidelidade e muito mais.</p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Button asChild variant="outline" className="px-8 border-primary/30 text-primary">
-                <Link href={getLink("/login")}>Entrar</Link>
-              </Button>
-              <Button asChild className="px-8 shadow-md">
-                <Link href={getLink("/cadastro")}>Criar Conta Agora</Link>
+              {authStatus === "authenticated" && (
+                <Button asChild variant="outline" className="gap-2">
+                  <Link href={getLink("/meu-perfil/historico")}>
+                    <Clock className="w-4 h-4" /> Ver Meus Horários
+                  </Link>
+                </Button>
+              )}
+              <Button asChild>
+                <Link href={getLink("/")}>Voltar para o Início</Link>
               </Button>
             </div>
           </div>
         )}
-        
-        <div className="mt-8 text-center pt-8">
-            <Link href={getLink("/")} className="text-sm text-muted-foreground hover:text-primary transition-colors flex items-center justify-center gap-2">
-               Voltar para o Início
-            </Link>
-        </div>
       </div>
     </Layout>
   );
+}
+
+function generateICS(appointment: any, settings: any) {
+  const dateStr = appointment.appointmentDate || appointment.appointment_date;
+  const timeStr = appointment.appointmentTime || appointment.appointment_time;
+  
+  if (!dateStr || !timeStr) return "";
+  
+  const startDate = new Date(`${dateStr}T${timeStr}`);
+  const endDate = new Date(startDate.getTime() + (settings?.slot_interval || 45) * 60 * 1000);
+
+  const formatDate = (date: Date) => {
+    return date.toISOString().replace(/[-:]/g, "").split(".")[0] + "Z";
+  };
+
+  const serviceName = appointment.serviceName || appointment.service_name || "Serviço Adquirido";
+  const customerName = appointment.customerName || appointment.customer_name || "Cliente";
+  const shopName = settings?.shopName || "Barbearia Premium";
+  const address = settings?.address || "Endereço da Barbearia";
+
+  return `BEGIN:VCALENDAR
+VERSION:2.0
+BEGIN:VEVENT
+SUMMARY:${serviceName}
+DESCRIPTION:Agendamento: ${customerName} na ${shopName}
+LOCATION:${address}
+DTSTART:${formatDate(startDate)}
+DTEND:${formatDate(endDate)}
+END:VEVENT
+END:VCALENDAR`;
 }

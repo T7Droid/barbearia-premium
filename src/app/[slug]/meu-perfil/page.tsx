@@ -10,6 +10,7 @@ import { Loader2, User, Mail, Phone, Calendar, History, Settings as SettingsIcon
 import Link from "next/link";
 import { formatCurrencyFromCents } from "@/lib/format";
 import { Progress } from "@/components/ui/progress";
+import { Label } from "@/components/ui/label";
 import { useTenant } from "@/components/tenant-provider";
 import { DemoStore } from "@/lib/persistence/demo-store";
 
@@ -141,11 +142,11 @@ export default function UserProfile() {
                   <div className="flex-1 w-full max-w-md space-y-2">
                     <div className="flex justify-between text-sm font-bold">
                       <span className="uppercase tracking-wider">Progresso</span>
-                      <span>{user?.points || 0} / {settings?.points_threshold || 100} pts</span>
+                      <span>{user?.points || 0} / {settings?.pointsThreshold || settings?.points_threshold || 100} pts</span>
                     </div>
-                    <Progress value={((user?.points || 0) / (settings?.points_threshold || 100)) * 100} className="h-3 shadow-inner" />
+                    <Progress value={((user?.points || 0) / (settings?.pointsThreshold || settings?.points_threshold || 100)) * 100} className="h-3 shadow-inner" />
                     <p className="text-[10px] text-muted-foreground text-center italic">
-                      Faltam {(settings?.points_threshold || 100) - (user?.points || 0)} pontos para sua recompensa: {settings?.reward_description || "Serviço Grátis"}
+                      Faltam {(settings?.pointsThreshold || settings?.points_threshold || 100) - (user?.points || 0)} pontos para sua recompensa: {settings?.rewardDescription || settings?.reward_description || "Serviço Grátis"}
                     </p>
                   </div>
 
@@ -153,7 +154,7 @@ export default function UserProfile() {
                     <Gift className="w-8 h-8 text-primary" />
                     <div className="text-center">
                       <p className="text-xs text-muted-foreground uppercase font-bold tracking-tighter">Próximos Pontos</p>
-                      <p className="text-lg font-black text-primary">+{settings?.points_per_appointment || 10}</p>
+                      <p className="text-lg font-black text-primary">+{settings?.pointsPerAppointment || settings?.points_per_appointment || 10}</p>
                     </div>
                   </div>
                 </div>

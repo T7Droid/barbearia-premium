@@ -7,6 +7,9 @@ export const config = {
   },
   mercadopago: {
     isConfigured: isMercadoPagoConfigured,
+    appId: process.env.MP_APP_ID,
+    clientSecret: process.env.MP_CLIENT_SECRET,
+    redirectUri: process.env.MP_REDIRECT_URI,
   },
   resend: {
     isConfigured: !!process.env.RESEND_API_KEY && !process.env.RESEND_API_KEY.includes("your-api-key"),

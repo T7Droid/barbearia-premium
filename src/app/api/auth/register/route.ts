@@ -63,7 +63,15 @@ export async function POST(request: NextRequest) {
           console.error("[AUTH REGISTER] Erro ao criar/atualizar perfil:", profileError);
         }
 
-        const response = NextResponse.json({ success: true, user: { name, email, role: "client" } });
+        const response = NextResponse.json({ 
+          success: true, 
+          user: { 
+            name, 
+            email, 
+            role: "client",
+            points: initialPoints
+          } 
+        });
         response.cookies.set("session_token", data.session?.access_token || "", {
           httpOnly: true,
           secure: process.env.NODE_ENV === "production",

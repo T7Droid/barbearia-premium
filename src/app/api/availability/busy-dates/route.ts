@@ -1,5 +1,8 @@
+import { NextResponse, NextRequest } from "next/server";
+import { supabaseAdmin, isSupabaseConfigured } from "@/lib/supabase";
+import { AppointmentService } from "@/lib/services/appointment.service";
+import { eachDayOfInterval, parseISO, format } from "date-fns";
 import { TenantContext } from "@/lib/services/tenant-context";
-
 export async function GET(request: NextRequest) {
   const tenant = await TenantContext.getTenant(request);
   if (!tenant) {

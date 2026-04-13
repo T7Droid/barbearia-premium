@@ -16,6 +16,7 @@ import {
   Scissors,
   Clock,
   DollarSign,
+  LayoutGrid,
   ChevronLeft,
   X,
   Save,

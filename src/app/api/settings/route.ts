@@ -19,6 +19,13 @@ export async function GET(request: NextRequest) {
     .eq("tenant_id", tenant.id)
     .single();
 
+  // Buscar informações de conexão do tenant
+  const { data: tenantData } = await supabase
+    .from("tenants")
+    .select("mp_connected, mp_public_key, mp_connection_error")
+    .eq("id", tenant.id)
+    .single();
+
   // Se houver erro ou não houver dados, usamos valores padrão seguros
   const defaultData = {
     is_points_enabled: true,
@@ -44,7 +51,9 @@ export async function GET(request: NextRequest) {
     businessEndTime: finalData.business_end_time,
     slotInterval: finalData.slot_interval,
     weeklyHours: finalData.weekly_hours,
-    mpPublicKey: process.env.NEXT_PUBLIC_MERCADOPAGO_PUBLIC_KEY || "",
+    mpPublicKey: tenantData?.mp_public_key || process.env.NEXT_PUBLIC_MERCADOPAGO_PUBLIC_KEY || "",
+    mpConnected: tenantData?.mp_connected || false,
+    mpConnectionError: tenantData?.mp_connection_error || null,
     tenantId: tenant.id,
     tenantSlug: tenant.slug
   };

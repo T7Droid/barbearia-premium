@@ -9,6 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Loader2, Mail, Lock, ArrowRight } from "lucide-react";
 import { DemoStore } from "@/lib/persistence/demo-store";
 import { useTenant } from "@/components/tenant-provider";
+import { userStore } from "@/lib/store/user-store";
 
 export function ClientLoginForm() {
   const router = useRouter();
@@ -38,16 +39,19 @@ export function ClientLoginForm() {
       const data = await response.json();
 
       if (response.ok) {
-        // Persistir para Modo Demo na Vercel
-        DemoStore.saveUser(data.user);
+        // Persistir para Modo Demo e Sincronizar Store Reativa
+        const user = data.user;
+        DemoStore.saveUser(user);
+        userStore.setUser(user);
 
         toast({
           title: "Bem-vindo!",
           description: "Você entrou na sua conta.",
         });
         
-        // Redireciona para a home do tenant específico
-        router.push(`/${tenant.slug}`);
+        // Redireciona para a página originária (from) ou a home
+        const from = searchParams.get("from");
+        router.push(from || `/${tenant.slug}`);
         router.refresh();
       } else {
         toast({

@@ -11,11 +11,13 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import {
   Plus,
+  UserPlus,
   Pencil,
   Trash2,
   Loader2,
   Users,
   User,
+  LayoutGrid,
   ChevronLeft,
   X,
   Save,

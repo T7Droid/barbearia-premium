@@ -12,6 +12,7 @@ import { UserPlus, ShieldCheck, ArrowRight, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { DemoStore } from "@/lib/persistence/demo-store";
 import { useTenant } from "@/hooks/use-tenant";
+import { userStore } from "@/lib/store/user-store";
 
 function CadastroContent() {
   const router = useRouter();
@@ -83,11 +84,13 @@ function CadastroContent() {
       if (response.ok) {
         const userData = await response.json();
         
-        // Persistência para Modo Demo na Vercel
-        DemoStore.saveUser({
+        // Persistência para Modo Demo e Sincronizar Store Reativa
+        const user = {
           ...userData.user,
           phone: formData.phone
-        });
+        };
+        DemoStore.saveUser(user);
+        userStore.setUser(user);
 
         toast({
           title: "Conta criada!",

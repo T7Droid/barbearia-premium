@@ -14,7 +14,7 @@ export async function POST(request: NextRequest) {
     // 1. Buscar a sessão para obter o valor real
     const { data: sessionRecord } = await supabaseAdmin
       .from("checkout_sessions")
-      .select("data")
+      .select("data, tenant_id")
       .eq("id", sessionId)
       .single();
 
@@ -29,7 +29,8 @@ export async function POST(request: NextRequest) {
     const pixResult = await PaymentService.processPixPayment(
       { payer, description: sessionData.serviceName },
       sessionId,
-      amountInCents
+      amountInCents,
+      sessionRecord.tenant_id
     );
 
     return NextResponse.json(pixResult);

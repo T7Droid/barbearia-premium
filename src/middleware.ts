@@ -1,15 +1,16 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
-export async function proxy(request: NextRequest) {
+export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // 1. Ignorar arquivos estáticos e webhooks
+  // 1. Ignorar arquivos estáticos, webhooks e rotas OAuth do Mercado Pago
   if (
     pathname.includes(".") || 
     pathname.startsWith("/_next") || 
     pathname === "/" ||
-    pathname.startsWith("/api/webhooks")
+    pathname.startsWith("/api/webhooks") ||
+    pathname.startsWith("/api/auth/mercadopago")
   ) {
     return NextResponse.next();
   }
@@ -80,7 +81,7 @@ export async function proxy(request: NextRequest) {
     requestHeaders.set("x-tenant-id", tenant.id);
 
     // Lógica de proteção de rotas (Admin, Perfil) dento do tenant
-    const isTenantAdminPath = !pathname.startsWith("/api") && pathname.startsWith(`/${slug}/admin`);
+    const isTenantAdminPath = !pathname.startsWith("/api") && pathname.startsWith(`/${slug}/admin`) && !pathname.endsWith("/admin/login");
     const isTenantProfilePath = !pathname.startsWith("/api") && pathname.startsWith(`/${slug}/meu-perfil`);
     const isTenantAuthPath = !pathname.startsWith("/api") && 
       (pathname === `/${slug}/login` || pathname === `/${slug}/cadastro`);
@@ -91,28 +92,41 @@ export async function proxy(request: NextRequest) {
       const { data: { user } } = await supabase.auth.getUser(token);
       
       if (user) {
+        // Primeiro buscamos o perfil sem o filtro restrito de tenant
         const { data: profile } = await supabase
           .from("profiles")
-          .select("role")
+          .select("role, tenant_id")
           .eq("id", user.id)
-          .eq("tenant_id", tenant.id)
           .single();
         
-        const role = profile?.role || "client";
+        let role = "client";
+        const adminEmails = ["admin@barber.com", "thyagoneves.sa@gmail.com"];
+        if (adminEmails.includes(user.email || "") || profile?.role === "admin") {
+          role = "admin";
+        } else if (profile && tenant.id && profile.tenant_id === tenant.id) {
+          role = profile.role || "client";
+        }
 
         if (isTenantAuthPath) {
-          const target = role === "admin" ? `/${slug}/admin` : `/${slug}/meu-perfil`;
+          const from = request.nextUrl.searchParams.get("from");
+          const target = from || (role === "admin" ? `/${slug}/admin` : `/${slug}/meu-perfil`);
+          console.log(`[Proxy] Redirecting authenticated user from ${pathname} to ${target}`);
           return NextResponse.redirect(new URL(target, request.url));
         }
 
         if (isTenantAdminPath && role !== "admin") {
-          return NextResponse.redirect(new URL(`/${slug}/login`, request.url));
+          console.log(`[Proxy] ACCESS DENIED: User role ${role} tried to access ${pathname}. Redirecting to login.`);
+          return NextResponse.redirect(new URL(`/${slug}/admin/login`, request.url));
         }
       } else if (isTenantAdminPath || isTenantProfilePath) {
-        return NextResponse.redirect(new URL(`/${slug}/login`, request.url));
+        console.log(`[Proxy] SESSION EXPIRED or INVALID for token. Redirecting ${pathname} to login.`);
+        const loginUrl = new URL(isTenantAdminPath ? `/${slug}/admin/login` : `/${slug}/login`, request.url);
+        loginUrl.searchParams.set("from", pathname);
+        return NextResponse.redirect(loginUrl);
       }
     } else if (!token && (isTenantAdminPath || isTenantProfilePath)) {
-      const loginUrl = new URL(`/${slug}/login`, request.url);
+      console.log(`[Proxy] NO TOKEN for protected path ${pathname}. Redirecting to login.`);
+      const loginUrl = new URL(isTenantAdminPath ? `/${slug}/admin/login` : `/${slug}/login`, request.url);
       loginUrl.searchParams.set("from", pathname);
       return NextResponse.redirect(loginUrl);
     }

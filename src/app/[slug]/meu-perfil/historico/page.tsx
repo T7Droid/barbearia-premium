@@ -35,50 +35,73 @@ export default function AppointmentHistory() {
 
     const headers = { "x-tenant-slug": tenant.slug };
     
-    Promise.all([
-      fetch("/api/appointments", { headers }).then(res => res.json()),
-      fetch("/api/settings", { headers }).then(res => res.json()),
-      fetch("/api/auth/me", { headers }).then(res => res.json())
-    ]).then(([appointmentsData, settingsData, authData]) => {
-      // Autenticação e Sincronização
-      if (authData.authenticated) {
-        DemoStore.saveUser(authData.user);
-      } else {
-        const savedUser = DemoStore.getUser();
-        if (!savedUser || savedUser.role === "admin") {
-          router.push(getLink("/login"));
-          return;
+    const loadData = async () => {
+      try {
+        const [appsRes, settingsRes, authRes] = await Promise.all([
+          fetch("/api/appointments", { headers }),
+          fetch("/api/settings", { headers }),
+          fetch("/api/auth/me", { headers })
+        ]);
+
+        const authData = await authRes.json();
+        const settingsData = await settingsRes.json();
+        
+        // 1. Lidar com Autenticação
+        if (authData.authenticated) {
+          DemoStore.saveUser(authData.user);
+        } else {
+          const savedUser = DemoStore.getUser();
+          if (!savedUser) {
+            router.push(getLink("/login"));
+            return;
+          }
         }
-      }
 
-      const apiApps = Array.isArray(appointmentsData) ? appointmentsData : [];
-      const savedApps = DemoStore.getAppointments();
-      
-      // Mesclar e remover duplicatas pelo ID
-      const allApps = [...apiApps];
-      savedApps.forEach(saved => {
-        if (!allApps.some(api => api.id === saved.id)) {
-          allApps.push(saved);
+        // 2. Lidar com Agendamentos
+        let apiAppsRaw = [];
+        if (appsRes.ok) {
+          apiAppsRaw = await appsRes.json();
+        } else if (appsRes.status === 401) {
+          console.log("Histórico: API retornou 401, usando apenas dados locais...");
         }
-      });
 
-      // Ordenar por data (mais recentes primeiro)
-      allApps.sort((a: any, b: any) => {
-        return new Date(`${b.appointmentDate}T${b.appointmentTime}`).getTime() - 
-               new Date(`${a.appointmentDate}T${a.appointmentTime}`).getTime();
-      });
+        const apiApps = (Array.isArray(apiAppsRaw) ? apiAppsRaw : []).map((app: any) => ({
+          ...app,
+          serviceName: app.service_name || app.serviceName,
+          serviceId: app.service_id || app.serviceId,
+          appointmentDate: app.appointment_date || app.appointmentDate,
+          appointmentTime: app.appointment_time || app.appointmentTime,
+        }));
 
-      setAppointments(allApps);
-      setSettings(settingsData);
-      setLoading(false);
-    }).catch(() => {
-      const savedUser = DemoStore.getUser();
-      if (savedUser && savedUser.role !== "admin") {
+        const savedApps = DemoStore.getAppointments();
+        const allApps = [...apiApps];
+        savedApps.forEach(saved => {
+          if (!allApps.some(api => api.id === saved.id)) {
+            allApps.push(saved);
+          }
+        });
+
+        allApps.sort((a: any, b: any) => {
+          try {
+            const dateA = new Date(`${a.appointmentDate || a.appointment_date}T${a.appointmentTime || a.appointment_time}`);
+            const dateB = new Date(`${b.appointmentDate || b.appointment_date}T${b.appointmentTime || b.appointment_time}`);
+            return dateB.getTime() - dateA.getTime();
+          } catch (e) { return 0; }
+        });
+
+        setAppointments(allApps);
+        setSettings(settingsData);
         setLoading(false);
-      } else {
-        router.push(getLink("/login"));
+      } catch (error) {
+        console.error("Histórico Load Error:", error);
+        // Fallback total para DemoStore em caso de erro de rede ou crítico
+        const savedApps = DemoStore.getAppointments();
+        setAppointments(savedApps);
+        setLoading(false);
       }
-    });
+    };
+
+    loadData();
   }, [tenant.slug]);
 
   const canReschedule = (dateStr: string) => {
@@ -152,13 +175,19 @@ export default function AppointmentHistory() {
                           <div className="w-8 h-8 rounded bg-primary/10 flex items-center justify-center">
                             <Scissors className="w-4 h-4 text-primary" />
                           </div>
-                          <span className="font-medium text-foreground">{app.serviceName}</span>
+                          <span className="font-medium text-foreground">{app.serviceName || app.service_name || "Serviço"}</span>
                         </div>
                       </TableCell>
                       <TableCell className="text-foreground">
                         <div className="flex flex-col">
-                          <span className="flex items-center gap-1.5"><Calendar className="w-3 h-3 text-muted-foreground" /> {app.appointmentDate.split("-").reverse().join("/")}</span>
-                          <span className="flex items-center gap-1.5 text-xs text-muted-foreground"><Clock className="w-3 h-3" /> {app.appointmentTime}</span>
+                          <span className="flex items-center gap-1.5">
+                            <Calendar className="w-3 h-3 text-muted-foreground" /> 
+                            {(app.appointmentDate || app.appointment_date)?.split("-").reverse().join("/") || "Data N/D"}
+                          </span>
+                          <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                            <Clock className="w-3 h-3" /> 
+                            {app.appointmentTime || app.appointment_time || "Horário N/D"}
+                          </span>
                         </div>
                       </TableCell>
                       <TableCell>{getStatusBadge(app.status)}</TableCell>
