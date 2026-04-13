@@ -14,6 +14,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DemoStore } from "@/lib/persistence/demo-store";
 import { useToast } from "@/hooks/use-toast";
+import { useTenant } from "@/hooks/use-tenant";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { CheckCircle2, ChevronRight, Clock, CreditCard, User, Scissors, Wallet, UserPlus, ArrowRight } from "lucide-react";
@@ -25,6 +26,14 @@ import {
   getGetAvailabilityQueryKey,
 } from "@workspace/api-client-react";
 import type { Service, TimeSlot } from "@workspace/api-client-react";
+
+export interface Barber {
+  id: number;
+  name: string;
+  description: string;
+  imageUrl?: string;
+  active: boolean;
+}
 import Link from "next/link";
 import { Loader2 } from "lucide-react";
 import { formatCurrencyFromCents } from "@/lib/format";
@@ -51,17 +60,24 @@ function BookingContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { toast } = useToast();
+  
+  // Obter contexto do tenant
+  const tenant = useTenant();
 
   const rescheduleId = searchParams.get("reschedule");
   const preSelectedServiceId = searchParams.get("serviceId");
 
-  const [step, setStep] = useState(rescheduleId ? 2 : 1);
+  const [step, setStep] = useState(1);
   const [settings, setSettings] = useState<any>(null);
   const [isLogged, setIsLogged] = useState(false);
   const [currentUser, setCurrentUser] = useState<any>(null);
 
   const timeSectionRef = useRef<HTMLDivElement>(null);
 
+  const [barbers, setBarbers] = useState<Barber[]>([]);
+  const [selectedBarber, setSelectedBarber] = useState<Barber | null>(null);
+  const [isLoadingBarbers, setIsLoadingBarbers] = useState(true);
+  
   const [selectedService, setSelectedService] = useState<Service | null>(null);
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
   const [selectedTime, setSelectedTime] = useState<string | null>(null);
@@ -85,9 +101,16 @@ function BookingContent() {
   useEffect(() => {
     Promise.all([
       fetch(`/api/settings?t=${Date.now()}`).then(res => res.json()),
-      fetch("/api/auth/me").then(res => res.json())
-    ]).then(([settingsData, authData]) => {
+      fetch("/api/auth/me").then(res => res.json()),
+      fetch("/api/barbers").then(res => res.json())
+    ]).then(([settingsData, authData, barbersData]) => {
       console.log("DEBUG: Configurações carregadas da API:", settingsData);
+
+      // Sincronizar barbeiros
+      if (Array.isArray(barbersData)) {
+        setBarbers(barbersData);
+      }
+      setIsLoadingBarbers(false);
 
       // Sincronizar configurações
       setSettings(settingsData);
@@ -155,11 +178,11 @@ function BookingContent() {
 
   const dateStr = selectedDate ? format(selectedDate, "yyyy-MM-dd") : "";
   const { data: availability, isLoading: isLoadingAvailability } = useGetAvailability(
-    { date: dateStr, serviceId: selectedService?.id || 0 },
+    { date: dateStr, serviceId: selectedService?.id || 0, barberId: selectedBarber?.id as any },
     {
       query: {
-        enabled: !!selectedDate && !!selectedService?.id,
-        queryKey: getGetAvailabilityQueryKey({ date: dateStr, serviceId: selectedService?.id || 0 })
+        enabled: !!selectedDate && !!selectedService?.id && !!selectedBarber?.id,
+        queryKey: getGetAvailabilityQueryKey({ date: dateStr, serviceId: selectedService?.id || 0, barberId: selectedBarber?.id as any })
       }
     }
   );
@@ -171,13 +194,35 @@ function BookingContent() {
 
   useEffect(() => {
     // Only proceed if all requirements are met
-    if (!isMpLoaded || !mpPublicKey || step !== 4 || paymentMethod !== "card" || isPrePaid) {
+    if (!isMpLoaded || !mpPublicKey || step !== 5 || paymentMethod !== "card" || isPrePaid) {
+      console.log("DEBUG: MP Brick não inicializou. Razões:", {
+        isMpLoaded,
+        hasMpKey: !!mpPublicKey,
+        step,
+        paymentMethod,
+        isPrePaid
+      });
       return;
     }
 
     let cardPaymentBrickController: any = null;
 
     const initCardBrick = async () => {
+      const amount = (selectedService?.price || 0) / 100;
+      const email = customerInfo.email;
+
+      console.log("DEBUG: Mercado Pago Initialization Config:", {
+        amount,
+        email,
+        publicKey: mpPublicKey?.substring(0, 10) + "...",
+        service: selectedService?.name
+      });
+
+      if (amount <= 0) {
+        console.error("DEBUG: Valor inválido para o Mercado Pago:", amount);
+        return;
+      }
+
       try {
         const mp = new (window as any).MercadoPago(mpPublicKey, {
           locale: 'pt-BR'
@@ -217,7 +262,13 @@ function BookingContent() {
                   }
                 });
               },
-              onError: (error: any) => console.error("Card Brick Error:", error),
+              onError: (error: any) => {
+                console.error("Card Brick Error Detail:", error);
+                // Tenta extrair mais informações se o erro for um objeto vazio {}
+                if (error && Object.keys(error).length === 0) {
+                  console.warn("DEBUG: Erro vazio recebido do MP. Verifique as chaves e o ambiente (Sandbox vs Prod).");
+                }
+              },
             },
           }
         );
@@ -244,6 +295,11 @@ function BookingContent() {
     if (rescheduleId && s === 2) return s;
     return Math.max(s - 1, 1);
   });
+
+  const handleBarberSelect = (barber: Barber) => {
+    setSelectedBarber(barber);
+    handleNextStep();
+  };
 
   const handleServiceSelect = (service: Service) => {
     setSelectedService(service);
@@ -281,6 +337,8 @@ function BookingContent() {
           customerPhone: customerInfo.phone,
           customerCpf: customerInfo.cpf,
           serviceId: selectedService.id,
+          barberId: selectedBarber?.id,
+          barberName: selectedBarber?.name,
           appointmentDate: format(selectedDate, "yyyy-MM-dd"),
           appointmentTime: selectedTime,
           userId: currentUser?.id,
@@ -443,7 +501,46 @@ function BookingContent() {
         <div className="bg-card border border-border/50 rounded-lg p-6 shadow-xl">
           {step === 1 && (
             <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4">
-              <h2 className="text-xl font-serif font-semibold">Escolha o Serviço</h2>
+              <h2 className="text-xl font-serif font-semibold">Selecione o Barbeiro</h2>
+              {isLoadingBarbers ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {[1, 2, 3, 4].map(i => <Skeleton key={i} className="h-24 w-full" />)}
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {barbers?.map((barber) => (
+                    <div
+                      key={barber.id}
+                      onClick={() => handleBarberSelect(barber)}
+                      className={`p-4 border rounded-lg cursor-pointer transition-all hover:border-primary/50 flex items-center gap-4
+                        ${selectedBarber?.id === barber.id ? 'border-primary bg-primary/5' : 'border-border/50 bg-background'}`}
+                    >
+                      <div className="w-16 h-16 rounded-full overflow-hidden bg-muted flex-shrink-0 border-2 border-border/50 shadow-sm">
+                        {barber.imageUrl ? (
+                          <img src={barber.imageUrl} alt={barber.name} className="w-full h-full object-cover" />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center bg-primary/10 text-primary">
+                            <User className="w-8 h-8" />
+                          </div>
+                        )}
+                      </div>
+                      <div>
+                        <h3 className="font-medium text-lg leading-tight">{barber.name}</h3>
+                        <p className="text-sm text-muted-foreground line-clamp-1 mt-1">{barber.description || "Especialista"}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {step === 2 && (
+            <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4">
+              <div className="flex items-center justify-between">
+                <h2 className="text-xl font-serif font-semibold">Escolha o Serviço</h2>
+                <Button variant="ghost" size="sm" onClick={handlePrevStep}>Voltar</Button>
+              </div>
               {isLoadingServices ? (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   {[1, 2, 3, 4].map(i => <Skeleton key={i} className="h-24 w-full" />)}
@@ -472,11 +569,11 @@ function BookingContent() {
             </div>
           )}
 
-          {step === 2 && (
+          {step === 3 && (
             <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4">
               <div className="flex items-center justify-between">
                 <h2 className="text-xl font-serif font-semibold text-foreground">Data e Horário</h2>
-                {!rescheduleId && <Button variant="ghost" size="sm" onClick={handlePrevStep}>Voltar</Button>}
+                <Button variant="ghost" size="sm" onClick={handlePrevStep}>Voltar</Button>
               </div>
 
               <div className="grid grid-cols-1 lg:grid-cols-5 gap-10">
@@ -549,7 +646,7 @@ function BookingContent() {
             </div>
           )}
 
-          {step === 3 && (
+          {step === 4 && (
             <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4">
               <div className="flex items-center justify-between">
                 <h2 className="text-xl font-serif font-semibold text-foreground">Seus Dados</h2>
@@ -559,7 +656,7 @@ function BookingContent() {
               {!isLogged && (
                 <div className="bg-primary/5 border border-primary/20 rounded-lg p-4 flex items-center justify-between mb-4">
                   <p className="text-sm text-foreground">Já possui uma conta? Entre para agendar mais rápido.</p>
-                  <Button variant="link" asChild className="p-0 text-primary h-auto"><Link href="/login">Entrar</Link></Button>
+                  <Button variant="link" asChild className="p-0 text-primary h-auto"><Link href={getLink("/login")}>Entrar</Link></Button>
                 </div>
               )}
 
@@ -625,7 +722,7 @@ function BookingContent() {
           )}
 
           { }
-          {step === 4 && (
+          {step === 5 && (
             <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4">
               <div className="flex items-center justify-between">
                 <h2 className="text-xl font-serif font-semibold text-foreground">
@@ -639,6 +736,10 @@ function BookingContent() {
                 <div className="bg-background rounded-lg p-6 border border-border/50 h-fit">
                   <h3 className="font-medium text-lg mb-4 text-foreground">Resumo do Agendamento</h3>
                   <div className="space-y-3 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground flex items-center gap-2"><User className="w-4 h-4" /> Barbeiro</span>
+                      <span className="font-medium text-right text-foreground">{selectedBarber?.name || "Qualquer um"}</span>
+                    </div>
                     <div className="flex justify-between">
                       <span className="text-muted-foreground flex items-center gap-2"><Scissors className="w-4 h-4" /> Serviço</span>
                       <span className="font-medium text-right text-foreground">{selectedService?.name}</span>

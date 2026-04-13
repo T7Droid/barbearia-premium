@@ -7,6 +7,8 @@ export interface Appointment {
   serviceId: number;
   serviceName: string;
   servicePrice: number;
+  barberId?: number;
+  barberName?: string;
   appointmentDate: string;
   appointmentTime: string;
   customerName: string;
@@ -16,7 +18,7 @@ export interface Appointment {
   isPaid: boolean;
   isReschedule?: boolean;
   rescheduleId?: number;
-  userId?: string;
+  tenantId: string;
   createdAt: string;
 }
 
@@ -26,6 +28,8 @@ export class AppointmentService {
     if (data.serviceId !== undefined) mapped.service_id = data.serviceId;
     if (data.serviceName !== undefined) mapped.service_name = data.serviceName;
     if (data.servicePrice !== undefined) mapped.service_price = data.servicePrice;
+    if (data.barberId !== undefined) mapped.barber_id = data.barberId;
+    if (data.barberName !== undefined) mapped.barber_name = data.barberName;
     if (data.appointmentDate !== undefined) mapped.appointment_date = data.appointmentDate;
     if (data.appointmentTime !== undefined) mapped.appointment_time = data.appointmentTime;
     if (data.customerName !== undefined) mapped.customer_name = data.customerName;
@@ -36,6 +40,7 @@ export class AppointmentService {
     if (data.isReschedule !== undefined) mapped.is_reschedule = data.isReschedule;
     if (data.rescheduleId !== undefined) mapped.reschedule_id = data.rescheduleId;
     if (data.userId !== undefined) mapped.user_id = data.userId;
+    if (data.tenantId !== undefined) mapped.tenant_id = data.tenantId;
     if (data.createdAt !== undefined) mapped.created_at = data.createdAt;
     return mapped;
   }
@@ -47,6 +52,8 @@ export class AppointmentService {
       serviceId: Number(data.service_id),
       serviceName: data.service_name,
       servicePrice: Number(data.service_price),
+      barberId: data.barber_id ? Number(data.barber_id) : undefined,
+      barberName: data.barber_name,
       appointmentDate: data.appointment_date,
       appointmentTime: data.appointment_time,
       customerName: data.customer_name,
@@ -91,6 +98,7 @@ export class AppointmentService {
       .insert({
         id: sessionId,
         data: sessionData,
+        tenant_id: data.tenantId,
         expires_at: new Date(Date.now() + 30 * 60 * 1000).toISOString()
       });
 
@@ -140,6 +148,8 @@ export class AppointmentService {
       serviceId: session.serviceId,
       serviceName: session.serviceName,
       servicePrice: session.amount,
+      barberId: session.barberId,
+      barberName: session.barberName,
       appointmentDate: session.appointmentDate,
       appointmentTime: session.appointmentTime,
       customerName: session.customerName,
@@ -149,6 +159,7 @@ export class AppointmentService {
       isPaid: isPaid,
       isReschedule: !!session.rescheduleId,
       userId: session.userId,
+      tenantId: sessionDataRaw.tenant_id,
       createdAt: new Date().toISOString()
     });
 
@@ -161,29 +172,25 @@ export class AppointmentService {
     if (appError) throw appError;
 
     // --- LOYALTY POINTS LOGIC ---
-    // Only award points if points are enabled AND the appointment is paid AND there is a user
     if (session.userId && isPaid) {
-      // 1. Fetch current settings with fallback
+      // 1. Fetch current settings for THIS tenant
       const { data: settingsData } = await supabaseAdmin
         .from("settings")
         .select("is_points_enabled, points_per_appointment")
-        .eq("id", 1)
+        .eq("tenant_id", sessionDataRaw.tenant_id)
         .single();
 
-      // Fallback para valores padrão caso a consulta falhe
       const settings = settingsData || { is_points_enabled: true, points_per_appointment: 5 };
-
-      console.log(`[LOYALTY CHECK] Configurações: enabled=${settings.is_points_enabled}, ptsPerApp=${settings.points_per_appointment}`);
 
       if (settings.is_points_enabled) {
         const pointsToAdd = settings.points_per_appointment || 0;
 
-        // 2. Usar UPSERT para garantir que o perfil exista e atualizar os pontos
-        // Usamos supabaseAdmin para bypassar RLS e garantir a atualização
+        // 2. Usar UPSERT para garantir que o perfil exista e atualizar os pontos NO TENANT correte
         const { data: profile } = await supabaseAdmin
           .from("profiles")
           .select("points, full_name")
           .eq("id", session.userId)
+          .eq("tenant_id", sessionDataRaw.tenant_id)
           .single();
 
         const currentPoints = profile?.points || 0;
@@ -193,20 +200,15 @@ export class AppointmentService {
           .from("profiles")
           .upsert({
             id: session.userId,
+            tenant_id: sessionDataRaw.tenant_id,
             points: newPoints,
             full_name: profile?.full_name || session.customerName
           });
 
         if (upsertError) {
-          console.error(`[LOYALTY] Erro ao atualizar pontos para o usuário ${session.userId}:`, upsertError);
-        } else {
-          console.log(`[LOYALTY] Sucesso! Usuário ${session.userId} recebeu ${pointsToAdd} pontos. Novo total: ${newPoints}`);
+          console.error(`[LOYALTY] Erro ao atualizar pontos para o usuário ${session.userId} no tenant ${sessionDataRaw.tenant_id}:`, upsertError);
         }
-      } else {
-        console.log(`[LOYALTY] Sistema de pontos desativado nas configurações.`);
       }
-    } else {
-      console.log(`[LOYALTY] Pontos NÃO atribuídos: userId=${session.userId}, isPaid=${isPaid}`);
     }
     // ----------------------------
 
@@ -263,16 +265,26 @@ export class AppointmentService {
     };
   }
 
-  static async getBookedSlots(date: string): Promise<string[]> {
+  static async getBookedSlots(date: string, barberId?: number, tenantId?: string): Promise<string[]> {
     if (!config.supabase.isConfigured || !supabaseAdmin) {
       throw new Error("Supabase Admin is required for availability checks.");
     }
 
-    const { data, error } = await supabaseAdmin
+    let query = supabaseAdmin
       .from("appointments")
       .select("appointment_time")
       .eq("appointment_date", date)
       .not("status", "eq", "cancelled");
+
+    if (tenantId) {
+      query = query.eq("tenant_id", tenantId);
+    }
+
+    if (barberId) {
+      query = query.eq("barber_id", barberId);
+    }
+
+    const { data, error } = await query;
 
     if (error) throw error;
     return (data || []).map(a => a.appointment_time);

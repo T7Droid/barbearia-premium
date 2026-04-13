@@ -4,41 +4,54 @@ import { Layout } from "@/components/layout";
 import { useEffect, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { Loader2 } from "lucide-react";
+import { useTenant } from "@/hooks/use-tenant";
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
+  const tenant = useTenant();
   const [isAuthorized, setIsAuthorized] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+    const adminLoginPath = `/${tenant.slug}/admin/login`;
 
-    if (pathname === "/admin/login") {
+    if (pathname === adminLoginPath) {
       setIsAuthorized(true);
       setIsLoading(false);
       return;
     }
 
     const checkAuth = async () => {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000); 
+
       try {
-        const res = await fetch("/api/auth/me");
+        const headers = { "x-tenant-slug": tenant.slug };
+        const res = await fetch("/api/auth/me", { signal: controller.signal, headers });
+        clearTimeout(timeoutId);
+        
+        if (!res.ok) {
+          throw new Error("Falha na autenticação");
+        }
+        
         const data = await res.json();
 
         if (data.authenticated && data.user?.role === "admin") {
           setIsAuthorized(true);
         } else {
-
-          router.push("/admin/login?from=" + encodeURIComponent(pathname));
+          router.push(`${adminLoginPath}?from=${encodeURIComponent(pathname)}`);
         }
-      } catch (error) {
-        router.push("/admin/login");
+      } catch (error: any) {
+        console.error("Auth check error:", error);
+        router.push(adminLoginPath);
       } finally {
         setIsLoading(false);
       }
     };
 
     checkAuth();
-  }, [pathname, router]);
+  }, [pathname, router, tenant]);
 
   if (isLoading) {
     return (
@@ -49,7 +62,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     );
   }
 
-  if (pathname === "/admin/login" || isAuthorized) {
+  const adminLoginPath = `/${tenant.slug}/admin/login`;
+  if (pathname === adminLoginPath || isAuthorized) {
     return (
       <Layout>
         {children}

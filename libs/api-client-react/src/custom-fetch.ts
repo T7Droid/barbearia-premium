@@ -17,6 +17,15 @@ const DEFAULT_JSON_ACCEPT = "application/json, application/problem+json";
 
 let _baseUrl: string | null = null;
 let _authTokenGetter: AuthTokenGetter | null = null;
+let _tenantSlug: string | null = null;
+
+/**
+ * Set the tenant slug to be sent in the `x-tenant-slug` header on every request.
+ * Useful for multi-tenant applications.
+ */
+export function setTenantSlug(slug: string | null): void {
+  _tenantSlug = slug;
+}
 
 /**
  * Set a base URL that is prepended to every relative request URL
@@ -359,6 +368,10 @@ export async function customFetch<T = unknown>(
     if (token) {
       headers.set("authorization", `Bearer ${token}`);
     }
+  }
+  // Attach tenant slug header if available
+  if (_tenantSlug && !headers.has("x-tenant-slug")) {
+    headers.set("x-tenant-slug", _tenantSlug);
   }
 
   const requestInfo = { method, url: resolveUrl(input) };

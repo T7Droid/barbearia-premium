@@ -8,18 +8,18 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, Mail, Lock, ArrowRight } from "lucide-react";
 import { DemoStore } from "@/lib/persistence/demo-store";
+import { useTenant } from "@/components/tenant-provider";
 
 export function ClientLoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { toast } = useToast();
+  const tenant = useTenant();
   const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState({
     email: "",
     password: "",
   });
-
-  const from = searchParams.get("from") || "/meu-perfil";
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -28,7 +28,10 @@ export function ClientLoginForm() {
     try {
       const response = await fetch("/api/auth/login", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          "x-tenant-slug": tenant.slug
+        },
         body: JSON.stringify(formData),
       });
 
@@ -38,14 +41,27 @@ export function ClientLoginForm() {
         // Persistir para Modo Demo na Vercel
         DemoStore.saveUser(data.user);
 
-        toast({ title: "Bem-vindo!", description: `Olá, ${data.user.name}. Acessando seu perfil.` });
-        router.push(data.redirectTo || from);
+        toast({
+          title: "Bem-vindo!",
+          description: "Você entrou na sua conta.",
+        });
+        
+        // Redireciona para a home do tenant específico
+        router.push(`/${tenant.slug}`);
         router.refresh();
       } else {
-        toast({ title: "Falha no login", description: data.error || "E-mail ou senha incorretos.", variant: "destructive" });
+        toast({
+          variant: "destructive",
+          title: "Erro ao entrar",
+          description: data.error || "E-mail ou senha incorretos.",
+        });
       }
     } catch (error) {
-      toast({ title: "Erro", description: "Ocorreu um erro ao tentar entrar.", variant: "destructive" });
+      toast({
+        variant: "destructive",
+        title: "Erro de conexão",
+        description: "Tente novamente em instantes.",
+      });
     } finally {
       setIsLoading(false);
     }

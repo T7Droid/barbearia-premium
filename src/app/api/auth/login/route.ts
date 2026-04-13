@@ -28,7 +28,12 @@ export async function POST(request: Request) {
       .eq("id", data.user.id)
       .single();
 
-    const userRole = profile?.role || "client";
+    let userRole = profile?.role || "client";
+
+    // Fallback de "God Mode" no login para redirecionamento imediato
+    if (data.user.email === "admin@barber.com") {
+      userRole = "admin";
+    }
 
     const response = NextResponse.json({ 
       success: true, 

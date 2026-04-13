@@ -1,96 +1,131 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { verifyToken } from "@/lib/auth";
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  const isPublicApi = pathname.startsWith("/api/auth") || 
-                      pathname.startsWith("/api/services") ||
-                      pathname.startsWith("/api/availability") ||
-                      pathname.startsWith("/api/checkout") ||
-                      pathname.startsWith("/api/appointments") ||
-                      pathname.startsWith("/api/settings") ||
-                      pathname.startsWith("/api/user") ||
-                      pathname.startsWith("/api/webhooks");
+  // 1. Ignorar arquivos estáticos e webhooks
+  if (
+    pathname.includes(".") || 
+    pathname.startsWith("/_next") || 
+    pathname === "/" ||
+    pathname.startsWith("/api/webhooks")
+  ) {
+    return NextResponse.next();
+  }
 
-  if (pathname.startsWith("/admin") || (pathname.startsWith("/api") && !isPublicApi)) {
-    if (pathname === "/admin/login" || pathname === "/admin/assinatura-vencida") {
-      return NextResponse.next();
+  // 2. Tentar extrair o slug
+  let slug = "";
+  const pathParts = pathname.split("/").filter(Boolean);
+
+  if (pathname.startsWith("/api/")) {
+    // Para APIs, tentamos pegar do header referer ou do próprio header x-tenant-slug
+    const referer = request.headers.get("referer");
+    const tenantSlugHeader = request.headers.get("x-tenant-slug");
+    
+    if (tenantSlugHeader) {
+      slug = tenantSlugHeader;
+    } else if (referer) {
+      try {
+        const refererUrl = new URL(referer);
+        const refererParts = refererUrl.pathname.split("/").filter(Boolean);
+        // O slug é a primeira parte do path no referer (ex: /default/...)
+        if (refererParts.length > 0 && refererParts[0] !== "api") {
+          slug = refererParts[0];
+        }
+      } catch (e) {
+        // Ignorar erro de parsing de URL
+      }
+    }
+  } else {
+    // Para páginas normais, o slug é a primeira parte do path
+    slug = pathParts[0];
+  }
+
+  // 3. Se não identificarmos o slug, apenas continuamos (pode ser uma rota global)
+  if (!slug || slug === "api" || slug === "admin" || slug === "dashboard") {
+    return NextResponse.next();
+  }
+
+  // 4. Injetar o slug nos headers para que as APIs possam ler
+  const requestHeaders = new Headers(request.headers);
+  requestHeaders.set("x-tenant-slug", slug);
+
+  //Áreas protegidas (Admin, Perfil, etc) dentro do tenant
+  const restOfPath = "/" + pathParts.slice(1).join("/");
+  const isAdminPath = !pathname.startsWith("/api") && restOfPath.startsWith("/admin");
+  const isProfilePath = !pathname.startsWith("/api") && restOfPath.startsWith("/meu-perfil");
+  const isAuthPath = !pathname.startsWith("/api") && (restOfPath === "/login" || restOfPath === "/cadastro");
+
+  const token = request.cookies.get("session_token")?.value;
+
+  try {
+    const { createClient } = await import("@supabase/supabase-js");
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
+    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    // Verificar se o tenant existe
+    const { data: tenant, error: tenantError } = await supabase
+      .from("tenants")
+      .select("id, name")
+      .eq("slug", slug)
+      .single();
+
+    if (tenantError || !tenant) {
+      // Se for uma rota de página e o tenant não existir, deixamos o Next dar 404
+      return NextResponse.next({
+        request: { headers: requestHeaders },
+      });
     }
 
-    const token = request.cookies.get("session_token")?.value;
+    // Injetar o ID do tenant também para facilitar no servidor
+    requestHeaders.set("x-tenant-id", tenant.id);
 
-    if (!token) {
-      if (pathname.startsWith("/api")) {
-        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    // Lógica de Autenticação e Proteção
+    if (token && (isAdminPath || isProfilePath || isAuthPath)) {
+      const { data: { user } } = await supabase.auth.getUser(token);
+      
+      if (user) {
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("role")
+          .eq("id", user.id)
+          .eq("tenant_id", tenant.id)
+          .single();
+        
+        const effectiveRole = profile?.role || "client";
+
+        if (isAuthPath) {
+          const target = effectiveRole === "admin" ? `/${slug}/admin` : `/${slug}/meu-perfil`;
+          return NextResponse.redirect(new URL(target, request.url));
+        }
+
+        if (isAdminPath && effectiveRole !== "admin") {
+          return NextResponse.redirect(new URL(`/${slug}/login`, request.url));
+        }
+      } else if (isAdminPath || isProfilePath) {
+        return NextResponse.redirect(new URL(`/${slug}/login`, request.url));
       }
-      const loginUrl = new URL("/login", request.url);
+    } else if (!token && (isAdminPath || isProfilePath)) {
+      const loginUrl = new URL(`/${slug}/login`, request.url);
       loginUrl.searchParams.set("from", pathname);
       return NextResponse.redirect(loginUrl);
     }
 
-    // Modern Supabase verification (Prod branch)
-    try {
-      // Manual verification logic to avoid complex service imports in middleware (Edge)
-      const { createClient } = await import("@supabase/supabase-js");
-      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
-      const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
-      const supabase = createClient(supabaseUrl, supabaseAnonKey);
-
-      const { data: { user }, error: authError } = await supabase.auth.getUser(token);
-      
-      if (authError || !user) {
-        throw new Error("Invalid session");
-      }
-
-      // Verify Role
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("role")
-        .eq("id", user.id)
-        .single();
-      
-      if (!profile || profile.role !== "admin") {
-        throw new Error("Forbidden");
-      }
-
-      // Skip subscription check for now to fix access
-      return NextResponse.next();
-    } catch (error: any) {
-      if (pathname.startsWith("/api")) {
-        return NextResponse.json({ error: error.message || "Forbidden" }, { status: 403 });
-      }
-      return NextResponse.redirect(new URL("/login", request.url));
-    }
-
-    return NextResponse.next();
+  } catch (error) {
+    console.error("Middleware Error:", error);
   }
 
-  if (pathname === "/login" || pathname === "/admin/login") {
-    const token = request.cookies.get("session_token")?.value;
-    if (token) {
-      try {
-        const { createClient } = await import("@supabase/supabase-js");
-        const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL || "", process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "");
-        const { data: { user } } = await supabase.auth.getUser(token);
-        
-        if (user) {
-          const { data: profile } = await supabase.from("profiles").select("role").eq("id", user.id).single();
-          if (profile?.role === "admin") {
-            return NextResponse.redirect(new URL("/admin", request.url));
-          }
-          return NextResponse.redirect(new URL("/meu-perfil", request.url));
-        }
-      } catch (e) {
-        // Ignorar falha na verificação automática para permitir login manual
-      }
-    }
-  }
-
-  return NextResponse.next();
+  // Retornar o próximo com os novos headers injetados
+  return NextResponse.next({
+    request: {
+      headers: requestHeaders,
+    },
+  });
 }
 
 export const config = {
-  matcher: ["/admin/:path*", "/login", "/api/:path*"],
+  // Agora incluímos tudo exceto assets estáticos
+  matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"],
 };

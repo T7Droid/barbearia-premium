@@ -1,16 +1,22 @@
 import { NextResponse, NextRequest } from "next/server";
 import { supabase, supabaseAdmin, isSupabaseConfigured } from "@/lib/supabase";
 import { AuthService } from "@/lib/services/auth.service";
+import { TenantContext } from "@/lib/services/tenant-context";
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   if (!isSupabaseConfigured || !supabase) {
     return NextResponse.json({ error: "Supabase not configured" }, { status: 500 });
+  }
+
+  const tenant = await TenantContext.getTenant(request);
+  if (!tenant) {
+    return NextResponse.json({ error: "Tenant não identificado" }, { status: 400 });
   }
 
   const { data, error } = await supabase
     .from("settings")
     .select("*")
-    .eq("id", 1)
+    .eq("tenant_id", tenant.id)
     .single();
 
   // Se houver erro ou não houver dados, usamos valores padrão seguros
@@ -39,15 +45,22 @@ export async function GET() {
     slotInterval: finalData.slot_interval,
     weeklyHours: finalData.weekly_hours,
     mpPublicKey: process.env.NEXT_PUBLIC_MERCADOPAGO_PUBLIC_KEY || "",
+    tenantId: tenant.id,
+    tenantSlug: tenant.slug
   };
 
   return NextResponse.json(settings);
 }
 
 export async function POST(request: NextRequest) {
-  const result = await AuthService.verifySession(request);
+  const tenant = await TenantContext.getTenant(request);
+  if (!tenant) {
+    return NextResponse.json({ error: "Tenant não identificado" }, { status: 400 });
+  }
+
+  const result = await AuthService.verifySession(request, tenant.id);
   if (!result.authenticated || result.user?.role !== "admin") {
-    return NextResponse.json({ error: "Acesso restrito a administradores" }, { status: 403 });
+    return NextResponse.json({ error: "Acesso restrito a administradores desta barbearia" }, { status: 403 });
   }
 
   try {
@@ -73,7 +86,7 @@ export async function POST(request: NextRequest) {
     const { data: updated, error } = await supabaseAdmin
       .from("settings")
       .update(updateData)
-      .eq("id", 1)
+      .eq("tenant_id", tenant.id)
       .select()
       .single();
 

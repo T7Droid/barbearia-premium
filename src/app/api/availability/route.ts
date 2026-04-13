@@ -1,14 +1,21 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse, NextRequest } from "next/server";
 import { supabaseAdmin, isSupabaseConfigured } from "@/lib/supabase";
 import { AppointmentService } from "@/lib/services/appointment.service";
+import { TenantContext } from "@/lib/services/tenant-context";
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const date = searchParams.get("date");
   const serviceId = searchParams.get("serviceId");
+  const barberId = searchParams.get("barberId");
+
+  const tenant = await TenantContext.getTenant(request);
+  if (!tenant) {
+    return NextResponse.json({ error: "Tenant não identificado" }, { status: 400 });
+  }
 
   if (!date || !serviceId) {
-    return NextResponse.json({ error: "Data e ID do serviço são obrigatórios" }, { status: 400 });
+    return NextResponse.json({ error: "Data e serviço são obrigatórios" }, { status: 400 });
   }
 
   if (!isSupabaseConfigured || !supabaseAdmin) {
@@ -16,15 +23,15 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    // 1. Buscar configurações do salão
+    // 1. Buscar configurações do tenant específico
     const { data: settings, error: settingsError } = await supabaseAdmin
       .from("settings")
       .select("*")
-      .eq("id", 1)
+      .eq("tenant_id", tenant.id)
       .single();
 
     if (settingsError || !settings) {
-      throw new Error("Configurações não encontradas");
+      throw new Error("Configurações não encontradas para esta barbearia");
     }
 
     // 2. Determinar o dia da semana
@@ -43,15 +50,18 @@ export async function GET(request: NextRequest) {
     const slots: { time: string, available: boolean }[] = [];
     const interval = settings.slot_interval || 45;
     
-    // Converter horas para minutos para facilitar o loop
     const [startH, startM] = dayConfig.start.split(":").map(Number);
     const [endH, endM] = dayConfig.end.split(":").map(Number);
     
     let currentMinutes = startH * 60 + startM;
     const endMinutes = endH * 60 + endM;
 
-    // 4. Buscar agendamentos já feitos para este dia
-    const bookedTimes = await AppointmentService.getBookedSlots(date);
+    // 4. Buscar agendamentos já feitos para este dia e tenant
+    const bookedTimes = await AppointmentService.getBookedSlots(
+      date, 
+      barberId ? parseInt(barberId) : undefined,
+      tenant.id
+    );
 
     while (currentMinutes + interval <= endMinutes) {
       const h = Math.floor(currentMinutes / 60);

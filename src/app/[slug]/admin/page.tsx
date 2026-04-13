@@ -9,10 +9,11 @@ import { Calendar, DollarSign, Scissors, Users, Settings, CreditCard, Wallet, Ch
 import { Skeleton } from "@/components/ui/skeleton";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-
 import { formatCurrencyFromCents } from "@/lib/format";
+import { useTenant } from "@/components/tenant-provider";
 
 export default function Admin() {
+  const tenant = useTenant();
   const { data: stats, isLoading: isLoadingStats } = useGetStatsSummary();
   const { data: appointments, isLoading: isLoadingAppointments } = useListAppointments();
 
@@ -25,18 +26,25 @@ export default function Admin() {
     }
   }
 
+  const getLink = (path: string) => `/${tenant.slug}${path}`;
+
   return (
     <div className="container mx-auto px-4 py-12">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
           <h1 className="text-4xl font-serif font-bold text-foreground">Painel Administrativo</h1>
-          <div className="flex gap-2 sm:gap-4 justify-end">
+          <div className="flex gap-2 sm:gap-4 justify-end flex-wrap">
             <Button asChild variant="outline" className="gap-2">
-              <Link href="/admin/servicos">
+              <Link href={getLink("/admin/barbeiros")}>
+                <Users className="w-4 h-4" /> Barbeiros
+              </Link>
+            </Button>
+            <Button asChild variant="outline" className="gap-2">
+              <Link href={getLink("/admin/servicos")}>
                 <Scissors className="w-4 h-4" /> Serviços
               </Link>
             </Button>
             <Button asChild variant="outline" className="gap-2">
-              <Link href="/admin/configuracoes">
+              <Link href={getLink("/admin/configuracoes")}>
                 <Settings className="w-4 h-4" /> Configurações
               </Link>
             </Button>
@@ -128,19 +136,19 @@ export default function Admin() {
                     </TableCell>
                   </TableRow>
                 ) : (
-                  appointments?.map((app) => (
+                  appointments?.map((app: any) => (
                     <TableRow key={app.id} className="border-border/50 hover:bg-muted/50">
                       <TableCell className="font-medium text-foreground">
-                        {app.appointmentDate ? app.appointmentDate.split('-').reverse().join('/') : 'Data N/D'} às {app.appointmentTime || 'N/D'}
+                        {app.appointment_date ? app.appointment_date.split('-').reverse().join('/') : 'Data N/D'} às {app.appointment_time || 'N/D'}
                       </TableCell>
                       <TableCell className="text-foreground">
-                        <div>{app.customerName || 'Cliente N/D'}</div>
-                        <div className="text-xs text-muted-foreground">{app.customerPhone}</div>
+                        <div>{app.customer_name || 'Cliente N/D'}</div>
+                        <div className="text-xs text-muted-foreground">{app.customer_phone}</div>
                       </TableCell>
-                      <TableCell className="text-foreground">{app.serviceName || 'Serviço N/D'}</TableCell>
-                      <TableCell className="text-foreground">{formatCurrencyFromCents(app.servicePrice)}</TableCell>
+                      <TableCell className="text-foreground">{app.service_name || 'Serviço N/D'}</TableCell>
+                      <TableCell className="text-foreground">{formatCurrencyFromCents(app.service_price)}</TableCell>
                       <TableCell>
-                         {app.isPaid ? (
+                         {app.is_paid ? (
                            <div className="flex items-center gap-1.5 text-green-500 font-medium text-xs">
                              <CheckCircle2 className="w-3.5 h-3.5" />
                              <span>Pago</span>

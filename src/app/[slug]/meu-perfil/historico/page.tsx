@@ -1,51 +1,56 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState, useEffect } from "react";
 import { Layout } from "@/components/layout";
-import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Button } from "@/components/ui/button";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Calendar, Clock, History as HistoryIcon, RefreshCw, Scissors, AlertCircle, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import Link from "next/link";
-import { Loader2, Calendar, Clock, AlertCircle, RefreshCw, Scissors, History as HistoryIcon } from "lucide-react";
 import { format, isBefore, addDays, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { DemoStore } from "@/lib/persistence/demo-store";
+import { useTenant } from "@/hooks/use-tenant";
+import { useRouter } from "next/navigation";
 
 export default function AppointmentHistory() {
   const { toast } = useToast();
+  const router = useRouter();
   const [loading, setLoading] = useState(true);
+  const tenant = useTenant();
   const [appointments, setAppointments] = useState<any[]>([]);
   const [settings, setSettings] = useState<any>(null);
 
-  useEffect(() => {
-    Promise.all([
-      fetch("/api/appointments").then(res => res.json()),
-      fetch("/api/settings").then(res => res.json()),
-      fetch("/api/auth/me").then(res => res.json())
-    ]).then(([appointmentsData, settingsData, authData]) => {
-      let activeUser = null;
+  const getLink = (path: string) => `/${tenant.slug}${path}`;
 
+  useEffect(() => {
+    if (!tenant.slug) return;
+
+    const headers = { "x-tenant-slug": tenant.slug };
+    
+    Promise.all([
+      fetch("/api/appointments", { headers }).then(res => res.json()),
+      fetch("/api/settings", { headers }).then(res => res.json()),
+      fetch("/api/auth/me", { headers }).then(res => res.json())
+    ]).then(([appointmentsData, settingsData, authData]) => {
+      // Autenticação e Sincronização
       if (authData.authenticated) {
-        activeUser = authData.user;
         DemoStore.saveUser(authData.user);
       } else {
-        // Fallback para DemoStore se estiver na Vercel e o servidor resetou
         const savedUser = DemoStore.getUser();
-        if (savedUser) {
-          activeUser = savedUser;
+        if (!savedUser || savedUser.role === "admin") {
+          router.push(getLink("/login"));
+          return;
         }
-      }
-
-      if (!activeUser) {
-        window.location.href = "/login";
-        return;
-      }
-
-      if (activeUser.role === "admin") {
-        window.location.href = "/admin";
-        return;
       }
 
       const apiApps = Array.isArray(appointmentsData) ? appointmentsData : [];
@@ -73,15 +78,15 @@ export default function AppointmentHistory() {
       if (savedUser && savedUser.role !== "admin") {
         setLoading(false);
       } else {
-        window.location.href = "/login";
+        router.push(getLink("/login"));
       }
     });
-  }, []);
+  }, [tenant.slug]);
 
   const canReschedule = (dateStr: string) => {
     if (!settings) return false;
     const appDate = parseISO(dateStr);
-    const minDate = addDays(new Date(), settings.cancellationWindowDays);
+    const minDate = addDays(new Date(), settings.cancellationWindowDays || 1);
     return isBefore(new Date(), appDate) && isBefore(minDate, appDate);
   };
 
@@ -112,10 +117,10 @@ export default function AppointmentHistory() {
             <h1 className="text-4xl font-serif font-bold text-foreground flex items-center gap-3">
               <HistoryIcon className="w-8 h-8 text-primary" /> Meus Agendamentos
             </h1>
-            <p className="text-muted-foreground mt-1">Visualize e gerencie seu histórico na Barbearia Premium.</p>
+            <p className="text-muted-foreground mt-1">Visualize e gerencie seu histórico na {tenant.name}.</p>
           </div>
           <Button asChild>
-            <Link href="/booking">Novo Agendamento</Link>
+            <Link href={getLink("/booking")}>Novo Agendamento</Link>
           </Button>
         </div>
 
@@ -137,7 +142,7 @@ export default function AppointmentHistory() {
                       <div className="flex flex-col items-center gap-2">
                         <AlertCircle className="w-8 h-8 opacity-20" />
                         <p>Nenhum agendamento encontrado.</p>
-                        <Button variant="link" asChild><Link href="/booking">Agendar agora</Link></Button>
+                        <Button variant="link" asChild><Link href={getLink("/booking")}>Agendar agora</Link></Button>
                       </div>
                     </TableCell>
                   </TableRow>
@@ -167,7 +172,7 @@ export default function AppointmentHistory() {
                             className="bg-primary/10 text-primary hover:bg-primary/20 gap-2 border border-primary/20"
                             asChild
                           >
-                            <Link href={`/booking?reschedule=${app.id}&serviceId=${app.serviceId}`}>
+                            <Link href={getLink(`/booking?reschedule=${app.id}&serviceId=${app.serviceId}`)}>
                               <RefreshCw className="w-3 h-3" /> Remarcar
                             </Link>
                           </Button>
@@ -187,7 +192,7 @@ export default function AppointmentHistory() {
           <AlertCircle className="w-5 h-5 text-muted-foreground mt-0.5" />
           <div className="text-xs text-muted-foreground space-y-1">
             <p className="font-semibold text-foreground uppercase tracking-widest text-[10px]">Política de Agendamento</p>
-            <p>Você pode remarcar ou cancelar seus horários com até <strong>{settings?.cancellationWindowDays} dia(s)</strong> de antecedência.</p>
+            <p>Você pode remarcar ou cancelar seus horários com até <strong>{settings?.cancellationWindowDays || 1} dia(s)</strong> de antecedência.</p>
             <p>Em caso de dúvidas, entre em contato via WhatsApp.</p>
           </div>
         </div>

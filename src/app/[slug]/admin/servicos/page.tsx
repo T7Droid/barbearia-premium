@@ -24,6 +24,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import Link from "next/link";
 import { formatCurrencyFromCents } from "@/lib/format";
+import { useTenant } from "@/hooks/use-tenant";
 
 interface Service {
   id: number;
@@ -36,6 +37,7 @@ interface Service {
 
 export default function AdminServices() {
   const { toast } = useToast();
+  const tenant = useTenant();
   const [services, setServices] = useState<Service[]>([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -46,13 +48,15 @@ export default function AdminServices() {
     name: "",
     description: "",
     price: "",
-    durationMinutes: "",
+    durationMinutes: "45",
     imageUrl: ""
   });
 
   const fetchServices = async () => {
+    if (!tenant?.slug) return;
     try {
-      const res = await fetch("/api/services");
+      const headers = { "x-tenant-slug": tenant.slug };
+      const res = await fetch("/api/services", { headers });
       const data = await res.json();
       setServices(data);
     } catch (error) {
@@ -64,7 +68,7 @@ export default function AdminServices() {
 
   useEffect(() => {
     fetchServices();
-  }, []);
+  }, [tenant]);
 
   const handleOpenModal = (service?: Service) => {
     if (service) {
@@ -82,7 +86,7 @@ export default function AdminServices() {
         name: "",
         description: "",
         price: "",
-        durationMinutes: "",
+        durationMinutes: "45",
         imageUrl: ""
       });
     }
@@ -98,6 +102,11 @@ export default function AdminServices() {
     e.preventDefault();
     setIsSubmitting(true);
 
+    const headers = { 
+      "Content-Type": "application/json",
+      "x-tenant-slug": tenant.slug
+    };
+
     const method = editingService ? "PUT" : "POST";
     const url = editingService ? `/api/services/${editingService.id}` : "/api/services";
 
@@ -110,7 +119,7 @@ export default function AdminServices() {
 
       const res = await fetch(url, {
         method,
-        headers: { "Content-Type": "application/json" },
+        headers,
         body: JSON.stringify(payload)
       });
 
@@ -135,7 +144,10 @@ export default function AdminServices() {
     if (!confirm("Tem certeza que deseja excluir este serviço?")) return;
 
     try {
-      const res = await fetch(`/api/services/${id}`, { method: "DELETE" });
+      const res = await fetch(`/api/services/${id}`, { 
+        method: "DELETE",
+        headers: { "x-tenant-slug": tenant.slug }
+      });
       if (res.ok) {
         toast({ title: "Excluído", description: "Serviço removido com sucesso." });
         fetchServices();
@@ -147,21 +159,30 @@ export default function AdminServices() {
     }
   };
 
+  const getLink = (path: string) => `/${tenant?.slug}${path}`;
+
   return (
-    <div className="container mx-auto px-4 py-12">
-      <div className="mb-8 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <Button variant="ghost" asChild className="mb-2 -ml-2 text-muted-foreground hover:text-primary">
-            <Link href="/admin"><ChevronLeft className="w-4 h-4 mr-1" /> Voltar ao Painel</Link>
-          </Button>
-          <h1 className="text-4xl font-serif font-bold text-foreground flex items-center gap-3">
-            <Scissors className="w-8 h-8 text-primary" /> Gerenciar Serviços
-          </h1>
-          <p className="text-muted-foreground mt-1">Adicione, edite ou remova os serviços oferecidos na sua barbearia.</p>
+    <div className="container mx-auto px-4 py-8 max-w-6xl">
+      <div className="mb-8">
+        <div className="flex items-center gap-2 text-sm text-muted-foreground mb-4">
+          <Link href={getLink("/admin")} className="hover:text-primary flex items-center gap-1 transition-colors">
+            <LayoutGrid className="w-4 h-4" /> Painel
+          </Link>
+          <span>/</span>
+          <span className="text-foreground font-medium">Serviços</span>
         </div>
-        <Button onClick={() => handleOpenModal()} className="gap-2 shadow-lg hover:shadow-primary/20 transition-all">
-          <Plus className="w-4 h-4" /> Novo Serviço
-        </Button>
+        
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div>
+            <h1 className="text-4xl font-serif font-bold text-foreground flex items-center gap-3">
+              <Scissors className="w-8 h-8 text-primary" /> Gerenciar Serviços
+            </h1>
+            <p className="text-muted-foreground mt-1">Configure o catálogo de serviços, preços e durações.</p>
+          </div>
+          <Button onClick={() => handleOpenModal()} className="gap-2">
+            <Plus className="w-4 h-4" /> Novo Serviço
+          </Button>
+        </div>
       </div>
 
       <Card className="bg-card border-border/50 shadow-xl overflow-hidden">

@@ -11,6 +11,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Loader2, Save, Settings2, ShieldCheck, Ticket, CalendarClock, CreditCard, Clock, ExternalLink } from "lucide-react";
 import { DemoStore } from "@/lib/persistence/demo-store";
 import { formatDateBR } from "@/lib/format/date";
+import { useTenant } from "@/hooks/use-tenant";
 import {
   Select,
   SelectContent,
@@ -21,6 +22,7 @@ import {
 
 export default function SettingsPage() {
   const { toast } = useToast();
+  const tenant = useTenant();
 
   const generateTimeOptions = () => {
     const options = [];
@@ -52,7 +54,8 @@ export default function SettingsPage() {
 
   const fetchSettings = async () => {
     try {
-      const res = await fetch("/api/settings");
+      const headers = { "x-tenant-slug": tenant.slug };
+      const res = await fetch("/api/settings", { headers });
       const data = await res.json();
       setSettings(data);
       // Sincronizar com DemoStore
@@ -66,15 +69,20 @@ export default function SettingsPage() {
   };
 
   useEffect(() => {
-    fetchSettings();
-  }, []);
+    if (tenant?.slug) {
+      fetchSettings();
+    }
+  }, [tenant]);
 
   const handleSave = async () => {
     setSaving(true);
     try {
       const res = await fetch("/api/settings", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          "x-tenant-slug": tenant.slug
+        },
         body: JSON.stringify(settings),
       });
 

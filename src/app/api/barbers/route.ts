@@ -13,7 +13,7 @@ export async function GET(request: NextRequest) {
   }
 
   const { data, error } = await supabase
-    .from("services")
+    .from("barbers")
     .select("*")
     .eq("tenant_id", tenant.id)
     .order("name", { ascending: true });
@@ -37,16 +37,15 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json();
-    const { name, description, price, durationMinutes, imageUrl } = body;
+    const { name, description, imageUrl, active } = body;
 
     const { data, error } = await supabaseAdmin
-      .from("services")
+      .from("barbers")
       .insert({
         name,
         description,
-        price,
-        duration_minutes: durationMinutes,
         image_url: imageUrl,
+        active: active !== undefined ? active : true,
         tenant_id: tenant.id
       })
       .select()
@@ -54,11 +53,8 @@ export async function POST(request: NextRequest) {
 
     if (error) throw error;
 
-    return NextResponse.json(data, { status: 201 });
+    return NextResponse.json(data);
   } catch (error: any) {
-    return NextResponse.json({ 
-      error: "Erro ao criar serviço", 
-      details: error.message 
-    }, { status: 400 });
+    return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }

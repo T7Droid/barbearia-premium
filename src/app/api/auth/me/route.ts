@@ -1,13 +1,21 @@
-import { NextResponse } from "next/server";
+import { NextResponse, NextRequest } from "next/server";
 import { AuthService } from "@/lib/services/auth.service";
+import { TenantContext } from "@/lib/services/tenant-context";
 
-export async function GET(request: Request) {
+export async function GET(request: NextRequest) {
   try {
-    const result = await AuthService.verifySession(request);
-    if (!result.authenticated) {
-      return NextResponse.json({ authenticated: false }, { status: 401 });
+    const tenant = await TenantContext.getTenant(request);
+    if (!tenant) {
+      return NextResponse.json({ authenticated: false, error: "Tenant não identificado" });
     }
-    return NextResponse.json(result);
+
+    const result = await AuthService.verifySession(request, tenant.id);
+    const response = NextResponse.json(result);
+
+    // Garantir que não haja cache para informações de autenticação
+    response.headers.set("Cache-Control", "no-store, max-age=0");
+    
+    return response;
   } catch (error) {
     return NextResponse.json({ authenticated: false }, { status: 401 });
   }

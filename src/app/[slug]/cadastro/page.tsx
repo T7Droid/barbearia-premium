@@ -11,11 +11,13 @@ import { useToast } from "@/hooks/use-toast";
 import { UserPlus, ShieldCheck, ArrowRight, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { DemoStore } from "@/lib/persistence/demo-store";
+import { useTenant } from "@/hooks/use-tenant";
 
 function CadastroContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { toast } = useToast();
+  const tenant = useTenant();
 
   const emailParam = searchParams.get("email") || "";
   const nameParam = searchParams.get("name") || "";
@@ -66,7 +68,10 @@ function CadastroContent() {
     try {
       const response = await fetch("/api/auth/register", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          "x-tenant-slug": tenant.slug
+        },
         body: JSON.stringify({
           email: formData.email,
           password: formData.password,
@@ -88,7 +93,7 @@ function CadastroContent() {
           title: "Conta criada!",
           description: "Bem-vindo à Barbearia Premium! Agende seu primeiro serviço agora."
         });
-        router.push("/meu-perfil");
+        router.push(`/${tenant.slug}`);
         router.refresh();
       } else {
         const error = await response.json();
@@ -187,10 +192,10 @@ function CadastroContent() {
           </form>
 
           <div className="mt-8 pt-6 border-t border-border/50 text-center">
-            <p className="text-sm text-muted-foreground">
-              Já tem conta?{" "}
-              <Link href="/login" className="text-primary hover:underline font-medium">
-                Entrar aqui
+            <p className="text-sm text-center text-muted-foreground">
+              Já tem uma conta?{" "}
+              <Link href={getLink("/login")} className="text-primary hover:underline font-medium">
+                Faça login
               </Link>
             </p>
           </div>
