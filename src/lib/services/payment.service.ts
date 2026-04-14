@@ -136,7 +136,7 @@ export class PaymentService {
       const body: any = {
         transaction_amount: amount,
         token: paymentData.token,
-        description: paymentData.description || "Agendamento Barber Premium",
+        description: paymentData.description || "Agendamento KingBarber",
         installments: Number(paymentData.installments) || 1,
         payment_method_id: paymentData.payment_method_id,
         external_reference: sessionId,
@@ -170,7 +170,7 @@ export class PaymentService {
       const body = {
         transaction_amount: amount,
         payment_method_id: "pix",
-        description: paymentData.description || "Agendamento Barber Premium",
+        description: paymentData.description || "Agendamento KingBarber",
         external_reference: sessionId,
         payer: {
           email: paymentData.payer?.email,

@@ -13,20 +13,23 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Calendar, Clock, History as HistoryIcon, RefreshCw, Scissors, AlertCircle, Loader2 } from "lucide-react";
+import { Calendar, Clock, History as HistoryIcon, RefreshCw, Scissors, AlertCircle, Loader2, XCircle, DollarSign, CheckCircle2, Wallet } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import Link from "next/link";
 import { format, isBefore, addDays, parseISO } from "date-fns";
 import { DemoStore } from "@/lib/persistence/demo-store";
 import { useTenant } from "@/hooks/use-tenant";
 import { useRouter } from "next/navigation";
+import { formatCurrencyFromCents } from "@/lib/format/currency";
 
 export default function AppointmentHistory() {
+  const { toast } = useToast();
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const tenant = useTenant();
   const [appointments, setAppointments] = useState<any[]>([]);
   const [settings, setSettings] = useState<any>(null);
+  const [cancellingId, setCancellingId] = useState<number | null>(null);
 
   const getLink = (path: string) => `/${tenant.slug}${path}`;
 
@@ -69,14 +72,34 @@ export default function AppointmentHistory() {
           ...app,
           serviceName: app.service_name || app.serviceName,
           serviceId: app.service_id || app.serviceId,
+          servicePrice: app.service_price || app.servicePrice || 0,
+          isPaid: app.is_paid || app.isPaid || false,
           appointmentDate: app.appointment_date || app.appointmentDate,
           appointmentTime: app.appointment_time || app.appointmentTime,
         }));
 
+        // 3. Mesclar com dados locais (DemoStore) se necessário
         const savedApps = DemoStore.getAppointments();
         const allApps = [...apiApps];
+
+        // Se autenticado, vamos limpar do LocalStorage o que já está no banco
+        const isAuthenticated = authData.authenticated;
+
         savedApps.forEach(saved => {
-          if (!allApps.some(api => api.id === saved.id)) {
+          // Filtrar por tenant para evitar mostrar agendamentos de outras barbearias
+          if (saved.tenantId && saved.tenantId !== settingsData.tenantId) {
+            return;
+          }
+
+          const isAlreadyInApi = apiApps.some(api => String(api.id) === String(saved.id));
+          
+          if (isAlreadyInApi) {
+            // Se já está no banco e estamos logados, removemos da cópia local para evitar lixo
+            if (isAuthenticated) {
+              DemoStore.removeAppointment(saved.id);
+            }
+          } else {
+            // Se não está no banco (ou banco falhou/estamos offline), mostramos o local
             allApps.push(saved);
           }
         });
@@ -104,11 +127,49 @@ export default function AppointmentHistory() {
     loadData();
   }, [tenant.slug]);
 
-  const canReschedule = (dateStr: string) => {
-    if (!settings) return false;
+  const canReschedule = (dateStr: string, status?: string) => {
+    if (!settings || status === "cancelled") return false;
     const appDate = parseISO(dateStr);
     const minDate = addDays(new Date(), settings.cancellationWindowDays || 1);
     return isBefore(new Date(), appDate) && isBefore(minDate, appDate);
+  };
+
+  const handleCancel = async (id: number) => {
+    if (!window.confirm("Tem certeza que deseja cancelar este agendamento? Esta ação não pode ser desfeita.")) {
+      return;
+    }
+
+    setCancellingId(id);
+    try {
+      const res = await fetch(`/api/appointments/${id}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          "x-tenant-slug": tenant.slug
+        }
+      });
+
+      if (res.ok) {
+        toast({ title: "Sucesso", description: "Agendamento cancelado com sucesso." });
+        // Recarregar a página ou atualizar o estado local
+        window.location.reload();
+      } else {
+        const error = await res.json();
+        toast({
+          title: "Erro",
+          description: error.error || "Falha ao cancelar agendamento.",
+          variant: "destructive"
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Erro",
+        description: "Erro de conexão ao tentar cancelar.",
+        variant: "destructive"
+      });
+    } finally {
+      setCancellingId(null);
+    }
   };
 
   const getStatusBadge = (status: string) => {
@@ -152,6 +213,8 @@ export default function AppointmentHistory() {
                 <TableRow className="border-border/50 hover:bg-transparent">
                   <TableHead className="text-foreground h-12">Serviço</TableHead>
                   <TableHead className="text-foreground">Data / Hora</TableHead>
+                  <TableHead className="text-foreground">Preço</TableHead>
+                  <TableHead className="text-foreground">Pagamento</TableHead>
                   <TableHead className="text-foreground">Status</TableHead>
                   <TableHead className="text-right text-foreground">Ações</TableHead>
                 </TableRow>
@@ -190,22 +253,53 @@ export default function AppointmentHistory() {
                           </span>
                         </div>
                       </TableCell>
+                      <TableCell className="text-foreground font-semibold">
+                        {formatCurrencyFromCents(app.servicePrice)}
+                      </TableCell>
+                      <TableCell>
+                         {app.isPaid ? (
+                           <div className="flex items-center gap-1.5 text-green-500 font-medium text-xs">
+                             <CheckCircle2 className="w-3.5 h-3.5" />
+                             <span>Pago</span>
+                           </div>
+                         ) : (
+                           <div className="flex items-center gap-1.5 text-amber-500 font-medium text-xs">
+                             <Wallet className="w-3.5 h-3.5" />
+                             <span>No Local</span>
+                           </div>
+                         )}
+                       </TableCell>
                       <TableCell>{getStatusBadge(app.status)}</TableCell>
                       <TableCell className="text-right">
-                        {canReschedule(app.appointmentDate) ? (
-                          <Button
-                            size="sm"
-                            variant="secondary"
-                            className="bg-primary/10 text-primary hover:bg-primary/20 gap-2 border border-primary/20"
-                            asChild
-                          >
-                            <Link href={getLink(`/booking?reschedule=${app.id}&serviceId=${app.serviceId}`)}>
-                              <RefreshCw className="w-3 h-3" /> Remarcar
-                            </Link>
-                          </Button>
-                        ) : (
-                          <span className="text-[10px] text-muted-foreground italic">Prazo encerrado</span>
-                        )}
+                        <div className="flex justify-end gap-2">
+                          {canReschedule(app.appointmentDate, app.status) ? (
+                            <>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="border-primary/20 text-primary hover:bg-primary/5 gap-2 h-8"
+                                asChild
+                                disabled={cancellingId === app.id}
+                              >
+                                <Link href={cancellingId === app.id ? "#" : getLink(`/booking?reschedule=${app.id}&serviceId=${app.serviceId}`)}>
+                                  <RefreshCw className={`w-3 h-3 ${cancellingId === app.id ? "animate-spin" : ""}`} /> Remarcar
+                                </Link>
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="text-destructive hover:bg-destructive/10 hover:text-destructive gap-2 h-8"
+                                onClick={() => handleCancel(app.id)}
+                                disabled={cancellingId === app.id}
+                              >
+                                {cancellingId === app.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <XCircle className="w-3 h-3" />}
+                                Cancelar
+                              </Button>
+                            </>
+                          ) : app.status !== "cancelled" ? (
+                            <span className="text-[10px] text-muted-foreground italic">Prazo encerrado</span>
+                          ) : null}
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))

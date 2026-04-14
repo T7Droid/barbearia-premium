@@ -24,7 +24,7 @@ export default function SubscriptionExpiredPage() {
           </div>
           <h1 className="text-3xl font-bold tracking-tight text-foreground">Acesso Bloqueado</h1>
           <p className="text-muted-foreground">
-            Sua assinatura do sistema Barber Premium está vencida ou não foi identificada.
+            Sua assinatura do sistema KingBarber está vencida ou não foi identificada.
           </p>
         </div>
 

@@ -12,11 +12,13 @@ import { Loader2, User, Mail, Phone, Bell, Save, ArrowLeft, ShieldCheck } from "
 import { DemoStore } from "@/lib/persistence/demo-store";
 import { useRouter } from "next/navigation";
 import { useTenant } from "@/hooks/use-tenant";
+import { useUserStore } from "@/lib/store/user-store";
 
 export default function ClientSettingsPage() {
   const { toast } = useToast();
   const router = useRouter();
   const tenant = useTenant();
+  const { user, setUser } = useUserStore();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [profile, setProfile] = useState({
@@ -58,7 +60,8 @@ export default function ClientSettingsPage() {
             phone: data.phone ? formatPhone(data.phone) : "",
             notificationsEnabled: data.notificationsEnabled ?? true,
           });
-          // Garantir que o DemoStore está sincronizado
+          // Garantir que o Store Reativo e DemoStore estão sincronizados
+          setUser(data);
           DemoStore.saveUser(data);
         }
         setLoading(false);
@@ -82,28 +85,42 @@ export default function ClientSettingsPage() {
     try {
       // Remover máscara antes de salvar no banco
       const rawPhone = profile.phone.replace(/\D/g, "");
-      const updatedProfile = { ...profile, phone: rawPhone };
+      const updatedProfile = { 
+        ...user, 
+        ...profile, 
+        phone: rawPhone 
+      };
 
       const res = await fetch("/api/user/profile", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(updatedProfile),
+        body: JSON.stringify({
+          name: profile.name,
+          phone: rawPhone,
+          notificationsEnabled: profile.notificationsEnabled
+        }),
       });
 
       if (res.ok) {
-        // Atualizar no DemoStore para persistir na Vercel
+        // Atualizar no Store Reativo e DemoStore
+        setUser(updatedProfile as any);
         DemoStore.saveUser(updatedProfile);
         
         toast({ title: "Sucesso", description: "Configurações salvas!" });
       } else {
-        // Mesmo que a API falhe (ex: 403 Forbidden na Vercel), salvamos no DemoStore para a demonstração
-        DemoStore.saveUser(updatedProfile);
-        toast({ title: "Aviso", description: "Salvo localmente (Modo Demo)." });
+        const errorData = await res.json();
+        toast({ 
+          title: "Erro ao salvar", 
+          description: errorData.error || "Não foi possível salvar as configurações no servidor.",
+          variant: "destructive"
+        });
       }
     } catch (error) {
-      // Fallback para DemoStore em erro de rede
-      DemoStore.saveUser(profile);
-      toast({ title: "Aviso", description: "Salvo apenas no navegador (Modo Demo)." });
+      toast({ 
+        title: "Erro de Conexão", 
+        description: "Não foi possível conectar ao servidor. Verifique sua internet.",
+        variant: "destructive"
+      });
     } finally {
       setSaving(false);
     }

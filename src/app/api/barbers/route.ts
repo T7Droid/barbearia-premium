@@ -1,9 +1,10 @@
 import { NextResponse, NextRequest } from "next/server";
 import { supabase, supabaseAdmin, isSupabaseConfigured } from "@/lib/supabase";
 import { TenantContext } from "@/lib/services/tenant-context";
+import { AuthService } from "@/lib/services/auth.service";
 
 export async function GET(request: NextRequest) {
-  if (!isSupabaseConfigured || !supabase) {
+  if (!isSupabaseConfigured || !supabaseAdmin) {
     return NextResponse.json({ error: "Supabase not configured" }, { status: 500 });
   }
 
@@ -12,17 +13,37 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "Tenant não identificado" }, { status: 400 });
   }
 
-  const { data, error } = await supabase
+  const activeOnly = request.nextUrl.searchParams.get("active") === "true";
+  
+  let query = supabaseAdmin
     .from("barbers")
-    .select("*")
-    .eq("tenant_id", tenant.id)
-    .order("name", { ascending: true });
+    .select("*, barber_units(unit_id), barber_services(service_id)")
+    .eq("tenant_id", tenant.id);
+
+  if (activeOnly) {
+    query = query.eq("active", true);
+  }
+
+  const { data, error } = await query.order("name", { ascending: true });
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  return NextResponse.json(data);
+  // Mapear para camelCase e incluir associações
+  const mapped = (data || []).map((b: any) => ({
+    id: b.id,
+    name: b.name,
+    description: b.description,
+    imageUrl: b.image_url,
+    active: b.active,
+    user_id: b.user_id,
+    weekly_hours: b.weekly_hours,
+    units: (b.barber_units || []).map((bu: any) => ({ id: bu.unit_id })),
+    services: (b.barber_services || []).map((bs: any) => ({ id: bs.service_id }))
+  }));
+
+  return NextResponse.json(mapped);
 }
 
 export async function POST(request: NextRequest) {
@@ -35,26 +56,86 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Tenant não identificado" }, { status: 400 });
   }
 
+  // Verificar se o usuário é admin deste tenant
+  const auth = await AuthService.verifySession(request, tenant.id);
+  if (!auth.authenticated || auth.user?.role !== "admin") {
+    return NextResponse.json({ error: "Não autorizado" }, { status: 403 });
+  }
+
   try {
     const body = await request.json();
-    const { name, description, imageUrl, active } = body;
+    const { name, description, imageUrl, active, unitIds, serviceIds, loginData } = body;
 
-    const { data, error } = await supabaseAdmin
+    let userId = null;
+
+    // 1. Criar login para o barbeiro se solicitado
+    if (loginData?.email && loginData?.password) {
+      const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
+        email: loginData.email,
+        password: loginData.password,
+        email_confirm: true,
+        user_metadata: { role: "barber", full_name: name }
+      });
+
+      if (authError) {
+        // Se o erro for que o usuário já existe, tentamos apenas atualizar o perfil depois
+        if (authError.message.includes("already registered")) {
+           const { data: existingUser } = await supabaseAdmin.from("profiles").select("id").eq("email", loginData.email).single();
+           if (existingUser) userId = existingUser.id;
+        } else {
+           throw authError;
+        }
+      } else {
+        userId = authData.user.id;
+        
+        // Criar ou atualizar perfil para garantir o tenant e o cargo
+        await supabaseAdmin.from("profiles").upsert({
+          id: userId,
+          full_name: name,
+          email: loginData.email,
+          role: "barber",
+          tenant_id: tenant.id
+        });
+      }
+    }
+
+    // 2. Criar o barbeiro
+    const { data: barber, error } = await supabaseAdmin
       .from("barbers")
       .insert({
         name,
         description,
         image_url: imageUrl,
         active: active !== undefined ? active : true,
-        tenant_id: tenant.id
+        tenant_id: tenant.id,
+        user_id: userId
       })
       .select()
       .single();
 
     if (error) throw error;
 
-    return NextResponse.json(data);
+    // 3. Associar Unidades (M2M)
+    if (Array.isArray(unitIds) && unitIds.length > 0) {
+      const associations = unitIds.map(uId => ({
+        barber_id: barber.id,
+        unit_id: uId
+      }));
+      await supabaseAdmin.from("barber_units").insert(associations);
+    }
+
+    // 4. Associar Serviços (M2M)
+    if (Array.isArray(serviceIds) && serviceIds.length > 0) {
+      const svcAssociations = serviceIds.map(sId => ({
+        barber_id: barber.id,
+        service_id: Number(sId)
+      }));
+      await supabaseAdmin.from("barber_services").insert(svcAssociations);
+    }
+
+    return NextResponse.json(barber);
   } catch (error: any) {
+    console.error("Error creating barber:", error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }

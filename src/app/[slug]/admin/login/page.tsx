@@ -2,9 +2,22 @@
 
 import { AdminLoginForm } from "./login-form";
 import { Scissors, ShieldCheck } from "lucide-react";
-import { Suspense } from "react";
+import { Suspense, useEffect } from "react";
+import { useRouter, useParams } from "next/navigation";
+import { useUserStore } from "@/lib/store/user-store";
 
 export default function AdminLoginPage() {
+  const router = useRouter();
+  const params = useParams();
+  const slug = params?.slug as string;
+  const { user } = useUserStore();
+
+  useEffect(() => {
+    if (user?.role === "admin") {
+      router.push(`/${slug}/admin`);
+    }
+  }, [user, router, slug]);
+
   return (
     <div className="flex-1 flex items-center justify-center p-4 bg-muted/30 min-h-[80vh]">
       <div className="w-full max-w-md space-y-8 animate-in fade-in slide-in-from-bottom-8 duration-700">

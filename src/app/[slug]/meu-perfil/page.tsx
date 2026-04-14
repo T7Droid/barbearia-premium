@@ -13,13 +13,14 @@ import { Progress } from "@/components/ui/progress";
 import { Label } from "@/components/ui/label";
 import { useTenant } from "@/components/tenant-provider";
 import { DemoStore } from "@/lib/persistence/demo-store";
+import { useUserStore } from "@/lib/store/user-store";
 
 export default function UserProfile() {
   const router = useRouter();
   const { toast } = useToast();
   const tenant = useTenant();
   
-  const [user, setUser] = useState<any>(null);
+  const { user, setUser, refreshProfile } = useUserStore();
   const [settings, setSettings] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
@@ -49,10 +50,11 @@ export default function UserProfile() {
           return;
         }
 
-        const userData = await userRes.json();
+        // Usar refreshProfile para centralizar a busca do usuário no store
+        const userData = await refreshProfile(tenant.slug);
         const settingsData = await settingsRes.json();
         
-        if (!userData.authenticated) {
+        if (!userData) {
           const savedUser = DemoStore.getUser();
           if (savedUser) {
             setUser(savedUser);
@@ -61,11 +63,11 @@ export default function UserProfile() {
             return;
           }
         } else {
-          setUser(userData.user);
-          DemoStore.saveUser(userData.user);
+          setUser(userData);
+          DemoStore.saveUser(userData);
         }
 
-        if (userData.user?.role === "admin") {
+        if (userData?.role === "admin") {
           router.push(`/${tenant.slug}/admin`);
           return;
         }

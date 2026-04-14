@@ -21,9 +21,10 @@ import { useUserStore } from "@/lib/store/user-store";
 
 export function Layout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const isRoot = pathname === "/";
   const router = useRouter();
   const { toast } = useToast();
-  
+
   // Tentar obter o tenant do context. Se não estiver em um [slug], o hook lidará com isso.
   let tenant: any = null;
   try {
@@ -32,7 +33,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
     // Fora de um contexto de tenant (ex: landing page global)
   }
 
-  const { user, setUser } = useUserStore();
+  const { user, setUser, refreshProfile } = useUserStore();
   const [isPointsEnabled, setIsPointsEnabled] = useState(true);
 
   useEffect(() => {
@@ -43,21 +44,18 @@ export function Layout({ children }: { children: React.ReactNode }) {
           headers["x-tenant-slug"] = tenant.slug;
         }
 
-        const [authRes, settingsRes] = await Promise.all([
-          fetch("/api/auth/me", { headers, cache: "no-store" }),
-          fetch("/api/settings", { headers, cache: "no-store" })
-        ]);
-        const authData = await authRes.json();
-        const settingsData = await settingsRes.json();
-
-        // Autenticação e Sincronização
-        if (authData.authenticated) {
-          setUser(authData.user);
-          DemoStore.saveUser(authData.user);
+        // Usar refreshProfile para centralizar a busca do usuário no store
+        const userData = await refreshProfile(tenant?.slug);
+        
+        if (userData) {
+          DemoStore.saveUser(userData);
         } else {
           const savedUser = DemoStore.getUser();
           if (savedUser) setUser(savedUser);
         }
+
+        const settingsRes = await fetch("/api/settings", { headers, cache: "no-store" });
+        const settingsData = await settingsRes.json();
 
         // Configurações e Sincronização
         if (settingsRes.ok) {
@@ -75,7 +73,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
       }
     };
     fetchData();
-  }, [pathname, tenant]);
+  }, [pathname, tenant, refreshProfile]);
 
   const handleLogout = async () => {
     try {
@@ -103,15 +101,21 @@ export function Layout({ children }: { children: React.ReactNode }) {
           <Link href={getLink("/")} className="flex items-center gap-2 group">
             <Scissors className="w-6 h-6 text-primary group-hover:text-primary/80 transition-colors" />
             <span className="font-serif text-xl font-bold tracking-wide uppercase">
-              {tenant ? tenant.name : "Barber"}
+              {isRoot ? (
+                <>
+                  <span className="text-yellow-400">King</span>Barber
+                </>
+              ) : (
+                tenant ? tenant.name : "Barber"
+              )}
               <span className="text-primary font-black">.</span>
             </span>
           </Link>
 
           {config.useMocks && (
-            <Link 
+            <Link
               href={`https://wa.me/5513982046758`}
-              target="_blank" 
+              target="_blank"
               rel="noopener noreferrer"
               className="flex items-center gap-1.5 bg-yellow-500/10 text-yellow-500 px-2 py-1 rounded text-[10px] font-bold uppercase border border-yellow-500/20 animate-pulse hover:bg-yellow-500/20 transition-colors cursor-pointer"
             >
@@ -119,28 +123,35 @@ export function Layout({ children }: { children: React.ReactNode }) {
             </Link>
           )}
 
-          <nav className="hidden md:flex items-center gap-8">
-            <Link href={getLink("/")} className={`text-sm font-medium transition-colors hover:text-primary ${pathname === getLink("/") ? 'text-primary' : 'text-muted-foreground'}`}>Início</Link>
-            <Link href={getLink("/booking")} className={`text-sm font-medium transition-colors hover:text-primary ${pathname.startsWith(getLink("/booking")) ? 'text-primary' : 'text-muted-foreground'}`}>Agendar</Link>
+          {!isRoot && (
+            <nav className="hidden md:flex items-center gap-8">
+              <Link href={getLink("/")} className={`text-sm font-medium transition-colors hover:text-primary ${pathname === getLink("/") ? 'text-primary' : 'text-muted-foreground'}`}>Início</Link>
+              <Link href={getLink("/booking")} className={`text-sm font-medium transition-colors hover:text-primary ${pathname.startsWith(getLink("/booking")) ? 'text-primary' : 'text-muted-foreground'}`}>Agendar</Link>
 
-            {user?.role === 'admin' && (
-              <Link href={getLink("/admin")} className={`text-sm font-medium transition-colors hover:text-primary ${pathname.startsWith(getLink("/admin")) ? 'text-primary' : 'text-muted-foreground'}`}>Administração</Link>
-            )}
+              {user?.role === 'admin' && (
+                <Link href={getLink("/admin")} className={`text-sm font-medium transition-colors hover:text-primary ${pathname.startsWith(getLink("/admin")) ? 'text-primary' : 'text-muted-foreground'}`}>Administração</Link>
+              )}
 
-            {user?.role === 'client' && (
-              <Link href={getLink("/meu-perfil/historico")} className={`text-sm font-medium transition-colors hover:text-primary ${pathname.startsWith(getLink("/meu-perfil/historico")) ? 'text-primary' : 'text-muted-foreground'}`}>Meus Agendamentos</Link>
-            )}
-          </nav>
+              {user && (
+                <Link href={getLink("/meu-perfil/historico")} className={`text-sm font-medium transition-colors hover:text-primary ${pathname.startsWith(getLink("/meu-perfil/historico")) ? 'text-primary' : 'text-muted-foreground'}`}>Meus Agendamentos</Link>
+              )}
+            </nav>
+          )}
 
           <div className="flex items-center gap-4">
-            {user && isPointsEnabled && (
-              <div className="flex items-center gap-1.5 bg-primary/10 text-primary px-3 py-1.5 rounded-full border border-primary/20 shadow-sm hover:scale-105 transition-transform cursor-default">
-                <Award className="w-4 h-4" />
-                <span className="text-xs font-black tracking-tight">{user.points || 0} pts</span>
-              </div>
-            )}
+            {(() => {
+              if (!isRoot && user && isPointsEnabled) {
+                return (
+                  <div className="flex items-center gap-1.5 bg-primary/10 text-primary px-3 py-1.5 rounded-full border border-primary/20 shadow-sm hover:scale-105 transition-transform cursor-default">
+                    <Award className="w-4 h-4" />
+                    <span className="text-xs font-black tracking-tight">{user.points || 0} pts</span>
+                  </div>
+                );
+              }
+              return null;
+            })()}
 
-            {user ? (
+            {!isRoot && (user ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" className="relative h-10 w-10 rounded-full bg-accent hover:bg-accent/80 border border-border/50">
@@ -155,28 +166,32 @@ export function Layout({ children }: { children: React.ReactNode }) {
                     </div>
                   </DropdownMenuLabel>
                   <DropdownMenuSeparator />
-                  {user.role === 'admin' ? (
+                  
+                  {/* Itens Administrativos */}
+                  {user.role === 'admin' && (
                     <>
+                      <DropdownMenuLabel className="text-[10px] uppercase text-muted-foreground font-bold tracking-widest pt-3 pb-1">Administração</DropdownMenuLabel>
                       <DropdownMenuItem asChild>
                         <Link href={getLink("/admin")}><LayoutGrid className="mr-2 h-4 w-4" /> Dashboard</Link>
                       </DropdownMenuItem>
                       <DropdownMenuItem asChild>
                         <Link href={getLink("/admin/configuracoes")}><SettingsIcon className="mr-2 h-4 w-4" /> Configurações</Link>
                       </DropdownMenuItem>
-                    </>
-                  ) : (
-                    <>
-                      <DropdownMenuItem asChild>
-                        <Link href={getLink("/meu-perfil")}><User className="mr-2 h-4 w-4" /> Meu Perfil</Link>
-                      </DropdownMenuItem>
-                      <DropdownMenuItem asChild>
-                        <Link href={getLink("/meu-perfil/historico")}><History className="mr-2 h-4 w-4" /> Meus Agendamentos</Link>
-                      </DropdownMenuItem>
-                      <DropdownMenuItem asChild>
-                        <Link href={getLink("/meu-perfil/settings")}><SettingsIcon className="mr-2 h-4 w-4" /> Configurações</Link>
-                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
                     </>
                   )}
+
+                  {/* Itens do Cliente (Acessíveis por ambos) */}
+                  <DropdownMenuLabel className="text-[10px] uppercase text-muted-foreground font-bold tracking-widest pt-3 pb-1">Minha Conta</DropdownMenuLabel>
+                  <DropdownMenuItem asChild>
+                    <Link href={getLink("/meu-perfil")}><User className="mr-2 h-4 w-4" /> Meu Perfil</Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link href={getLink("/meu-perfil/historico")}><History className="mr-2 h-4 w-4" /> Meus Agendamentos</Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link href={getLink("/meu-perfil/settings")}><SettingsIcon className="mr-2 h-4 w-4" /> Configurações</Link>
+                  </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem className="text-destructive focus:text-destructive cursor-pointer" onClick={handleLogout}>
                     <LogOut className="mr-2 h-4 w-4" /> Sair
@@ -187,7 +202,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
               <Button asChild size="sm" variant="outline" className="border-primary/50 text-primary hover:bg-primary/5 h-9">
                 <Link href={getLink("/login")}>Entrar</Link>
               </Button>
-            )}
+            ))}
           </div>
         </div>
       </header>
@@ -200,10 +215,12 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <div className="container mx-auto px-4 flex flex-col md:flex-row justify-between items-center gap-6">
           <div className="flex items-center gap-2">
             <Scissors className="w-5 h-5 text-primary" />
-            <span className="font-serif text-lg font-bold tracking-wide uppercase italic">Barber<span className="text-primary NOT-italic font-black">.</span></span>
+            <span className="font-serif text-lg font-bold tracking-wide uppercase italic">
+              {isRoot && <span className="text-yellow-400 NOT-italic">King</span>}Barber<span className="text-primary NOT-italic font-black">.</span>
+            </span>
           </div>
           <p className="text-sm text-muted-foreground text-center">
-            © {new Date().getFullYear()} Barber Premium. Experiência de Barbearia de Luxo.
+            © {new Date().getFullYear()} KingBarber. Experiência de Barbearia de Luxo.
           </p>
           <div className="flex items-center gap-4 text-xs text-muted-foreground">
             <Link href={getLink("/privacidade")} className="hover:text-primary transition-colors">Privacidade</Link>

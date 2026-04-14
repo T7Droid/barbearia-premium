@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { ADMIN_USER, createSessionToken } from "@/lib/mock-auth";
 import { USERS_STORE } from "@/lib/mock-store";
-import { supabase, isSupabaseConfigured } from "@/lib/supabase";
+import { supabase, supabaseAdmin, isSupabaseConfigured } from "@/lib/supabase";
 
 export async function POST(request: Request) {
   try {
@@ -22,7 +22,7 @@ export async function POST(request: Request) {
     }
 
     // 2. Fetch User Profile for Role verification
-    const { data: profile } = await supabase
+    const { data: profile } = await supabaseAdmin!
       .from("profiles")
       .select("role, full_name, points")
       .eq("id", data.user.id)

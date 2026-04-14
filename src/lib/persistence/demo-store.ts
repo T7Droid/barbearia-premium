@@ -35,7 +35,14 @@ export class DemoStore {
     if (typeof window === "undefined") return;
     const current = this.getAppointments();
     // Adicionar ao início da lista e remover duplicatas pelo ID
-    const updated = [appointment, ...current.filter((a: any) => a.id !== appointment.id)];
+    const updated = [appointment, ...current.filter((a: any) => String(a.id) !== String(appointment.id))];
+    localStorage.setItem(KEYS.APPOINTMENTS, JSON.stringify(updated));
+  }
+
+  static removeAppointment(id: string | number) {
+    if (typeof window === "undefined") return;
+    const current = this.getAppointments();
+    const updated = current.filter((a: any) => String(a.id) !== String(id));
     localStorage.setItem(KEYS.APPOINTMENTS, JSON.stringify(updated));
   }
 

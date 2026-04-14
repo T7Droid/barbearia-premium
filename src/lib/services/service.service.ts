@@ -29,7 +29,9 @@ export class ServiceService {
       description: data.description,
       price: Number(data.price),
       durationMinutes: Number(data.duration_minutes),
-      imageUrl: data.image_url
+      imageUrl: data.image_url,
+      // Extrair unit IDs da relação M2M
+      units: data.service_units?.map((su: any) => ({ id: su.unit_id })) ?? []
     };
   }
 
@@ -40,7 +42,7 @@ export class ServiceService {
 
     const { data, error } = await supabaseAdmin
       .from("services")
-      .select("*")
+      .select("*, service_units(unit_id)")
       .order("id", { ascending: true });
 
     if (error) throw error;
@@ -74,6 +76,16 @@ export class ServiceService {
       .single();
 
     if (error) throw error;
+
+    // Sincronizar Unidades
+    if (Array.isArray(data.unitIds) && data.unitIds.length > 0) {
+      const associations = data.unitIds.map(uId => ({
+        service_id: newService.id,
+        unit_id: uId
+      }));
+      await supabaseAdmin.from("service_units").insert(associations);
+    }
+
     return this.mapFromSupabase(newService);
   }
 
@@ -90,6 +102,19 @@ export class ServiceService {
       .single();
 
     if (error) throw error;
+
+    // Sincronizar Unidades
+    if (Array.isArray(data.unitIds)) {
+      await supabaseAdmin.from("service_units").delete().eq("service_id", id);
+      if (data.unitIds.length > 0) {
+        const associations = data.unitIds.map(uId => ({
+          service_id: id,
+          unit_id: uId
+        }));
+        await supabaseAdmin.from("service_units").insert(associations);
+      }
+    }
+
     return this.mapFromSupabase(updatedService);
   }
 

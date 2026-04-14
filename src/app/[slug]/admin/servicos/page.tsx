@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Layout } from "@/components/layout";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
@@ -9,19 +8,27 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
+  Save,
+  ImageIcon,
+  MapPin,
+  LayoutGrid,
+  Scissors,
   Plus,
   Pencil,
   Trash2,
   Loader2,
-  Scissors,
-  Clock,
-  DollarSign,
-  LayoutGrid,
-  ChevronLeft,
   X,
-  Save,
-  Image as ImageIcon
+  Clock,
+  DollarSign
 } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { 
+  Tabs, 
+  TabsContent, 
+  TabsList, 
+  TabsTrigger 
+} from "@/components/ui/tabs";
+import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import Link from "next/link";
 import { formatCurrencyFromCents } from "@/lib/format";
@@ -50,20 +57,32 @@ export default function AdminServices() {
     description: "",
     price: "",
     durationMinutes: "45",
-    imageUrl: ""
+    imageUrl: "",
+    unitIds: [] as string[]
   });
+
+  const [units, setUnits] = useState<any[]>([]);
+  const [isLoadingUnits, setIsLoadingUnits] = useState(true);
 
   const fetchServices = async () => {
     if (!tenant?.slug) return;
     try {
       const headers = { "x-tenant-slug": tenant.slug };
-      const res = await fetch("/api/services", { headers });
-      const data = await res.json();
-      setServices(data);
+      const [servicesRes, unitsRes] = await Promise.all([
+        fetch("/api/services", { headers }),
+        fetch("/api/units", { headers })
+      ]);
+      
+      const servicesData = await servicesRes.json();
+      const unitsData = await unitsRes.json();
+      
+      setServices(servicesData);
+      setUnits(unitsData);
     } catch (error) {
-      toast({ title: "Erro", description: "Falha ao carregar serviços", variant: "destructive" });
+      toast({ title: "Erro", description: "Falha ao carregar dados", variant: "destructive" });
     } finally {
       setLoading(false);
+      setIsLoadingUnits(false);
     }
   };
 
@@ -71,15 +90,16 @@ export default function AdminServices() {
     fetchServices();
   }, [tenant]);
 
-  const handleOpenModal = (service?: Service) => {
+  const handleOpenModal = (service?: any) => {
     if (service) {
       setEditingService(service);
       setFormData({
         name: service.name,
-        description: service.description,
-        price: (service.price / 100).toFixed(2),
-        durationMinutes: service.durationMinutes.toString(),
-        imageUrl: service.imageUrl || ""
+        description: service.description || "",
+        price: ((service.price ?? service.price_cents ?? 0) / 100).toFixed(2),
+        durationMinutes: (service.durationMinutes ?? service.duration_minutes ?? 45).toString(),
+        imageUrl: service.imageUrl || service.image_url || "",
+        unitIds: (service.units || []).map((u: any) => String(u.id))
       });
     } else {
       setEditingService(null);
@@ -88,7 +108,8 @@ export default function AdminServices() {
         description: "",
         price: "",
         durationMinutes: "45",
-        imageUrl: ""
+        imageUrl: "",
+        unitIds: []
       });
     }
     setIsModalOpen(true);
@@ -275,85 +296,147 @@ export default function AdminServices() {
                 Preencha os detalhes abaixo para {editingService ? "atualizar" : "criar"} o serviço.
               </CardDescription>
             </CardHeader>
-            <CardContent>
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="name">Nome do Serviço</Label>
-                  <Input
-                    id="name"
-                    required
-                    value={formData.name}
-                    onChange={e => setFormData({...formData, name: e.target.value})}
-                    placeholder="Ex: Corte Degradê"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="description">Descrição</Label>
-                  <Textarea
-                    id="description"
-                    required
-                    value={formData.description}
-                    onChange={e => setFormData({...formData, description: e.target.value})}
-                    placeholder="Descreva o que está incluso no serviço..."
-                    className="min-h-[100px]"
-                  />
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="price">Preço (R$)</Label>
-                    <div className="relative">
-                      <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <CardContent className="p-0">
+              <Tabs defaultValue="geral" className="w-full">
+                <TabsList className="w-full grid grid-cols-2 rounded-none border-b h-14 bg-muted/20">
+                  <TabsTrigger value="geral" className="gap-2">
+                    <Scissors className="w-4 h-4" /> Informações
+                  </TabsTrigger>
+                  <TabsTrigger value="unidades" className="gap-2">
+                    <MapPin className="w-4 h-4" /> Unidades
+                  </TabsTrigger>
+                </TabsList>
+
+                <form onSubmit={handleSubmit}>
+                  <TabsContent value="geral" className="p-6 space-y-4 m-0">
+                    <div className="space-y-2">
+                      <Label htmlFor="name">Nome do Serviço</Label>
                       <Input
-                        id="price"
-                        type="number"
-                        step="0.01"
+                        id="name"
                         required
-                        value={formData.price}
-                        onChange={e => setFormData({...formData, price: e.target.value})}
-                        className="pl-9"
-                        placeholder="0.00"
+                        value={formData.name}
+                        onChange={e => setFormData({...formData, name: e.target.value})}
+                        placeholder="Ex: Corte Degradê"
                       />
                     </div>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="duration">Duração (min)</Label>
-                    <div className="relative">
-                      <Clock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                      <Input
-                        id="duration"
-                        type="number"
+                    <div className="space-y-2">
+                      <Label htmlFor="description">Descrição</Label>
+                      <Textarea
+                        id="description"
                         required
-                        value={formData.durationMinutes}
-                        onChange={e => setFormData({...formData, durationMinutes: e.target.value})}
-                        className="pl-9"
-                        placeholder="45"
+                        value={formData.description}
+                        onChange={e => setFormData({...formData, description: e.target.value})}
+                        placeholder="Descreva o que está incluso no serviço..."
+                        className="min-h-[100px]"
                       />
                     </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="price">Preço (R$)</Label>
+                        <div className="relative">
+                          <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                          <Input
+                            id="price"
+                            type="number"
+                            step="0.01"
+                            required
+                            value={formData.price}
+                            onChange={e => setFormData({...formData, price: e.target.value})}
+                            className="pl-9"
+                            placeholder="0.00"
+                          />
+                        </div>
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="duration">Duração (min)</Label>
+                        <div className="relative">
+                          <Clock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                          <Input
+                            id="duration"
+                            type="number"
+                            required
+                            value={formData.durationMinutes}
+                            onChange={e => setFormData({...formData, durationMinutes: e.target.value})}
+                            className="pl-9"
+                            placeholder="45"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="imageUrl">URL da Imagem (opcional)</Label>
+                      <div className="relative">
+                        <ImageIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                        <Input
+                          id="imageUrl"
+                          value={formData.imageUrl}
+                          onChange={e => setFormData({...formData, imageUrl: e.target.value})}
+                          className="pl-9"
+                          placeholder="https://images.unsplash.com/..."
+                        />
+                      </div>
+                    </div>
+                  </TabsContent>
+
+                  <TabsContent value="unidades" className="p-6 space-y-4 m-0">
+                    <div className="space-y-4">
+                      <Label className="text-base font-semibold flex items-center gap-2">
+                        <MapPin className="w-4 h-4" /> Disponibilidade em Unidades
+                      </Label>
+                      <p className="text-xs text-muted-foreground">Marque em quais unidades este serviço estará disponível para agendamento.</p>
+                      
+                      <div className="grid grid-cols-1 gap-3 border rounded-xl p-6 bg-muted/10">
+                        {isLoadingUnits ? (
+                          <div className="py-4 flex justify-center">
+                            <Loader2 className="w-6 h-6 animate-spin text-primary" />
+                          </div>
+                        ) : units.length === 0 ? (
+                          <div className="text-center py-4 space-y-2">
+                            <p className="text-sm text-muted-foreground">Nenhuma unidade cadastrada.</p>
+                            <Link href={getLink("/admin/unidades")}>
+                              <Button variant="link" size="sm">Cadastrar Unidades</Button>
+                            </Link>
+                          </div>
+                        ) : (
+                          units.map(unit => (
+                            <div key={unit.id} className="flex items-center space-x-3 p-2 hover:bg-muted/30 rounded-lg transition-colors">
+                              <Checkbox 
+                                id={`unit-${unit.id}`}
+                                checked={formData.unitIds.includes(String(unit.id))}
+                                onCheckedChange={(checked) => {
+                                  const uid = String(unit.id);
+                                  const newIds = checked 
+                                    ? [...formData.unitIds, uid]
+                                    : formData.unitIds.filter(id => id !== uid);
+                                  setFormData({...formData, unitIds: newIds});
+                                }}
+                              />
+                              <div className="grid gap-0.5 leading-none">
+                                <Label htmlFor={`unit-${unit.id}`} className="text-sm font-medium cursor-pointer">
+                                  {unit.name}
+                                </Label>
+                                <p className="text-xs text-muted-foreground">
+                                  {unit.address}, {unit.city}
+                                </p>
+                              </div>
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    </div>
+                  </TabsContent>
+
+                  <div className="p-6 border-t flex gap-3 bg-muted/10">
+                    <Button type="button" variant="outline" onClick={handleCloseModal} className="flex-1">
+                      Cancelar
+                    </Button>
+                    <Button type="submit" disabled={isSubmitting} className="flex-1 gap-2">
+                      {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                      {editingService ? "Salvar Alterações" : "Criar Serviço"}
+                    </Button>
                   </div>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="imageUrl">URL da Imagem (opcional)</Label>
-                  <div className="relative">
-                    <ImageIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                    <Input
-                      id="imageUrl"
-                      value={formData.imageUrl}
-                      onChange={e => setFormData({...formData, imageUrl: e.target.value})}
-                      className="pl-9"
-                      placeholder="https://images.unsplash.com/..."
-                    />
-                  </div>
-                </div>
-                <div className="pt-4 flex gap-3">
-                  <Button type="button" variant="outline" onClick={handleCloseModal} className="flex-1">
-                    Cancelar
-                  </Button>
-                  <Button type="submit" disabled={isSubmitting} className="flex-1 gap-2">
-                    {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-                    {editingService ? "Salvar Alterações" : "Criar Serviço"}
-                  </Button>
-                </div>
-              </form>
+                </form>
+              </Tabs>
             </CardContent>
           </Card>
         </div>

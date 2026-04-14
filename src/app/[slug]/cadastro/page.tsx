@@ -19,6 +19,7 @@ function CadastroContent() {
   const searchParams = useSearchParams();
   const { toast } = useToast();
   const tenant = useTenant();
+  const getLink = (path: string) => `/${tenant.slug}${path}`;
 
   const emailParam = searchParams.get("email") || "";
   const nameParam = searchParams.get("name") || "";

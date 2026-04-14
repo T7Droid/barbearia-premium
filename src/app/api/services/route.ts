@@ -3,7 +3,7 @@ import { supabase, supabaseAdmin, isSupabaseConfigured } from "@/lib/supabase";
 import { TenantContext } from "@/lib/services/tenant-context";
 
 export async function GET(request: NextRequest) {
-  if (!isSupabaseConfigured || !supabase) {
+  if (!isSupabaseConfigured || !supabaseAdmin) {
     return NextResponse.json({ error: "Supabase not configured" }, { status: 500 });
   }
 
@@ -12,9 +12,9 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "Tenant não identificado" }, { status: 400 });
   }
 
-  const { data, error } = await supabase
+  const { data, error } = await supabaseAdmin
     .from("services")
-    .select("*")
+    .select("*, service_units(unit_id)")
     .eq("tenant_id", tenant.id)
     .order("name", { ascending: true });
 
@@ -22,7 +22,18 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  return NextResponse.json(data);
+  // Mapear para camelCase e incluir units para o frontend
+  const mapped = (data || []).map((s: any) => ({
+    id: s.id,
+    name: s.name,
+    description: s.description,
+    price: s.price,
+    durationMinutes: s.duration_minutes,
+    imageUrl: s.image_url,
+    units: (s.service_units || []).map((su: any) => ({ id: su.unit_id }))
+  }));
+
+  return NextResponse.json(mapped);
 }
 
 export async function POST(request: NextRequest) {
@@ -37,9 +48,9 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json();
-    const { name, description, price, durationMinutes, imageUrl } = body;
+    const { name, description, price, durationMinutes, imageUrl, unitIds } = body;
 
-    const { data, error } = await supabaseAdmin
+    const { data: service, error } = await supabaseAdmin
       .from("services")
       .insert({
         name,
@@ -54,7 +65,16 @@ export async function POST(request: NextRequest) {
 
     if (error) throw error;
 
-    return NextResponse.json(data, { status: 201 });
+    // Associar Unidades (M2M)
+    if (Array.isArray(unitIds) && unitIds.length > 0) {
+      const associations = unitIds.map(uId => ({
+        service_id: service.id,
+        unit_id: uId
+      }));
+      await supabaseAdmin.from("service_units").insert(associations);
+    }
+
+    return NextResponse.json(service, { status: 201 });
   } catch (error: any) {
     return NextResponse.json({ 
       error: "Erro ao criar serviço", 

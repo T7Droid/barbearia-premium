@@ -7,6 +7,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, LogIn } from "lucide-react";
+import { userStore } from "@/lib/store/user-store";
+import { DemoStore } from "@/lib/persistence/demo-store";
 
 export function AdminLoginForm() {
   const router = useRouter();
@@ -31,6 +33,13 @@ export function AdminLoginForm() {
       });
 
       if (response.ok) {
+        const data = await response.json();
+        const user = data.user;
+        
+        // Sincronizar Store Reativa e Modo Demo
+        userStore.setUser(user);
+        DemoStore.saveUser(user);
+
         toast({ title: "Bem-vindo de volta!", description: "Acessando o painel de gestão." });
         router.push(`/${slug}/admin`);
         router.refresh();

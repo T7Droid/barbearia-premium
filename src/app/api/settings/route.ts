@@ -13,14 +13,14 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "Tenant não identificado" }, { status: 400 });
   }
 
-  const { data, error } = await supabase
+  const { data, error } = await supabaseAdmin!
     .from("settings")
     .select("*")
     .eq("tenant_id", tenant.id)
     .single();
 
   // Buscar informações de conexão do tenant
-  const { data: tenantData } = await supabase
+  const { data: tenantData } = await supabaseAdmin!
     .from("tenants")
     .select("mp_connected, mp_public_key, mp_connection_error")
     .eq("id", tenant.id)
@@ -92,7 +92,7 @@ export async function POST(request: NextRequest) {
 
     updateData.updated_at = new Date().toISOString();
 
-    const { data: updated, error } = await supabaseAdmin
+    const { data: updated, error } = await supabaseAdmin!
       .from("settings")
       .update(updateData)
       .eq("tenant_id", tenant.id)

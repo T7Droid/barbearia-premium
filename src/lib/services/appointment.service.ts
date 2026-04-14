@@ -19,6 +19,15 @@ export interface Appointment {
   isReschedule?: boolean;
   rescheduleId?: number;
   tenantId: string;
+  unitId?: string;
+  unit?: {
+    id: string;
+    name: string;
+    address: string;
+    number?: string;
+    city?: string;
+    state?: string;
+  };
   createdAt: string;
 }
 
@@ -41,6 +50,7 @@ export class AppointmentService {
     if (data.rescheduleId !== undefined) mapped.reschedule_id = data.rescheduleId;
     if (data.userId !== undefined) mapped.user_id = data.userId;
     if (data.tenantId !== undefined) mapped.tenant_id = data.tenantId;
+    if (data.unitId !== undefined) mapped.unit_id = data.unitId;
     if (data.createdAt !== undefined) mapped.created_at = data.createdAt;
     return mapped;
   }
@@ -64,6 +74,15 @@ export class AppointmentService {
       isReschedule: data.is_reschedule,
       rescheduleId: data.reschedule_id ? Number(data.reschedule_id) : undefined,
       userId: data.user_id,
+      unitId: data.unit_id,
+      unit: data.units ? {
+        id: data.units.id,
+        name: data.units.name,
+        address: data.units.address,
+        number: data.units.number,
+        city: data.units.city,
+        state: data.units.state
+      } : undefined,
       createdAt: data.created_at,
     };
   }
@@ -113,7 +132,7 @@ export class AppointmentService {
 
     const { data, error } = await supabaseAdmin
       .from("appointments")
-      .select("*")
+      .select("*, units(*)")
       .eq("id", id)
       .single();
 
@@ -159,6 +178,7 @@ export class AppointmentService {
       isPaid: isPaid,
       isReschedule: !!session.rescheduleId,
       userId: session.userId,
+      unitId: session.unitId,
       tenantId: sessionDataRaw.tenant_id,
       createdAt: new Date().toISOString()
     });
@@ -209,12 +229,94 @@ export class AppointmentService {
           console.error(`[LOYALTY] Erro ao atualizar pontos para o usuário ${session.userId} no tenant ${sessionDataRaw.tenant_id}:`, upsertError);
         }
       }
+
+      // --- RESCHEDULE COUNTER ---
+      if (session.rescheduleId) {
+        try {
+          // Buscar perfil para pegar valor atual
+          const { data: profile } = await supabaseAdmin
+            .from("profiles")
+            .select("reschedule_count")
+            .eq("id", session.userId)
+            .eq("tenant_id", sessionDataRaw.tenant_id)
+            .single();
+
+          const currentCount = profile?.reschedule_count || 0;
+
+          await supabaseAdmin
+            .from("profiles")
+            .update({ reschedule_count: currentCount + 1 })
+            .eq("id", session.userId)
+            .eq("tenant_id", sessionDataRaw.tenant_id);
+            
+          console.log(`[REAGENDAMENTO] Contador incrementado para usuário ${session.userId}`);
+        } catch (e) {
+          console.error("[REAGENDAMENTO] Erro ao incrementar contador:", e);
+        }
+      }
     }
     // ----------------------------
 
     await supabaseAdmin!.from("checkout_sessions").delete().eq("id", sessionId);
 
     return this.mapFromSupabase(appointment);
+  }
+  
+  static async cancel(id: number, tenantId: string): Promise<boolean> {
+    if (!config.supabase.isConfigured || !supabaseAdmin) {
+      throw new Error("Supabase Admin is required for appointment cancellation.");
+    }
+
+    try {
+      // 1. Buscar o agendamento para pegar o user_id
+      const { data: appData } = await supabaseAdmin
+        .from("appointments")
+        .select("user_id")
+        .eq("id", id)
+        .single();
+
+      // 2. Atualizar o status para cancelado
+      const { error } = await supabaseAdmin
+        .from("appointments")
+        .update({ status: "cancelled" })
+        .eq("id", id)
+        .eq("tenant_id", tenantId);
+
+      if (error) throw error;
+
+      // 3. Incrementar contador de cancelamentos no perfil
+      if (appData?.user_id) {
+        try {
+          const { data: profile } = await supabaseAdmin
+            .from("profiles")
+            .select("cancel_count")
+            .eq("id", appData.user_id)
+            .eq("tenant_id", tenantId)
+            .single();
+
+          const currentCount = profile?.cancel_count || 0;
+
+          await supabaseAdmin
+            .from("profiles")
+            .update({ cancel_count: currentCount + 1 })
+            .eq("id", appData.user_id)
+            .eq("tenant_id", tenantId);
+            
+          console.log(`[CANCELAMENTO] Contador incrementado para usuário ${appData.user_id}`);
+        } catch (e) {
+          console.error("[CANCELAMENTO] Erro ao incrementar contador:", e);
+        }
+      }
+    } catch (error: any) {
+      if (error.name === 'TypeError' && error.message === 'Failed to fetch') {
+        console.warn("STORE: Network error or CORS issue while refreshing profile (Failed to fetch).");
+      } else {
+        console.error(`[APPOINTMENT] Erro ao cancelar agendamento ${id}:`, error);
+      }
+      return false;
+    }
+
+    return true;
   }
 
   static async list(): Promise<Appointment[]> {
@@ -265,7 +367,7 @@ export class AppointmentService {
     };
   }
 
-  static async getBookedSlots(date: string, barberId?: number, tenantId?: string): Promise<string[]> {
+  static async getBookedSlots(date: string, barberId?: number, tenantId?: string, excludeId?: number): Promise<string[]> {
     if (!config.supabase.isConfigured || !supabaseAdmin) {
       throw new Error("Supabase Admin is required for availability checks.");
     }
@@ -282,6 +384,10 @@ export class AppointmentService {
 
     if (barberId) {
       query = query.eq("barber_id", barberId);
+    }
+
+    if (excludeId) {
+      query = query.neq("id", excludeId);
     }
 
     const { data, error } = await query;

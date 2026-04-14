@@ -54,6 +54,7 @@ export async function POST(request: NextRequest) {
           id: data.user.id,
           tenant_id: tenant.id,
           full_name: name,
+          email: email, // Persistir o e-mail no perfil
           phone: phone || "",
           role: "client",
           points: initialPoints

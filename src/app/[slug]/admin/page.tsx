@@ -5,9 +5,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { useListAppointments, useGetStatsSummary } from "@workspace/api-client-react";
-import { Calendar, DollarSign, Scissors, Users, Settings, CreditCard, Wallet, CheckCircle2, AlertCircle } from "lucide-react";
+import { Calendar, DollarSign, Scissors, Users, Settings, CreditCard, Wallet, CheckCircle2, AlertCircle, MapPin } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import Link from "next/link";
+import { useEffect } from "react";
+import { useUserStore } from "@/lib/store/user-store";
 import { Button } from "@/components/ui/button";
 import { formatCurrencyFromCents } from "@/lib/format";
 import { useTenant } from "@/components/tenant-provider";
@@ -16,6 +18,14 @@ export default function Admin() {
   const tenant = useTenant();
   const { data: stats, isLoading: isLoadingStats } = useGetStatsSummary();
   const { data: appointments, isLoading: isLoadingAppointments } = useListAppointments();
+  
+  const { refreshProfile } = useUserStore();
+
+  useEffect(() => {
+    if (tenant?.slug) {
+      refreshProfile(tenant.slug);
+    }
+  }, [tenant?.slug, refreshProfile]);
 
   const getStatusBadge = (status: string) => {
     switch(status) {
@@ -34,13 +44,23 @@ export default function Admin() {
           <h1 className="text-4xl font-serif font-bold text-foreground">Painel Administrativo</h1>
           <div className="flex gap-2 sm:gap-4 justify-end flex-wrap">
             <Button asChild variant="outline" className="gap-2">
-              <Link href={getLink("/admin/barbeiros")}>
-                <Users className="w-4 h-4" /> Barbeiros
+              <Link href={getLink("/admin/unidades")}>
+                <MapPin className="w-4 h-4" /> Unidades
               </Link>
             </Button>
             <Button asChild variant="outline" className="gap-2">
               <Link href={getLink("/admin/servicos")}>
                 <Scissors className="w-4 h-4" /> Serviços
+              </Link>
+            </Button>
+            <Button asChild variant="outline" className="gap-2">
+              <Link href={getLink("/admin/barbeiros")}>
+                <Users className="w-4 h-4" /> Barbeiros
+              </Link>
+            </Button>
+            <Button asChild variant="outline" className="gap-2">
+              <Link href={getLink("/admin/clientes")}>
+                <Users className="w-4 h-4" /> Clientes
               </Link>
             </Button>
             <Button asChild variant="outline" className="gap-2">

@@ -9,7 +9,7 @@ export default function TermosPage() {
           <section>
             <h2 className="text-2xl font-serif font-semibold text-foreground mb-4">1. Aceitação dos Termos</h2>
             <p>
-              Ao acessar e utilizar o sistema de agendamento da Barber Premium, você concorda em cumprir e estar vinculado a estes Termos de Uso. 
+              Ao acessar e utilizar o sistema de agendamento da KingBarber, você concorda em cumprir e estar vinculado a estes Termos de Uso. 
               Este sistema é destinado a facilitar a reserva de serviços de barbearia de forma prática e segura.
             </p>
           </section>

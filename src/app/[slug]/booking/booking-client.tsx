@@ -15,10 +15,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DemoStore } from "@/lib/persistence/demo-store";
 import { useToast } from "@/hooks/use-toast";
 import { useTenant } from "@/hooks/use-tenant";
-import { userStore } from "@/lib/store/user-store";
+import { useUserStore } from "@/lib/store/user-store";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { CheckCircle2, ChevronRight, Clock, CreditCard, User, Scissors, Wallet } from "lucide-react";
+import { CheckCircle2, ChevronRight, Clock, CreditCard, User, Scissors, Wallet, MapPin } from "lucide-react";
 import {
   useListServices,
   useGetAvailability,
@@ -71,99 +71,90 @@ function BookingContent() {
 
   const [step, setStep] = useState(1);
   const [settings, setSettings] = useState<any>(null);
-  const [isLogged, setIsLogged] = useState(false);
-  const [currentUser, setCurrentUser] = useState<any>(null);
+  const { user: currentUser, setUser: setStoreUser, refreshProfile } = useUserStore();
+  const isLogged = !!currentUser;
 
   const timeSectionRef = useRef<HTMLDivElement>(null);
 
-  const [barbers, setBarbers] = useState<Barber[]>([]);
-  const [selectedBarber, setSelectedBarber] = useState<Barber | null>(null);
-  const [isLoadingBarbers, setIsLoadingBarbers] = useState(true);
-  
-  const [selectedService, setSelectedService] = useState<Service | null>(null);
-  const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
-  const [selectedTime, setSelectedTime] = useState<string | null>(null);
+  const [units, setUnits] = useState<any[]>([]);
+  const [selectedUnit, setSelectedUnit] = useState<any | null>(null);
+  const [isLoadingUnits, setIsLoadingUnits] = useState(true);
 
-  const [customerInfo, setCustomerInfo] = useState({ name: "", email: "", phone: "", cpf: "" });
-  const [pixData, setPixData] = useState<any>(null);
-  const [isGeneratingPix, setIsGeneratingPix] = useState(false);
-  const [cardInfo, setCardInfo] = useState({ number: "", expiry: "", cvv: "", name: "" });
-  const [paymentMethod, setPaymentMethod] = useState<"card" | "local">("card");
-  const [sessionId, setSessionId] = useState<string | null>(null);
-  const [isPrePaid, setIsPrePaid] = useState(false);
-  const [mpPublicKey, setMpPublicKey] = useState<string>("");
-  const [mpPaymentToken, setMpPaymentToken] = useState<string | null>(null);
-  const [mpPaymentData, setMpPaymentData] = useState<any>(null);
-  const [busyDates, setBusyDates] = useState<string[]>([]);
-  const [isMpLoaded, setIsMpLoaded] = useState(typeof window !== "undefined" && !!(window as any).MercadoPago);
-  const paymentSubmitRef = useRef<any>(null);
-
-  const { data: services, isLoading: isLoadingServices } = useListServices();
+  const { data: allServices, isLoading: isLoadingServices } = useListServices();
+  const [services, setServices] = useState<Service[]>([]);
 
   useEffect(() => {
+    const headers = { "x-tenant-slug": tenant.slug };
+    
     Promise.all([
-      fetch(`/api/settings?t=${Date.now()}`).then(res => res.json()),
-      fetch("/api/auth/me").then(res => res.json()),
-      fetch("/api/barbers").then(res => res.json())
-    ]).then(([settingsData, authData, barbersData]) => {
-      console.log("DEBUG: Configurações carregadas da API:", settingsData);
+      fetch(`/api/settings?t=${Date.now()}`, { headers }).then(res => res.json()),
+      fetch("/api/auth/me", { headers }).then(res => res.json()),
+      fetch("/api/units", { headers }).then(res => res.json()),
+      fetch("/api/barbers?active=true", { headers }).then(res => res.json())
+    ]).then(([settingsData, authData, unitsData, barbersData]) => {
+      
+      // 1. Unidades
+      if (Array.isArray(unitsData)) {
+        setUnits(unitsData);
+        if (unitsData.length === 1) {
+          setSelectedUnit(unitsData[0]);
+          setStep(2); // Pula para Barbeiros
+        }
+      }
+      setIsLoadingUnits(false);
 
-      // Sincronizar barbeiros
+      // 2. Barbeiros (Global por enquanto, filtraremos no clique)
       if (Array.isArray(barbersData)) {
         setBarbers(barbersData);
       }
       setIsLoadingBarbers(false);
 
-      // Sincronizar configurações
+      // 3. Sincronizar configurações
       setSettings(settingsData);
       DemoStore.saveSettings(settingsData);
+      setMpPublicKey(settingsData.mpPublicKey || "");
 
-      const publicKey = settingsData.mpPublicKey || "";
-      console.log("DEBUG: Definindo mpPublicKey como:", publicKey);
-      setMpPublicKey(publicKey);
-
-      // Definir método de pagamento inicial baseado nas configurações
       if (!settingsData.isPrepaymentRequired) {
         setPaymentMethod("local");
       }
 
-      // Sincronizar autenticação
-      const savedUser = DemoStore.getUser();
+      // 4. Sincronizar autenticação
       if (authData.authenticated) {
-        setIsLogged(true);
-        setCurrentUser(authData.user);
-        const phone = authData.user.phone || savedUser?.phone || "";
-        
+        setStoreUser(authData.user);
         setCustomerInfo(prev => ({
           ...prev,
           name: authData.user.name || prev.name,
           email: authData.user.email || prev.email,
-          phone: prev.phone || (phone ? formatPhone(phone) : "")
-        }));
-        
-        // Sincronizar dados da API com o DemoStore
-        DemoStore.saveUser({ ...savedUser, ...authData.user, phone });
-      } else if (savedUser) {
-        setIsLogged(true);
-        setCurrentUser(savedUser); // Garantir que o estado do usuário logado seja restaurado
-        setCustomerInfo(prev => ({
-          ...prev,
-          name: savedUser.name || prev.name,
-          email: savedUser.email || prev.email,
-          phone: prev.phone || (savedUser.phone ? formatPhone(savedUser.phone) : "")
+          phone: authData.user.phone ? formatPhone(authData.user.phone) : prev.phone
         }));
       }
-
-      if (preSelectedServiceId && services) {
-        const service = services.find(s => s.id === parseInt(preSelectedServiceId));
-        if (service) setSelectedService(service);
-      }
-    }).catch(() => {
-      // Fallback para configurações salvas se API falhar
-      const savedSettings = DemoStore.getSettings();
-      if (savedSettings) setSettings(savedSettings);
     });
-  }, [services, preSelectedServiceId]);
+  }, [tenant]);
+
+  // Filtrar barbeiros e serviços quando a unidade é selecionada
+  useEffect(() => {
+    if (selectedUnit && Array.isArray(allServices)) {
+      // Aqui precisaríamos de um endpoint que retorna associações ou 
+      // carregar as associações no fetch inicial. 
+      // Para simplificar agora, vamos assumir que se houver associações, filtramos.
+      // Em uma implementação real, o GET /api/barbers?unitId=... faria isso.
+      fetch(`/api/barbers?active=true&unitId=${selectedUnit.id}`, { headers: { "x-tenant-slug": tenant.slug } })
+        .then(res => res.json())
+        .then(data => {
+            setBarbers(data);
+            if (data.length === 1 && step === 2) {
+                setSelectedBarber(data[0]);
+                setStep(3);
+            }
+        });
+        
+      fetch(`/api/services?unitId=${selectedUnit.id}`, { headers: { "x-tenant-slug": tenant.slug } })
+        .then(res => res.json())
+        .then(data => setServices(data));
+    } else if (Array.isArray(allServices)) {
+      setServices(allServices);
+    }
+  }, [selectedUnit, allServices, tenant]);
 
   useEffect(() => {
     // Buscar dias ocupados/fechados para os próximos 2 meses
@@ -180,11 +171,21 @@ function BookingContent() {
 
   const dateStr = selectedDate ? format(selectedDate, "yyyy-MM-dd") : "";
   const { data: availability, isLoading: isLoadingAvailability } = useGetAvailability(
-    { date: dateStr, serviceId: selectedService?.id || 0, barberId: selectedBarber?.id as any },
+    { 
+      date: dateStr, 
+      serviceId: selectedService?.id || 0, 
+      barberId: selectedBarber?.id as any,
+      query: { reschedule: rescheduleId || undefined }
+    },
     {
       query: {
         enabled: !!selectedDate && !!selectedService?.id && !!selectedBarber?.id,
-        queryKey: getGetAvailabilityQueryKey({ date: dateStr, serviceId: selectedService?.id || 0, barberId: selectedBarber?.id as any })
+        queryKey: getGetAvailabilityQueryKey({ 
+          date: dateStr, 
+          serviceId: selectedService?.id || 0, 
+          barberId: selectedBarber?.id as any,
+          query: { reschedule: rescheduleId || undefined }
+        })
       }
     }
   );
@@ -294,6 +295,8 @@ function BookingContent() {
 
   const handleNextStep = () => setStep((s) => Math.min(s + 1, 5));
   const handlePrevStep = () => setStep((s) => {
+    // Não permitir voltar para o passo 1 se houver apenas um barbeiro
+    if (barbers.length === 1 && s === 2) return s;
     if (rescheduleId && s === 2) return s;
     return Math.max(s - 1, 1);
   });
@@ -443,8 +446,9 @@ function BookingContent() {
       });
 
       if ((paymentMethod === "card" || paymentMethod === "pix") && settings?.isPointsEnabled) {
-        const pts = settings?.pointsPerAppointment || settings?.points_per_appointment || 0;
-        userStore.addPoints(pts);
+        // Em vez de somar manualmente, solicitamos que o Store recarregue os dados do banco
+        // O backend já processou o acréscimo de pontos no AppointmentService.confirm
+        await refreshProfile(tenant?.slug);
       }
 
       DemoStore.saveAppointment(appointment);
@@ -486,39 +490,114 @@ function BookingContent() {
 
           <div className="flex items-center justify-between relative mt-10">
             <div className="absolute left-0 top-1/2 -translate-y-1/2 w-full h-1 bg-border z-0"></div>
-            <div
-              className="absolute left-0 top-1/2 -translate-y-1/2 h-1 bg-primary z-0 transition-all duration-300"
-              style={{ width: `${((step - 1) / 4) * 100}%` }}
-            ></div>
+            {(() => {
+              const hasUnits = units.length > 1;
+              const hasBarbers = barbers.length > 1;
+              
+              // O total de passos visíveis depende se houve pulo automático
+              const totalSteps = 4 + (hasUnits ? 1 : 0) + (hasBarbers ? 1 : 0);
+              
+              // Mapeamento de steps reais para visuais para manter progresso linear
+              let visualStep = 1;
+              if (step === 1 && hasUnits) visualStep = 1;
+              else if (step === 2) visualStep = hasUnits ? 2 : 1;
+              else if (step === 3) visualStep = (hasUnits ? 1 : 0) + (hasBarbers ? 1 : 0) + 1;
+              else if (step === 4) visualStep = (hasUnits ? 1 : 0) + (hasBarbers ? 1 : 0) + 2;
+              else if (step === 5) visualStep = (hasUnits ? 1 : 0) + (hasBarbers ? 1 : 0) + 3;
+              else if (step === 6) visualStep = (hasUnits ? 1 : 0) + (hasBarbers ? 1 : 0) + 4;
+              
+              const progressWidth = ((visualStep - 1) / (totalSteps - 1)) * 100;
 
-            {[1, 2, 3, 4, 5].map((s) => (
-              <div
-                key={s}
-                className={`relative z-10 w-8 h-8 rounded-full flex items-center justify-center font-medium border-2 transition-colors
-                  ${step > s ? 'bg-primary border-primary text-primary-foreground' :
-                    step === s ? 'bg-background border-primary text-primary' :
-                      'bg-background border-border text-muted-foreground'}`}
-              >
-                {step > s ? <CheckCircle2 className="w-5 h-5" /> : s}
-              </div>
-            ))}
+              return (
+                <>
+                  <div
+                    className="absolute left-0 top-1/2 -translate-y-1/2 h-1 bg-primary z-0 transition-all duration-300"
+                    style={{ width: `${Math.max(0, progressWidth)}%` }}
+                  ></div>
+
+                  {Array.from({ length: totalSteps }, (_, i) => i + 1).map((s) => {
+                    const isActive = visualStep === s;
+                    const isCompleted = visualStep > s;
+                    
+                    return (
+                      <div
+                        key={s}
+                        className={`relative z-10 w-8 h-8 rounded-full flex items-center justify-center font-medium border-2 transition-colors
+                          ${isCompleted ? 'bg-primary border-primary text-primary-foreground' :
+                            isActive ? 'bg-background border-primary text-primary' :
+                              'bg-background border-border text-muted-foreground'}`}
+                      >
+                        {isCompleted ? <CheckCircle2 className="w-5 h-5" /> : s}
+                      </div>
+                    );
+                  })}
+                </>
+              );
+            })()}
           </div>
         </div>
 
         <div className="bg-card border border-border/50 rounded-lg p-6 shadow-xl">
           {step === 1 && (
             <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4">
-              <h2 className="text-xl font-serif font-semibold">Selecione o Barbeiro</h2>
+              <h2 className="text-xl font-serif font-semibold">Selecione a Unidade</h2>
+              {isLoadingUnits ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {[1, 2].map(i => <Skeleton key={i} className="h-24 w-full" />)}
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {units?.map((unit) => (
+                    <div
+                      key={unit.id}
+                      onClick={() => {
+                        setSelectedUnit(unit);
+                        setStep(2);
+                      }}
+                      className={`p-4 border rounded-lg cursor-pointer transition-all hover:border-primary/50 flex items-center gap-4
+                        ${selectedUnit?.id === unit.id ? 'border-primary bg-primary/5' : 'border-border/50 bg-background'}`}
+                    >
+                      <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center text-primary flex-shrink-0">
+                        <MapPin className="w-6 h-6" />
+                      </div>
+                      <div>
+                        <h3 className="font-medium text-lg leading-tight">{unit.name}</h3>
+                        <p className="text-sm text-muted-foreground mt-1">{unit.address}, {unit.number}</p>
+                        <p className="text-xs text-muted-foreground">{unit.city}/{unit.state}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {step === 2 && (
+            <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4">
+              <div className="flex items-center justify-between">
+                <h2 className="text-xl font-serif font-semibold">Selecione o Barbeiro</h2>
+                {units.length > 1 && (
+                  <Button variant="ghost" size="sm" onClick={() => setStep(1)}>Mudar Unidade</Button>
+                )}
+              </div>
               {isLoadingBarbers ? (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   {[1, 2, 3, 4].map(i => <Skeleton key={i} className="h-24 w-full" />)}
+                </div>
+              ) : barbers.length === 0 ? (
+                <div className="text-center py-10">
+                   <p className="text-muted-foreground">Nenhum barbeiro disponível nesta unidade.</p>
+                   <Button onClick={() => setStep(1)} className="mt-4">Voltar</Button>
                 </div>
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   {barbers?.map((barber) => (
                     <div
                       key={barber.id}
-                      onClick={() => handleBarberSelect(barber)}
+                      onClick={() => {
+                        setSelectedBarber(barber);
+                        setStep(3);
+                      }}
                       className={`p-4 border rounded-lg cursor-pointer transition-all hover:border-primary/50 flex items-center gap-4
                         ${selectedBarber?.id === barber.id ? 'border-primary bg-primary/5' : 'border-border/50 bg-background'}`}
                     >
@@ -542,11 +621,11 @@ function BookingContent() {
             </div>
           )}
 
-          {step === 2 && (
+          {step === 3 && (
             <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4">
               <div className="flex items-center justify-between">
                 <h2 className="text-xl font-serif font-semibold">Escolha o Serviço</h2>
-                <Button variant="ghost" size="sm" onClick={handlePrevStep}>Voltar</Button>
+                <Button variant="ghost" size="sm" onClick={() => setStep(2)}>Voltar</Button>
               </div>
               {isLoadingServices ? (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -557,7 +636,10 @@ function BookingContent() {
                   {services?.map((service) => (
                     <div
                       key={service.id}
-                      onClick={() => handleServiceSelect(service)}
+                      onClick={() => {
+                        setSelectedService(service);
+                        setStep(4);
+                      }}
                       className={`p-4 border rounded-lg cursor-pointer transition-all hover:border-primary/50
                         ${selectedService?.id === service.id ? 'border-primary bg-primary/5' : 'border-border/50 bg-background'}`}
                     >
@@ -565,9 +647,10 @@ function BookingContent() {
                         <h3 className="font-medium text-lg">{service.name}</h3>
                         <span className="text-primary font-medium">{formatCurrencyFromCents(service.price)}</span>
                       </div>
-                      <p className="text-sm text-muted-foreground line-clamp-2 mb-3">{service.description}</p>
-                      <div className="flex items-center text-xs text-muted-foreground">
-                        <Clock className="w-3 h-3 mr-1" /> {service.durationMinutes} min
+                      <p className="text-sm text-muted-foreground line-clamp-2">{service.description}</p>
+                      <div className="flex items-center gap-1 mt-3 text-xs text-muted-foreground">
+                        <Clock className="w-3 h-3" />
+                        {service.duration_minutes} min
                       </div>
                     </div>
                   ))}
@@ -576,11 +659,11 @@ function BookingContent() {
             </div>
           )}
 
-          {step === 3 && (
+          {step === 4 && (
             <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4">
               <div className="flex items-center justify-between">
                 <h2 className="text-xl font-serif font-semibold text-foreground">Data e Horário</h2>
-                <Button variant="ghost" size="sm" onClick={handlePrevStep}>Voltar</Button>
+                <Button variant="ghost" size="sm" onClick={() => setStep(3)}>Voltar</Button>
               </div>
 
               <div className="grid grid-cols-1 lg:grid-cols-5 gap-10">
@@ -653,7 +736,7 @@ function BookingContent() {
             </div>
           )}
 
-          {step === 4 && (
+          {step === 5 && (
             <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4">
               <div className="flex items-center justify-between">
                 <h2 className="text-xl font-serif font-semibold text-foreground">Seus Dados</h2>
@@ -729,7 +812,7 @@ function BookingContent() {
           )}
 
           { }
-          {step === 5 && (
+          {step === 6 && (
             <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4">
               <div className="flex items-center justify-between">
                 <h2 className="text-xl font-serif font-semibold text-foreground">
@@ -791,15 +874,20 @@ function BookingContent() {
                 ) : (
                   <Card className="border-border">
                     <CardContent className="pt-6">
-                      <Tabs defaultValue={settings?.isPrepaymentRequired ? "card" : "local"} onValueChange={(v) => setPaymentMethod(v as any)}>
-                        <TabsList className={`grid w-full mb-6 ${settings?.isPrepaymentRequired ? "grid-cols-2" : "grid-cols-3"}`}>
+                      {(() => {
+                        const canPayLocal = !settings?.isPrepaymentRequired && currentUser?.canPayAtShop !== false;
+                        const defaultPaymentMethod = canPayLocal ? "local" : "card";
+                        
+                        return (
+                          <Tabs defaultValue={defaultPaymentMethod} onValueChange={(v) => setPaymentMethod(v as any)}>
+                            <TabsList className={`grid w-full mb-6 ${canPayLocal ? "grid-cols-3" : "grid-cols-2"}`}>
                           <TabsTrigger value="card" className="gap-2">
                             <CreditCard className="w-4 h-4" /> Cartão
                           </TabsTrigger>
                           <TabsTrigger value="pix" className="gap-2" onClick={handleGeneratePix}>
                             <QrCode className="w-4 h-4" /> Pix
                           </TabsTrigger>
-                          {!settings?.isPrepaymentRequired && (
+                          {!settings?.isPrepaymentRequired && currentUser?.canPayAtShop !== false && (
                             <TabsTrigger value="local" className="gap-2">
                               <Wallet className="w-4 h-4" /> No Local
                             </TabsTrigger>
@@ -881,7 +969,7 @@ function BookingContent() {
                           )}
                         </TabsContent>
 
-                        {!settings?.isPrepaymentRequired && (
+                        {!settings?.isPrepaymentRequired && currentUser?.canPayAtShop !== false && (
                           <TabsContent value="local" className="space-y-4 py-4 text-center">
                             <div className="p-4 bg-muted/50 rounded-lg border border-dashed border-border mb-4">
                               <p className="text-sm font-medium">Você pagará diretamente na barbearia.</p>
@@ -905,7 +993,9 @@ function BookingContent() {
                             </p>
                           </div>
                         ) : null}
-                      </Tabs>
+                          </Tabs>
+                        );
+                      })()}
                     </CardContent>
                   </Card>
                 )}

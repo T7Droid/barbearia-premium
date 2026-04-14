@@ -23,28 +23,52 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    // 1. Buscar configurações do tenant específico
-    const { data: settings, error: settingsError } = await supabaseAdmin
+    // 1. Buscar barbeiro específico para pegar seus horários individuais
+    let dayConfig = { active: false };
+    let interval = 45;
+
+    if (barberId) {
+      const { data: barber } = await supabaseAdmin
+        .from("barbers")
+        .select("weekly_hours")
+        .eq("id", parseInt(barberId))
+        .single();
+      
+      if (barber?.weekly_hours) {
+        // Determinar o dia da semana
+        const targetDate = new Date(date + "T00:00:00");
+        const daysMap = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"];
+        const dayName = daysMap[targetDate.getDay()];
+        dayConfig = barber.weekly_hours[dayName] || { active: false };
+      }
+    }
+
+    // 2. Buscar configurações do tenant para o intervalo (slot_interval)
+    const { data: settings } = await supabaseAdmin
       .from("settings")
-      .select("*")
+      .select("slot_interval, weekly_hours")
       .eq("tenant_id", tenant.id)
       .single();
 
-    if (settingsError || !settings) {
-      throw new Error("Configurações não encontradas para esta barbearia");
+    if (settings) {
+      interval = settings.slot_interval || 45;
+      
+      // Se o barbeiro NÃO tiver horários próprios (ainda não migrado), usamos o global
+      if (!dayConfig.active) {
+        const targetDate = new Date(date + "T00:00:00");
+        const daysMap = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"];
+        const dayName = daysMap[targetDate.getDay()];
+        dayConfig = settings.weekly_hours?.[dayName] || { active: false };
+      }
     }
 
-    // 2. Determinar o dia da semana
-    const targetDate = new Date(date + "T00:00:00");
-    const daysMap = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"];
-    const dayName = daysMap[targetDate.getDay()];
-    
-    const dayConfig = settings.weekly_hours?.[dayName] || { active: false };
-
-    // Se o dia estiver fechado
-    if (!dayConfig.active || !dayConfig.start || !dayConfig.end) {
+    // Se o dia estiver fechado (tanto no barbeiro quanto no global)
+    if (!dayConfig.active || !(dayConfig as any).start || !(dayConfig as any).end) {
       return NextResponse.json([]);
     }
+
+    const startConfig = (dayConfig as any).start;
+    const endConfig = (dayConfig as any).end;
 
     // 3. Gerar slots teóricos baseados no intervalo
     const slots: { time: string, available: boolean }[] = [];
@@ -56,11 +80,14 @@ export async function GET(request: NextRequest) {
     let currentMinutes = startH * 60 + startM;
     const endMinutes = endH * 60 + endM;
 
+    const rescheduleId = searchParams.get("reschedule");
+
     // 4. Buscar agendamentos já feitos para este dia e tenant
     const bookedTimes = await AppointmentService.getBookedSlots(
       date, 
       barberId ? parseInt(barberId) : undefined,
-      tenant.id
+      tenant.id,
+      rescheduleId ? parseInt(rescheduleId) : undefined
     );
 
     while (currentMinutes + interval <= endMinutes) {

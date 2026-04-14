@@ -199,7 +199,7 @@ export default function SettingsPage() {
                   {settings.subscriptionStatus === 'active' ? 'Ativa' : 'Pendente'}
                 </div>
               </div>
-              <CardDescription>Gerencie seu plano e pagamentos do Barber Premium.</CardDescription>
+              <CardDescription>Gerencie seu plano e pagamentos do KingBarber.</CardDescription>
             </div>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -469,9 +469,10 @@ export default function SettingsPage() {
               <div className="space-y-4">
                 <div className="bg-green-500/5 border border-green-500/20 rounded-lg p-3 text-sm text-green-700">
                   <p className="flex items-center gap-2 font-medium">
-                    <ShieldCheck className="w-4 h-4" /> Sua conta está vinculada com sucesso.
+                    <ShieldCheck className="w-5 h-5 shrink-0" /> 
+                    Sua barbearia já está conectada com o Mercado Pago e você já pode receber pagamentos dos clientes online!
                   </p>
-                  <p className="mt-1 opacity-80 text-xs">Os pagamentos dos seus clientes cairão diretamente na sua conta do Mercado Pago.</p>
+                  <p className="mt-1 opacity-80 text-xs pl-7">Tudo pronto! Seus recebimentos cairão diretamente na sua conta digital vinculada.</p>
                 </div>
                 <Button 
                   variant="outline" 

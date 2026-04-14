@@ -95,8 +95,8 @@ END:VCARD`;
     const dateStr = appointment.appointment_date || appointment.appointmentDate;
     const timeStr = appointment.appointment_time || appointment.appointmentTime;
     const serviceName = appointment.service_name || appointment.serviceName;
-    const shopName = settings?.shopName || 'Barbearia Premium';
-    const address = settings?.address || '';
+    const shopName = settings?.shopName || tenant.name || 'Barbearia Premium';
+    const address = appointment.unit?.address || settings?.address || '';
 
     if (!dateStr || !timeStr) return;
 
@@ -250,7 +250,7 @@ END:VCARD`;
 
                   <div className="border-t border-border/50 pt-4 mt-2">
                     <p className="text-sm text-muted-foreground mb-1">Status do Pagamento</p>
-                    {((appointment as any).isReschedule || appointment.is_reschedule || appointment.isPaid || appointment.is_paid) ? (
+                    {(appointment.isPaid || appointment.is_paid) ? (
                       <div className="flex items-center gap-2 text-green-600 font-bold uppercase text-xs">
                         <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
                         Pago e Confirmado
@@ -268,8 +268,12 @@ END:VCARD`;
                   <div className="flex items-start gap-3 mb-4">
                     <MapPin className="w-5 h-5 text-primary shrink-0 mt-1" />
                     <div>
-                      <p className="font-medium text-foreground">{settings?.shopName || "Barbearia Premium"}</p>
-                      <p className="text-sm text-muted-foreground">{settings?.address || "Endereço não informado"}</p>
+                      <p className="font-medium text-foreground">{appointment.unit?.name || settings?.shopName || tenant.name || "Barbearia Premium"}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {appointment.unit 
+                          ? `${appointment.unit.address}, ${appointment.unit.number || ""}` 
+                          : settings?.address || "Endereço não informado"}
+                      </p>
                     </div>
                   </div>
                   
@@ -283,8 +287,8 @@ END:VCARD`;
 
                   <div className="border-t border-border/50 pt-4 mt-2">
                     <p className="text-sm text-muted-foreground text-center italic">
-                      {(appointment as any).isReschedule || appointment.is_reschedule
-                        ? "Como esta é uma remarcação de um serviço, seu crédito foi mantido."
+                      {((appointment as any).isReschedule || appointment.is_reschedule) && (appointment.isPaid || appointment.is_paid)
+                        ? "Como esta é uma remarcação de um serviço já pago, seu crédito foi mantido."
                         : "Por favor, chegue com 5 minutos de antecedência."}
                     </p>
                   </div>
@@ -356,8 +360,8 @@ function generateICS(appointment: any, settings: any) {
 
   const serviceName = appointment.serviceName || appointment.service_name || "Serviço Adquirido";
   const customerName = appointment.customerName || appointment.customer_name || "Cliente";
-  const shopName = settings?.shopName || "Barbearia Premium";
-  const address = settings?.address || "Endereço da Barbearia";
+  const shopName = settings?.shopName || appointment.unit?.name || "Barbearia Premium";
+  const address = appointment.unit?.address || settings?.address || "Endereço da Barbearia";
 
   return `BEGIN:VCALENDAR
 VERSION:2.0

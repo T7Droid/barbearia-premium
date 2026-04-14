@@ -6,7 +6,7 @@ export default function RootPage() {
   return (
     <Layout>
       <div className="flex flex-col items-center justify-center min-h-[70vh] text-center px-4">
-        <h1 className="text-4xl font-serif font-bold mb-6">Barber Premium</h1>
+        <h1 className="text-4xl font-serif font-bold mb-6">KingBarber</h1>
         <p className="text-xl text-muted-foreground mb-10 max-w-lg">
           Transformamos barbearias em negócios digitais de alta performance. 
           Deseja ter o seu próprio sistema de agendamento?
