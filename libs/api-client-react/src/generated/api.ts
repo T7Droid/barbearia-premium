@@ -23,6 +23,7 @@ import type {
   CreateCheckoutBody,
   ErrorResponse,
   GetAvailabilityParams,
+  ListAppointmentsParams,
   HealthStatus,
   Service,
   StatsSummary,
@@ -286,41 +287,57 @@ export function useGetAvailability<
 /**
  * @summary List all confirmed appointments
  */
-export const getListAppointmentsUrl = () => {
-  return `/api/appointments`;
+export const getListAppointmentsUrl = (params?: ListAppointmentsParams) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : value.toString());
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/appointments?${stringifiedParams}`
+    : `/api/appointments`;
 };
 
 export const listAppointments = async (
+  params?: ListAppointmentsParams,
   options?: RequestInit,
 ): Promise<Appointment[]> => {
-  return customFetch<Appointment[]>(getListAppointmentsUrl(), {
+  return customFetch<Appointment[]>(getListAppointmentsUrl(params), {
     ...options,
     method: "GET",
   });
 };
 
-export const getListAppointmentsQueryKey = () => {
-  return [`/api/appointments`] as const;
+export const getListAppointmentsQueryKey = (params?: ListAppointmentsParams) => {
+  return [`/api/appointments`, ...(params ? [params] : [])] as const;
 };
 
 export const getListAppointmentsQueryOptions = <
   TData = Awaited<ReturnType<typeof listAppointments>>,
   TError = ErrorType<unknown>,
->(options?: {
-  query?: UseQueryOptions<
-    Awaited<ReturnType<typeof listAppointments>>,
-    TError,
-    TData
-  >;
-  request?: SecondParameter<typeof customFetch>;
-}) => {
+>(
+  params?: ListAppointmentsParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof listAppointments>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
   const { query: queryOptions, request: requestOptions } = options ?? {};
 
-  const queryKey = queryOptions?.queryKey ?? getListAppointmentsQueryKey();
+  const queryKey = queryOptions?.queryKey ?? getListAppointmentsQueryKey(params);
 
   const queryFn: QueryFunction<
     Awaited<ReturnType<typeof listAppointments>>
-  > = ({ signal }) => listAppointments({ signal, ...requestOptions });
+  > = ({ signal }) => listAppointments(params, { signal, ...requestOptions });
 
   return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
     Awaited<ReturnType<typeof listAppointments>>,
@@ -341,15 +358,18 @@ export type ListAppointmentsQueryError = ErrorType<unknown>;
 export function useListAppointments<
   TData = Awaited<ReturnType<typeof listAppointments>>,
   TError = ErrorType<unknown>,
->(options?: {
-  query?: UseQueryOptions<
-    Awaited<ReturnType<typeof listAppointments>>,
-    TError,
-    TData
-  >;
-  request?: SecondParameter<typeof customFetch>;
-}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
-  const queryOptions = getListAppointmentsQueryOptions(options);
+>(
+  params?: ListAppointmentsParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof listAppointments>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getListAppointmentsQueryOptions(params, options);
 
   const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
     queryKey: QueryKey;

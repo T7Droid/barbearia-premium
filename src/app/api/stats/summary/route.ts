@@ -30,7 +30,7 @@ export async function GET(request: NextRequest) {
     const totalAppointments = appointments.length;
     const todayAppointments = appointments.filter(a => a.appointment_date === todayStr).length;
     const totalRevenue = appointments
-      .filter(a => a.is_paid)
+      .filter(a => a.is_paid && a.status !== "cancelled")
       .reduce((sum, a) => sum + (a.service_price || 0), 0);
 
     const serviceCounts: Record<string, number> = {};

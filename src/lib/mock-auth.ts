@@ -1,7 +1,7 @@
 import { createToken, verifyToken as verifySessionToken } from "./auth";
 
 export const ADMIN_USER = {
-  email: "admin@barber.com",
+  email: "thyagonevesa.sa@gmail.com",
   password: "admin123",
   name: "Barbeiro Mestre",
 };

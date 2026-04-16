@@ -247,7 +247,7 @@ export default function ClientSettingsPage() {
             <div className="space-y-1">
               <p className="font-bold">Privacidade & Segurança</p>
               <p className="text-muted-foreground leading-relaxed italic">
-                Seus dados são protegidos e utilizados apenas para a gestão de seus agendamentos na unidade Barbearia Premium.
+                Seus dados são protegidos e utilizados apenas para a gestão de seus agendamentos na unidade King Barber.
               </p>
             </div>
           </div>

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { Scissors, LogOut, User, Settings as SettingsIcon, History, LayoutGrid, Award } from "lucide-react";
+import { Scissors, LogOut, User, Settings as SettingsIcon, History, LayoutGrid, Award, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
@@ -131,6 +131,10 @@ export function Layout({ children }: { children: React.ReactNode }) {
               {user?.role === 'admin' && (
                 <Link href={getLink("/admin")} className={`text-sm font-medium transition-colors hover:text-primary ${pathname.startsWith(getLink("/admin")) ? 'text-primary' : 'text-muted-foreground'}`}>Administração</Link>
               )}
+              
+              {(user?.role === 'barber' || user?.role === 'admin') && (
+                <Link href={getLink("/barber")} className={`text-sm font-medium transition-colors hover:text-primary ${pathname.startsWith(getLink("/barber")) ? 'text-primary' : 'text-muted-foreground'}`}>Painel Profissional</Link>
+              )}
 
               {user && (
                 <Link href={getLink("/meu-perfil/historico")} className={`text-sm font-medium transition-colors hover:text-primary ${pathname.startsWith(getLink("/meu-perfil/historico")) ? 'text-primary' : 'text-muted-foreground'}`}>Meus Agendamentos</Link>
@@ -162,7 +166,9 @@ export function Layout({ children }: { children: React.ReactNode }) {
                   <DropdownMenuLabel className="font-normal">
                     <div className="flex flex-col space-y-1">
                       <p className="text-sm font-medium leading-none">{user.name}</p>
-                      <p className="text-xs leading-none text-muted-foreground">{user.role === 'admin' ? 'Administrador' : 'Cliente Premium'}</p>
+                      <p className="text-xs leading-none text-muted-foreground">
+                        {user.role === 'admin' ? 'Administrador' : user.role === 'barber' ? 'Barbeiro Profissional' : 'Cliente Premium'}
+                      </p>
                     </div>
                   </DropdownMenuLabel>
                   <DropdownMenuSeparator />
@@ -176,6 +182,20 @@ export function Layout({ children }: { children: React.ReactNode }) {
                       </DropdownMenuItem>
                       <DropdownMenuItem asChild>
                         <Link href={getLink("/admin/configuracoes")}><SettingsIcon className="mr-2 h-4 w-4" /> Configurações</Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                    </>
+                  )}
+
+                  {/* Itens do Barbeiro */}
+                  {(user.role === 'barber' || user.role === 'admin') && (
+                    <>
+                      <DropdownMenuLabel className="text-[10px] uppercase text-muted-foreground font-bold tracking-widest pt-3 pb-1">Profissional</DropdownMenuLabel>
+                      <DropdownMenuItem asChild>
+                        <Link href={getLink("/barber")}><LayoutGrid className="mr-2 h-4 w-4" /> Painel Profissional</Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem asChild>
+                        <Link href={getLink("/barber/horarios")}><Clock className="mr-2 h-4 w-4" /> Meus Horários</Link>
                       </DropdownMenuItem>
                       <DropdownMenuSeparator />
                     </>

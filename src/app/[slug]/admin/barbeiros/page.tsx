@@ -10,22 +10,22 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
 import {
+  User,
+  Users,
+  Scissors,
+  Eye,
+  EyeOff,
   Plus,
   UserPlus,
   Save,
   ImageIcon,
   Key,
-  Calendar as CalendarIcon,
   MapPin,
-  Clock,
-  LayoutGrid,
   Loader2,
   Pencil,
   Trash2,
   X,
-  User,
-  Users,
-  Scissors
+  LayoutGrid
 } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { 
@@ -55,22 +55,34 @@ export default function AdminBarbers() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingBarber, setEditingBarber] = useState<Barber | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showEmail, setShowEmail] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   const [formData, setFormData] = useState({
     name: "",
     description: "",
     imageUrl: "",
-    active: true,
+    active: false,
     unitIds: [] as string[],
     serviceIds: [] as string[],
     loginEmail: "",
     loginPassword: "",
-    createLogin: false
+    createLogin: true
   });
 
   const [units, setUnits] = useState<any[]>([]);
   const [services, setServices] = useState<any[]>([]);
   const [isLoadingUnits, setIsLoadingUnits] = useState(true);
+  
+  // Lógica de Validação
+  const isGeneralValid = formData.name.trim() !== "" && formData.description.trim() !== "";
+  const isServicesValid = formData.serviceIds.length > 0;
+  const isAccessValid = formData.unitIds.length > 0;
+  const isCredentialsValid = editingBarber 
+    ? true // Na edição, as credenciais estão ocultas/não editáveis
+    : (formData.loginEmail.trim() !== "" && formData.loginPassword.trim().length >= 6);
+
+  const isFormValid = isGeneralValid && isServicesValid && isAccessValid && isCredentialsValid;
 
   const fetchBarbers = async () => {
     if (!tenant?.slug) return;
@@ -112,8 +124,7 @@ export default function AdminBarbers() {
         unitIds: (barber.units || []).map((u: any) => String(u.id)),
         serviceIds: (barber.services || []).map((s: any) => String(s.id)),
         loginEmail: "",
-        loginPassword: "",
-        createLogin: false
+        loginPassword: ""
       });
     } else {
       setEditingBarber(null);
@@ -121,12 +132,12 @@ export default function AdminBarbers() {
         name: "",
         description: "",
         imageUrl: "",
-        active: true,
+        active: false,
         unitIds: [],
         serviceIds: [],
         loginEmail: "",
         loginPassword: "",
-        createLogin: false
+        createLogin: true
       });
     }
     setIsModalOpen(true);
@@ -148,7 +159,7 @@ export default function AdminBarbers() {
     try {
       const payload = {
         ...formData,
-        loginData: formData.createLogin ? {
+        loginData: !editingBarber ? {
           email: formData.loginEmail,
           password: formData.loginPassword
         } : undefined
@@ -329,24 +340,29 @@ export default function AdminBarbers() {
                 <form onSubmit={handleSubmit}>
                   <TabsContent value="geral" className="p-6 space-y-4 m-0">
                     <div className="space-y-2">
-                      <Label htmlFor="name">Nome Completo</Label>
+                      <Label htmlFor="name" className="flex items-center gap-1">
+                        Nome Completo <span className="text-destructive">*</span>
+                      </Label>
                       <Input
                         id="name"
                         required
                         value={formData.name}
                         onChange={e => setFormData({...formData, name: e.target.value})}
                         placeholder="Ex: João Silva"
+                        className={formData.name.trim() === "" ? "border-destructive/50" : ""}
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="description">Especialidade / Descrição</Label>
+                      <Label htmlFor="description" className="flex items-center gap-1">
+                        Especialidade / Descrição <span className="text-destructive">*</span>
+                      </Label>
                       <Textarea
                         id="description"
                         required
                         value={formData.description}
                         onChange={e => setFormData({...formData, description: e.target.value})}
                         placeholder="Ex: Especialista em degradê e barba..."
-                        className="min-h-[100px]"
+                        className={`min-h-[100px] ${formData.description.trim() === "" ? "border-destructive/50" : ""}`}
                       />
                     </div>
                     <div className="space-y-2">
@@ -440,45 +456,56 @@ export default function AdminBarbers() {
                     <Separator />
 
                     <div className="space-y-4">
-                      <div className="flex items-center justify-between">
-                        <Label className="text-base font-semibold flex items-center gap-2">
-                          <Key className="w-4 h-4" /> Acesso ao Painel Profissional
-                        </Label>
-                        {!editingBarber && (
-                          <Switch 
-                            checked={formData.createLogin}
-                            onCheckedChange={(v) => setFormData({...formData, createLogin: v})}
-                          />
-                        )}
-                      </div>
+                      <Label className="text-base font-semibold flex items-center gap-2">
+                        <Key className="w-4 h-4" /> Acesso ao Painel Profissional
+                      </Label>
                       
-                      {editingBarber && (
-                         <div className="p-4 bg-blue-50 border border-blue-100 rounded-lg text-blue-800 text-xs">
-                           Se o barbeiro já tem login, ele pode acessar o painel profissional usando seu e-mail cadastrado.
+                      {editingBarber ? (
+                         <div className="p-4 bg-muted/30 border border-border/50 rounded-lg text-muted-foreground text-xs italic flex items-center gap-2">
+                           <Key className="w-4 h-4" />
+                           As credenciais de acesso não podem ser editadas. Para alterar o e-mail ou senha, exclua o profissional e cadastre-o novamente.
                          </div>
-                      )}
-
-                      {(formData.createLogin || (editingBarber && !editingBarber.user_id)) && (
-                        <div className="space-y-4 animate-in fade-in duration-300">
+                      ) : (
+                        <div className="space-y-4 animate-in fade-in slide-in-from-top-1 duration-300">
                           <div className="space-y-2">
-                            <Label htmlFor="loginEmail">E-mail Profissional</Label>
-                            <Input 
-                              id="loginEmail"
-                              type="email"
-                              placeholder="barbeiro@exemplo.com"
-                              value={formData.loginEmail}
-                              onChange={e => setFormData({...formData, loginEmail: e.target.value})}
-                            />
+                            <Label htmlFor="loginEmail">E-mail Profissional <span className="text-destructive">*</span></Label>
+                            <div className="relative group">
+                              <Input 
+                                id="loginEmail"
+                                type={showEmail ? "text" : "password"}
+                                placeholder="barbeiro@exemplo.com"
+                                value={formData.loginEmail}
+                                onChange={e => setFormData({...formData, loginEmail: e.target.value})}
+                                className="pr-10"
+                              />
+                              <button
+                                type="button"
+                                onClick={() => setShowEmail(!showEmail)}
+                                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                              >
+                                {showEmail ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                              </button>
+                            </div>
                           </div>
                           <div className="space-y-2">
-                            <Label htmlFor="loginPassword">Senha Temporária</Label>
-                            <Input 
-                              id="loginPassword"
-                              type="password"
-                              placeholder="Mínimo 6 caracteres"
-                              value={formData.loginPassword}
-                              onChange={e => setFormData({...formData, loginPassword: e.target.value})}
-                            />
+                            <Label htmlFor="loginPassword">Senha Temporária <span className="text-destructive">*</span></Label>
+                            <div className="relative group">
+                              <Input 
+                                id="loginPassword"
+                                type={showPassword ? "text" : "password"}
+                                placeholder="Mínimo 6 caracteres"
+                                value={formData.loginPassword}
+                                onChange={e => setFormData({...formData, loginPassword: e.target.value})}
+                                className="pr-10"
+                              />
+                              <button
+                                type="button"
+                                onClick={() => setShowPassword(!showPassword)}
+                                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                              >
+                                {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                              </button>
+                            </div>
                           </div>
                         </div>
                       )}
@@ -489,7 +516,7 @@ export default function AdminBarbers() {
                     <Button type="button" variant="outline" onClick={handleCloseModal} className="flex-1">
                       Cancelar
                     </Button>
-                    <Button type="submit" disabled={isSubmitting} className="flex-1 gap-2">
+                    <Button type="submit" disabled={isSubmitting || !isFormValid} className="flex-1 gap-2">
                       {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
                       {editingBarber ? "Salvar Alterações" : "Cadastrar Barbeiro"}
                     </Button>

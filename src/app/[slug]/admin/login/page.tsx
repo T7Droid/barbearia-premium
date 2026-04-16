@@ -2,7 +2,7 @@
 
 import { AdminLoginForm } from "./login-form";
 import { Scissors, ShieldCheck } from "lucide-react";
-import { Suspense, useEffect } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { useUserStore } from "@/lib/store/user-store";
 
@@ -10,13 +10,26 @@ export default function AdminLoginPage() {
   const router = useRouter();
   const params = useParams();
   const slug = params?.slug as string;
-  const { user } = useUserStore();
+  const { user, isLoading } = useUserStore();
+  const [isRedirecting, setIsRedirecting] = useState(false);
 
   useEffect(() => {
     if (user?.role === "admin") {
+      setIsRedirecting(true);
       router.push(`/${slug}/admin`);
     }
   }, [user, router, slug]);
+
+  if (isLoading || isRedirecting || user?.role === "admin") {
+    return (
+      <div className="flex-1 flex items-center justify-center min-h-[80vh] bg-muted/30">
+        <div className="flex flex-col items-center gap-4">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+          <p className="text-sm text-muted-foreground animate-pulse">Verificando acesso...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex-1 flex items-center justify-center p-4 bg-muted/30 min-h-[80vh]">
@@ -26,7 +39,7 @@ export default function AdminLoginPage() {
             <Scissors className="w-8 h-8 text-primary" />
           </div>
           <h1 className="text-3xl font-serif font-bold text-foreground tracking-tight">Painel Administrativo</h1>
-          <p className="text-muted-foreground mt-2">Área restrita para gestão da Barbearia Premium.</p>
+          <p className="text-muted-foreground mt-2">Área restrita para gestão da King Barber.</p>
         </div>
 
         <div className="bg-card border border-border/50 rounded-xl p-8 shadow-2xl relative overflow-hidden">

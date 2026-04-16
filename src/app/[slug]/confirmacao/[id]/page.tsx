@@ -75,7 +75,7 @@ export default function ConfirmationPage(props: { params: Promise<{ slug: string
     
     const vcard = `BEGIN:VCARD
 VERSION:3.0
-FN:${settings.shopName || 'Barbearia Premium'}
+FN:${settings.shopName || 'King Barber'}
 TEL;TYPE=WORK,VOICE:${settings.phone || ''}
 URL:${window.location.origin}/${tenant.slug}
 END:VCARD`;
@@ -95,7 +95,7 @@ END:VCARD`;
     const dateStr = appointment.appointment_date || appointment.appointmentDate;
     const timeStr = appointment.appointment_time || appointment.appointmentTime;
     const serviceName = appointment.service_name || appointment.serviceName;
-    const shopName = settings?.shopName || tenant.name || 'Barbearia Premium';
+    const shopName = settings?.shopName || tenant.name || 'King Barber';
     const address = appointment.unit?.address || settings?.address || '';
 
     if (!dateStr || !timeStr) return;
@@ -268,7 +268,7 @@ END:VCARD`;
                   <div className="flex items-start gap-3 mb-4">
                     <MapPin className="w-5 h-5 text-primary shrink-0 mt-1" />
                     <div>
-                      <p className="font-medium text-foreground">{appointment.unit?.name || settings?.shopName || tenant.name || "Barbearia Premium"}</p>
+                      <p className="font-medium text-foreground">{appointment.unit?.name || settings?.shopName || tenant.name || "King Barber"}</p>
                       <p className="text-sm text-muted-foreground">
                         {appointment.unit 
                           ? `${appointment.unit.address}, ${appointment.unit.number || ""}` 
@@ -360,7 +360,7 @@ function generateICS(appointment: any, settings: any) {
 
   const serviceName = appointment.serviceName || appointment.service_name || "Serviço Adquirido";
   const customerName = appointment.customerName || appointment.customer_name || "Cliente";
-  const shopName = settings?.shopName || appointment.unit?.name || "Barbearia Premium";
+  const shopName = settings?.shopName || appointment.unit?.name || "King Barber";
   const address = appointment.unit?.address || settings?.address || "Endereço da Barbearia";
 
   return `BEGIN:VCALENDAR

@@ -95,7 +95,7 @@ function CadastroContent() {
 
         toast({
           title: "Conta criada!",
-          description: "Bem-vindo à Barbearia Premium! Agende seu primeiro serviço agora."
+          description: "Bem-vindo à King Barber! Agende seu primeiro serviço agora."
         });
         router.push(`/${tenant.slug}`);
         router.refresh();

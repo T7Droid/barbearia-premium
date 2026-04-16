@@ -96,3 +96,8 @@ export type GetAvailabilityParams = {
   date: string;
   serviceId: number;
 };
+
+export type ListAppointmentsParams = {
+  year?: string;
+  month?: string;
+};

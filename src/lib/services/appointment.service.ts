@@ -340,7 +340,7 @@ export class AppointmentService {
     const todayAppointments = (appointments || []).filter(a => a.appointmentDate === todayStr).length;
     const totalAppointments = (appointments || []).length;
     const totalRevenue = (appointments || [])
-      .filter(a => a.isPaid)
+      .filter(a => a.isPaid && a.status !== "cancelled")
       .reduce((sum, a) => sum + (a.servicePrice || 0), 0);
 
     const serviceCounts: Record<string, number> = {};

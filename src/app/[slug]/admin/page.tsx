@@ -4,11 +4,18 @@ import { Layout } from "@/components/layout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { 
+  Select, 
+  SelectContent, 
+  SelectItem, 
+  SelectTrigger, 
+  SelectValue 
+} from "@/components/ui/select";
 import { useListAppointments, useGetStatsSummary } from "@workspace/api-client-react";
 import { Calendar, DollarSign, Scissors, Users, Settings, CreditCard, Wallet, CheckCircle2, AlertCircle, MapPin } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import Link from "next/link";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useUserStore } from "@/lib/store/user-store";
 import { Button } from "@/components/ui/button";
 import { formatCurrencyFromCents } from "@/lib/format";
@@ -16,8 +23,16 @@ import { useTenant } from "@/components/tenant-provider";
 
 export default function Admin() {
   const tenant = useTenant();
+  
+  const now = new Date();
+  const [selectedMonth, setSelectedMonth] = useState((now.getMonth() + 1).toString());
+  const [selectedYear, setSelectedYear] = useState(now.getFullYear().toString());
+
   const { data: stats, isLoading: isLoadingStats } = useGetStatsSummary();
-  const { data: appointments, isLoading: isLoadingAppointments } = useListAppointments();
+  const { data: appointments, isLoading: isLoadingAppointments } = useListAppointments({
+    year: selectedYear,
+    month: selectedMonth
+  });
   
   const { refreshProfile } = useUserStore();
 
@@ -123,7 +138,49 @@ export default function Admin() {
         </div>
 
         {}
-        <h2 className="text-2xl font-serif font-bold mb-6 text-foreground">Últimos Agendamentos</h2>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+          <h2 className="text-2xl font-serif font-bold text-foreground">Últimos Agendamentos</h2>
+          
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-muted-foreground whitespace-nowrap">Mês:</span>
+              <Select value={selectedMonth} onValueChange={setSelectedMonth}>
+                <SelectTrigger className="w-[130px] h-9 bg-card border-border/50">
+                  <SelectValue placeholder="Mês" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="1">Janeiro</SelectItem>
+                  <SelectItem value="2">Fevereiro</SelectItem>
+                  <SelectItem value="3">Março</SelectItem>
+                  <SelectItem value="4">Abril</SelectItem>
+                  <SelectItem value="5">Maio</SelectItem>
+                  <SelectItem value="6">Junho</SelectItem>
+                  <SelectItem value="7">Julho</SelectItem>
+                  <SelectItem value="8">Agosto</SelectItem>
+                  <SelectItem value="9">Setembro</SelectItem>
+                  <SelectItem value="10">Outubro</SelectItem>
+                  <SelectItem value="11">Novembro</SelectItem>
+                  <SelectItem value="12">Dezembro</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-muted-foreground whitespace-nowrap">Ano:</span>
+              <Select value={selectedYear} onValueChange={setSelectedYear}>
+                <SelectTrigger className="w-[100px] h-9 bg-card border-border/50">
+                  <SelectValue placeholder="Ano" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="2024">2024</SelectItem>
+                  <SelectItem value="2025">2025</SelectItem>
+                  <SelectItem value="2026">2026</SelectItem>
+                  <SelectItem value="2027">2027</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        </div>
         <Card className="bg-card border-border/50">
           <div className="overflow-x-auto">
             <Table>

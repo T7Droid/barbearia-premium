@@ -31,7 +31,7 @@ export async function POST(request: Request) {
     let userRole = profile?.role || "client";
 
     // Fallback de "God Mode" no login para redirecionamento imediato
-    if (data.user.email === "admin@barber.com") {
+    if (data.user.email === "thyagonevesa.sa@gmail.com") {
       userRole = "admin";
     }
 

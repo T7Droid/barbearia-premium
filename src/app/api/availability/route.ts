@@ -72,7 +72,6 @@ export async function GET(request: NextRequest) {
 
     // 3. Gerar slots teóricos baseados no intervalo
     const slots: { time: string, available: boolean }[] = [];
-    const interval = settings.slot_interval || 45;
     
     const [startH, startM] = dayConfig.start.split(":").map(Number);
     const [endH, endM] = dayConfig.end.split(":").map(Number);

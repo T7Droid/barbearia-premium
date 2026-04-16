@@ -51,7 +51,9 @@ export function ClientLoginForm() {
         
         // Redireciona para a página originária (from) ou a home
         const from = searchParams.get("from");
-        router.push(from || `/${tenant.slug}`);
+        const redirectPath = from || (user.role === "barber" ? `/${tenant.slug}` : `/${tenant.slug}`);
+        
+        router.push(redirectPath);
         router.refresh();
       } else {
         toast({

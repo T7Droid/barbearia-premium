@@ -15,7 +15,8 @@ import {
   Search,
   RefreshCw,
   XCircle,
-  CreditCard
+  CreditCard,
+  Store
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
@@ -210,7 +211,11 @@ export default function AdminCustomers() {
                         checked={customer.can_pay_at_shop !== false} 
                         onCheckedChange={() => handleTogglePermission(customer.id, customer.can_pay_at_shop !== false)}
                       />
-                      <CreditCard className={`w-4 h-4 ${customer.can_pay_at_shop !== false ? 'text-green-500' : 'text-muted-foreground opacity-50'}`} />
+                      {customer.can_pay_at_shop !== false ? (
+                        <Store className="w-4 h-4 text-amber-500" title="Pagar no Local" />
+                      ) : (
+                        <CreditCard className="w-4 h-4 text-green-500" title="Precisa Pagar Antes" />
+                      )}
                     </div>
                   </TableCell>
                   <TableCell className="text-muted-foreground text-sm">

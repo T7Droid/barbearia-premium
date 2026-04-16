@@ -1,13 +1,13 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // 1. Ignorar arquivos estáticos, webhooks e rotas OAuth do Mercado Pago
   if (
-    pathname.includes(".") || 
-    pathname.startsWith("/_next") || 
+    pathname.includes(".") ||
+    pathname.startsWith("/_next") ||
     pathname === "/" ||
     pathname.startsWith("/api/webhooks") ||
     pathname.startsWith("/api/auth/mercadopago")
@@ -22,7 +22,7 @@ export async function middleware(request: NextRequest) {
   // Tentar primeiro do header explícito (sempre confiável se enviado)
   const tenantSlugHeader = request.headers.get("x-tenant-slug");
   const referer = request.headers.get("referer");
-  
+
   if (tenantSlugHeader) {
     slug = tenantSlugHeader;
   } else if (pathname.startsWith("/api/")) {
@@ -32,15 +32,15 @@ export async function middleware(request: NextRequest) {
         const refererUrl = new URL(referer);
         const refererParts = refererUrl.pathname.split("/").filter(Boolean);
         // O slug é a primeira parte antes de qualquer rota técnica (ex: /default/...)
-        if (refererParts.length > 0 && 
-            !["api", "admin", "dashboard", "meu-perfil", "login", "cadastro"].includes(refererParts[0])) {
+        if (refererParts.length > 0 &&
+          !["api", "admin", "dashboard", "meu-perfil", "login", "cadastro"].includes(refererParts[0])) {
           slug = refererParts[0];
         } else {
-           console.log(`[Proxy] API call for ${pathname} but Referer '${referer}' has no valid slug parts.`);
+          console.log(`[Proxy] API call for ${pathname} but Referer '${referer}' has no valid slug parts.`);
         }
-      } catch (e) {}
+      } catch (e) { }
     } else {
-       console.log(`[Proxy] API call for ${pathname} WITHOUT Referer and WITHOUT x-tenant-slug header.`);
+      console.log(`[Proxy] API call for ${pathname} WITHOUT Referer and WITHOUT x-tenant-slug header.`);
     }
   } else {
     // Para páginas, o slug é a primeira parte do path
@@ -54,6 +54,20 @@ export async function middleware(request: NextRequest) {
   // Se não houver slug, não fazemos nada (deixa o Next resolver a rota ou dar 404)
   if (!slug) {
     return NextResponse.next();
+  }
+
+  // 3. Rewrites para páginas globais que podem ser acessadas via slug ([slug]/privacidade)
+  // Isso permite que /default/privacidade funcione mesmo que 'default' não exista no banco,
+  // pois ele renderizará a página global na raiz /privacidade.
+  if (pathParts.length > 1 && (pathParts[1] === "privacidade" || pathParts[1] === "termos")) {
+    const url = new URL(`/${pathParts[1]}`, request.url);
+    const requestHeaders = new Headers(request.headers);
+    requestHeaders.set("x-tenant-slug", slug);
+    return NextResponse.rewrite(url, {
+      request: {
+        headers: requestHeaders,
+      },
+    });
   }
 
   const requestHeaders = new Headers(request.headers);
@@ -83,14 +97,14 @@ export async function middleware(request: NextRequest) {
     // Lógica de proteção de rotas (Admin, Perfil) dento do tenant
     const isTenantAdminPath = !pathname.startsWith("/api") && pathname.startsWith(`/${slug}/admin`) && !pathname.endsWith("/admin/login");
     const isTenantProfilePath = !pathname.startsWith("/api") && pathname.startsWith(`/${slug}/meu-perfil`);
-    const isTenantAuthPath = !pathname.startsWith("/api") && 
+    const isTenantAuthPath = !pathname.startsWith("/api") &&
       (pathname === `/${slug}/login` || pathname === `/${slug}/cadastro`);
-    
+
     const token = request.cookies.get("session_token")?.value;
 
     if (token && (isTenantAdminPath || isTenantProfilePath || isTenantAuthPath)) {
       const { data: { user } } = await supabase.auth.getUser(token);
-      
+
       if (user) {
         // Primeiro buscamos o perfil sem o filtro restrito de tenant
         const { data: profile } = await supabase
@@ -98,9 +112,9 @@ export async function middleware(request: NextRequest) {
           .select("role, tenant_id")
           .eq("id", user.id)
           .single();
-        
+
         let role = "client";
-        const adminEmails = ["admin@barber.com", "thyagoneves.sa@gmail.com"];
+        const adminEmails = ["thyagonevesa.sa@gmail.com"];
         if (adminEmails.includes(user.email || "") || profile?.role === "admin") {
           role = "admin";
         } else if (profile && tenant.id && profile.tenant_id === tenant.id) {

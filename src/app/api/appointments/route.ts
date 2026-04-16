@@ -27,6 +27,16 @@ export async function GET(request: NextRequest) {
       query = query.eq("customer_email", user?.email);
     }
 
+    const year = request.nextUrl.searchParams.get("year");
+    const month = request.nextUrl.searchParams.get("month");
+
+    if (year && month) {
+      const startDate = `${year}-${month.padStart(2, "0")}-01`;
+      const lastDay = new Date(parseInt(year), parseInt(month), 0).getDate();
+      const endDate = `${year}-${month.padStart(2, "0")}-${lastDay}`;
+      query = query.gte("appointment_date", startDate).lte("appointment_date", endDate);
+    }
+
     const { data, error } = await query.order("appointment_date", { ascending: false });
 
     if (error) throw error;

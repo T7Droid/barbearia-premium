@@ -13,6 +13,7 @@ interface User {
   rescheduleCount?: number;
   cancelCount?: number;
   canPayAtShop?: boolean;
+  fcmToken?: string;
   [key: string]: any;
 }
 

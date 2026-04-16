@@ -6,7 +6,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Save, ShieldCheck, CalendarClock, CreditCard, Clock, Settings, ExternalLink, Ticket, Wallet, AlertCircle } from "lucide-react";
+import { Loader2, Save, ShieldCheck, CalendarClock, CreditCard, Clock, Settings, ExternalLink, Ticket, Wallet, AlertCircle, LayoutGrid } from "lucide-react";
+import Link from "next/link";
 import { DemoStore } from "@/lib/persistence/demo-store";
 import { useTenant } from "@/hooks/use-tenant";
 import { Label } from "@/components/ui/label";
@@ -55,6 +56,8 @@ export default function SettingsPage() {
     mpPublicKey: "",
     mpConnectionError: null as string | null
   });
+  
+  const getLink = (path: string) => `/${tenant?.slug}${path}`;
 
   const fetchSettings = async () => {
     try {
@@ -167,19 +170,29 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-12 max-w-3xl">
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-8 gap-4 md:gap-0">
-        <div>
-          <h1 className="text-4xl font-serif font-bold text-foreground flex items-center gap-3">
-            <Settings className="w-8 h-8 text-primary" /> Configurações
-          </h1>
-          <p className="text-muted-foreground mt-2">Gerencie as regras de negócio da sua barbearia.</p>
+    <div className="container mx-auto px-4 py-8 max-w-3xl">
+      <div className="mb-8">
+        <div className="flex items-center gap-2 text-sm text-muted-foreground mb-4">
+          <Link href={getLink("/admin")} className="hover:text-primary flex items-center gap-1 transition-colors">
+            <LayoutGrid className="w-4 h-4" /> Painel
+          </Link>
+          <span>/</span>
+          <span className="text-foreground font-medium">Configurações</span>
         </div>
-        <div className="flex justify-end">
-          <Button onClick={handleSave} disabled={saving} className="gap-2">
-            {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-            Salvar Alterações
-          </Button>
+
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 md:gap-0">
+          <div>
+            <h1 className="text-4xl font-serif font-bold text-foreground flex items-center gap-3">
+              <Settings className="w-8 h-8 text-primary" /> Configurações
+            </h1>
+            <p className="text-muted-foreground mt-2">Gerencie as regras de negócio da sua barbearia.</p>
+          </div>
+          <div className="flex justify-end">
+            <Button onClick={handleSave} disabled={saving} className="gap-2">
+              {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+              Salvar Alterações
+            </Button>
+          </div>
         </div>
       </div>
 

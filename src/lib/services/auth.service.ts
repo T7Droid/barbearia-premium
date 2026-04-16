@@ -20,7 +20,7 @@ export class AuthService {
     // 3. Se o perfil diz que é barber, permitimos.
     // 4. Caso contrário, verificamos se o tenant_id bate.
     let userRole = "client";
-    const adminEmails = ["admin@barber.com", "thyagoneves.sa@gmail.com"];
+    const adminEmails = ["thyagonevesa.sa@gmail.com"];
     
     if (adminEmails.includes(user.email || "") || profile?.role === "admin") {
       userRole = "admin";
@@ -41,7 +41,8 @@ export class AuthService {
       notificationsEnabled: profile?.notifications_enabled ?? true,
       rescheduleCount: profile?.reschedule_count || 0,
       cancelCount: profile?.cancel_count || 0,
-      canPayAtShop: profile?.can_pay_at_shop ?? true
+      canPayAtShop: profile?.can_pay_at_shop ?? true,
+      fcmToken: profile?.fcm_token || ""
     };
   }
 
@@ -76,6 +77,7 @@ export class AuthService {
         full_name: updates.name,
         phone: updates.phone,
         notifications_enabled: updates.notificationsEnabled,
+        fcm_token: updates.fcmToken,
         role: updates.role // Permitir atualização de role se explicitamente enviado (para admin ops)
       })
       .eq("id", user.id);

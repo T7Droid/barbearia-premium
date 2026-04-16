@@ -1,8 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { Layout } from "@/components/layout";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { useTenant } from "@/hooks/use-tenant";
 import { useUserStore } from "@/lib/store/user-store";
@@ -18,14 +20,23 @@ import {
 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { useRouter } from "next/navigation";
 
 export default function BarberDashboard() {
   const { toast } = useToast();
   const tenant = useTenant();
   const { user } = useUserStore();
+  const router = useRouter();
   const [stats, setStats] = useState<any>(null);
   const [todayAppointments, setTodayAppointments] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+
+  // Segurança: Apenas barbeiros e admins acessam este painel
+  useEffect(() => {
+    if (!isLoading && user && user.role !== 'barber' && user.role !== 'admin') {
+      router.push(`/${tenant.slug}`);
+    }
+  }, [user, isLoading, tenant.slug, router]);
 
   const fetchBarberData = async () => {
     try {
@@ -59,9 +70,16 @@ export default function BarberDashboard() {
   return (
     <Layout>
       <div className="container mx-auto px-4 py-8 max-w-6xl">
-        <div className="mb-8">
-          <h1 className="text-3xl font-serif font-bold tracking-tight">Olá, {user?.name || "Barbeiro"}</h1>
-          <p className="text-muted-foreground">Aqui está um resumo do seu dia na {tenant.name}.</p>
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
+          <div>
+            <h1 className="text-3xl font-serif font-bold tracking-tight">Olá, {user?.name || "Barbeiro"}</h1>
+            <p className="text-muted-foreground">Aqui está um resumo do seu dia na {tenant.name}.</p>
+          </div>
+          <Button asChild className="gap-2">
+            <Link href={`/${tenant.slug}/barber/horarios`}>
+              <Clock className="w-4 h-4" /> Gerenciar Meus Horários
+            </Link>
+          </Button>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">

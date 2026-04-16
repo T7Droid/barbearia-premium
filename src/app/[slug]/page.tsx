@@ -138,7 +138,7 @@ export default function Home() {
                 <Phone className="text-primary w-6 h-6" />
               </a>
               <h3 className="font-serif text-xl font-semibold mb-2">Contato</h3>
-              <p className="text-muted-foreground">(13) 98204-6758<br />contato@barbeariapremium.com</p>
+              <p className="text-muted-foreground">(13) 98204-6758<br />thyagonevesa.sa@gmail.com</p>
             </div>
           </div>
         </div>

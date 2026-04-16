@@ -63,7 +63,7 @@ export function AdminLoginForm() {
           required
           value={formData.email}
           onChange={(e) => setFormData({...formData, email: e.target.value})}
-          placeholder="admin@barber.com"
+          placeholder="admin@gmail.com"
           className="h-12 border-border/50"
         />
       </div>

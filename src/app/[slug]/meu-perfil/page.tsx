@@ -67,11 +67,6 @@ export default function UserProfile() {
           DemoStore.saveUser(userData);
         }
 
-        if (userData?.role === "admin") {
-          router.push(`/${tenant.slug}/admin`);
-          return;
-        }
-
         setSettings(settingsData);
         setLoading(false);
       } catch (err) {

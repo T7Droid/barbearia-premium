@@ -82,6 +82,44 @@ function BookingContent() {
 
   const { data: allServices, isLoading: isLoadingServices } = useListServices();
   const [services, setServices] = useState<Service[]>([]);
+  const [barbers, setBarbers] = useState<Barber[]>([]);
+  const [selectedBarber, setSelectedBarber] = useState<Barber | null>(null);
+  const [selectedService, setSelectedService] = useState<Service | null>(null);
+  const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
+  const [selectedTime, setSelectedTime] = useState<string | null>(null);
+  const [busyDates, setBusyDates] = useState<string[]>([]);
+  const [isLoadingBarbers, setIsLoadingBarbers] = useState(true);
+  
+  const [customerInfo, setCustomerInfo] = useState({
+    name: "",
+    email: "",
+    phone: "",
+    cpf: ""
+  });
+
+  const [paymentMethod, setPaymentMethod] = useState<string>("card");
+  const [isPrePaid, setIsPrePaid] = useState(false);
+  const [sessionId, setSessionId] = useState<string | null>(null);
+  const [isGeneratingPix, setIsGeneratingPix] = useState(false);
+  const [pixData, setPixData] = useState<any>(null);
+
+  const [mpPublicKey, setMpPublicKey] = useState("");
+  const [isMpLoaded, setIsMpLoaded] = useState(false);
+  const [mpPaymentToken, setMpPaymentToken] = useState<string | null>(null);
+  const [mpPaymentData, setMpPaymentData] = useState<any>(null);
+  const paymentSubmitRef = useRef<any>(null);
+
+  // Script do Mercado Pago
+  useEffect(() => {
+    const script = document.createElement("script");
+    script.src = "https://sdk.mercadopago.com/js/v2";
+    script.async = true;
+    script.onload = () => setIsMpLoaded(true);
+    document.body.appendChild(script);
+    return () => {
+      document.body.removeChild(script);
+    };
+  }, []);
 
   useEffect(() => {
     const headers = { "x-tenant-slug": tenant.slug };
@@ -90,7 +128,7 @@ function BookingContent() {
       fetch(`/api/settings?t=${Date.now()}`, { headers }).then(res => res.json()),
       fetch("/api/auth/me", { headers }).then(res => res.json()),
       fetch("/api/units", { headers }).then(res => res.json()),
-      fetch("/api/barbers?active=true", { headers }).then(res => res.json())
+      fetch("/api/barbers?active=true&bookable=true", { headers }).then(res => res.json())
     ]).then(([settingsData, authData, unitsData, barbersData]) => {
       
       // 1. Unidades
@@ -650,7 +688,7 @@ function BookingContent() {
                       <p className="text-sm text-muted-foreground line-clamp-2">{service.description}</p>
                       <div className="flex items-center gap-1 mt-3 text-xs text-muted-foreground">
                         <Clock className="w-3 h-3" />
-                        {service.duration_minutes} min
+                        {service.durationMinutes} min
                       </div>
                     </div>
                   ))}

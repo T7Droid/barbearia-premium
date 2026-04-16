@@ -14,13 +14,16 @@ export async function GET(request: NextRequest) {
   }
 
   const activeOnly = request.nextUrl.searchParams.get("active") === "true";
+  const bookableOnly = request.nextUrl.searchParams.get("bookable") === "true";
   
   let query = supabaseAdmin
     .from("barbers")
     .select("*, barber_units(unit_id), barber_services(service_id)")
     .eq("tenant_id", tenant.id);
 
-  if (activeOnly) {
+  if (bookableOnly) {
+    query = query.eq("active", true).not("weekly_hours", "is", null);
+  } else if (activeOnly) {
     query = query.eq("active", true);
   }
 
@@ -31,7 +34,7 @@ export async function GET(request: NextRequest) {
   }
 
   // Mapear para camelCase e incluir associações
-  const mapped = (data || []).map((b: any) => ({
+  let mapped = (data || []).map((b: any) => ({
     id: b.id,
     name: b.name,
     description: b.description,
@@ -42,6 +45,11 @@ export async function GET(request: NextRequest) {
     units: (b.barber_units || []).map((bu: any) => ({ id: bu.unit_id })),
     services: (b.barber_services || []).map((bs: any) => ({ id: bs.service_id }))
   }));
+
+  // Filtro adicional para garantir que o barbeiro tem tudo necessário
+  if (bookableOnly) {
+    mapped = mapped.filter(b => b.units.length > 0 && b.services.length > 0);
+  }
 
   return NextResponse.json(mapped);
 }
@@ -99,7 +107,26 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // 2. Criar o barbeiro
+    // 2. Buscar horários padrão do tenant para aplicar ao novo barbeiro
+    const { data: settings } = await supabaseAdmin
+      .from("settings")
+      .select("weekly_hours")
+      .eq("tenant_id", tenant.id)
+      .single();
+
+    const systemDefaultHours = {
+      monday: { active: true, start: "09:00", end: "18:00" },
+      tuesday: { active: true, start: "09:00", end: "18:00" },
+      wednesday: { active: true, start: "09:00", end: "18:00" },
+      thursday: { active: true, start: "09:00", end: "18:00" },
+      friday: { active: true, start: "09:00", end: "18:00" },
+      saturday: { active: true, start: "09:00", end: "12:00" },
+      sunday: { active: false }
+    };
+
+    const initialWeeklyHours = settings?.weekly_hours || systemDefaultHours;
+
+    // 3. Criar o barbeiro
     const { data: barber, error } = await supabaseAdmin
       .from("barbers")
       .insert({
@@ -108,7 +135,8 @@ export async function POST(request: NextRequest) {
         image_url: imageUrl,
         active: active !== undefined ? active : true,
         tenant_id: tenant.id,
-        user_id: userId
+        user_id: userId,
+        weekly_hours: initialWeeklyHours
       })
       .select()
       .single();

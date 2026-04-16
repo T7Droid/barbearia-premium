@@ -14,7 +14,7 @@ const playfair = Playfair_Display({
 });
 
 export const metadata: Metadata = {
-  title: "Barbearia Premium | Agende seu Horário",
+  title: "King Barber | Agende seu Horário",
   description: "A melhor experiência em barbearia clássica e moderna de São Paulo.",
 };
 
