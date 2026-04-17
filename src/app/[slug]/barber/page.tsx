@@ -21,6 +21,11 @@ import {
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useRouter } from "next/navigation";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
+import * as XLSX from "xlsx";
+import { FileText, FileSpreadsheet } from "lucide-react";
+import { formatCurrencyFromCents } from "@/lib/format";
 
 export default function BarberDashboard() {
   const { toast } = useToast();
@@ -102,6 +107,48 @@ export default function BarberDashboard() {
     } finally {
       setIsActivating(false);
     }
+  };
+  const handleExportPDF = () => {
+    if (!todayAppointments || todayAppointments.length === 0) return;
+
+    const doc = new jsPDF();
+    const tableData = todayAppointments.map((app: any) => [
+      app.appointment_time || '',
+      app.customer_name || 'N/D',
+      app.service_name || 'N/D',
+      app.status === 'confirmed' ? 'Confirmado' : app.status === 'pending' ? 'Pendente' : app.status
+    ]);
+
+    autoTable(doc, {
+      head: [['Hora', 'Cliente', 'Serviço', 'Status']],
+      body: tableData,
+      theme: 'grid',
+      headStyles: { fillColor: [142, 68, 173] },
+      styles: { fontSize: 8 },
+    });
+
+    const fileName = `agenda_hoje_${format(new Date(), 'dd_MM_yyyy')}.pdf`;
+    doc.save(fileName);
+    toast({ title: "Sucesso", description: "Agenda em PDF gerada com sucesso." });
+  };
+
+  const handleExportExcel = () => {
+    if (!todayAppointments || todayAppointments.length === 0) return;
+
+    const tableData = todayAppointments.map((app: any) => ({
+      'Hora': app.appointment_time || '',
+      'Cliente': app.customer_name || 'N/D',
+      'Serviço': app.service_name || 'N/D',
+      'Status': app.status === 'confirmed' ? 'Confirmado' : app.status === 'pending' ? 'Pendente' : app.status
+    }));
+
+    const ws = XLSX.utils.json_to_sheet(tableData);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Agenda_Hoje");
+
+    const fileName = `agenda_hoje_${format(new Date(), 'dd_MM_yyyy')}.xlsx`;
+    XLSX.writeFile(wb, fileName);
+    toast({ title: "Sucesso", description: "Agenda em Excel gerada com sucesso." });
   };
 
   useEffect(() => {
@@ -290,6 +337,29 @@ export default function BarberDashboard() {
                 )}
               </CardContent>
             </Card>
+
+            {todayAppointments && todayAppointments.length > 0 && (
+              <div className="mt-4 flex gap-2">
+                <Button 
+                  onClick={handleExportPDF} 
+                  variant="ghost" 
+                  size="sm" 
+                  className="h-8 gap-2 text-muted-foreground hover:text-primary transition-colors hover:bg-muted/50"
+                >
+                  <FileText className="w-4 h-4" />
+                  <span>Exportar PDF</span>
+                </Button>
+                <Button 
+                  onClick={handleExportExcel} 
+                  variant="ghost" 
+                  size="sm" 
+                  className="h-8 gap-2 text-muted-foreground hover:text-green-500 transition-colors hover:bg-muted/50"
+                >
+                  <FileSpreadsheet className="w-4 h-4" />
+                  <span>Exportar Excel</span>
+                </Button>
+              </div>
+            )}
           </div>
         </div>
         </>

@@ -20,8 +20,16 @@ import { useUserStore } from "@/lib/store/user-store";
 import { Button } from "@/components/ui/button";
 import { formatCurrencyFromCents } from "@/lib/format";
 import { useTenant } from "@/components/tenant-provider";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
+import * as XLSX from "xlsx";
+import { FileText, FileSpreadsheet, Download } from "lucide-react";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
+import { useToast } from "@/hooks/use-toast";
 
 export default function Admin() {
+  const { toast } = useToast();
   const tenant = useTenant();
   
   const now = new Date();
@@ -52,6 +60,54 @@ export default function Admin() {
   }
 
   const getLink = (path: string) => `/${tenant.slug}${path}`;
+
+  const handleExportPDF = () => {
+    if (!appointments || appointments.length === 0) return;
+
+    const doc = new jsPDF();
+    const tableData = appointments.map((app: any) => [
+      `${app.appointment_date ? app.appointment_date.split('-').reverse().join('/') : 'N/D'} ${app.appointment_time || ''}`,
+      app.customer_name || 'N/D',
+      app.service_name || 'N/D',
+      formatCurrencyFromCents(app.service_price),
+      app.is_paid ? 'Pago' : 'No Local',
+      app.status === 'confirmed' ? 'Confirmado' : app.status === 'pending' ? 'Pendente' : 'Cancelado'
+    ]);
+
+    autoTable(doc, {
+      head: [['Data/Hora', 'Cliente', 'Serviço', 'Valor', 'Pagamento', 'Status']],
+      body: tableData,
+      theme: 'grid',
+      headStyles: { fillColor: [142, 68, 173] }, // Roxo premium
+      styles: { fontSize: 8 },
+    });
+
+    const fileName = `agendamentos_${selectedMonth}_${selectedYear}.pdf`;
+    doc.save(fileName);
+    toast({ title: "Sucesso", description: "Relatório PDF gerado com sucesso." });
+  };
+
+  const handleExportExcel = () => {
+    if (!appointments || appointments.length === 0) return;
+
+    const tableData = appointments.map((app: any) => ({
+      'Data/Hora': `${app.appointment_date ? app.appointment_date.split('-').reverse().join('/') : 'N/D'} ${app.appointment_time || ''}`,
+      'Cliente': app.customer_name || 'N/D',
+      'Telefone': app.customer_phone || 'N/D',
+      'Serviço': app.service_name || 'N/D',
+      'Valor': formatCurrencyFromCents(app.service_price),
+      'Pagamento': app.is_paid ? 'Pago' : 'No Local',
+      'Status': app.status === 'confirmed' ? 'Confirmado' : app.status === 'pending' ? 'Pendente' : 'Cancelado'
+    }));
+
+    const ws = XLSX.utils.json_to_sheet(tableData);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Agendamentos");
+
+    const fileName = `agendamentos_${selectedMonth}_${selectedYear}.xlsx`;
+    XLSX.writeFile(wb, fileName);
+    toast({ title: "Sucesso", description: "Planilha Excel gerada com sucesso." });
+  };
 
   return (
     <div className="container mx-auto px-4 py-12">
@@ -245,6 +301,31 @@ export default function Admin() {
             </Table>
           </div>
         </Card>
+
+        {appointments && appointments.length > 0 && (
+          <div className="mt-4 flex gap-2">
+            <Button 
+              onClick={handleExportPDF} 
+              variant="ghost" 
+              size="sm" 
+              className="h-8 gap-2 text-muted-foreground hover:text-primary transition-colors hover:bg-muted/50"
+              disabled={isLoadingAppointments}
+            >
+              <FileText className="w-4 h-4" />
+              <span>Exportar PDF</span>
+            </Button>
+            <Button 
+              onClick={handleExportExcel} 
+              variant="ghost" 
+              size="sm" 
+              className="h-8 gap-2 text-muted-foreground hover:text-green-500 transition-colors hover:bg-muted/50"
+              disabled={isLoadingAppointments}
+            >
+              <FileSpreadsheet className="w-4 h-4" />
+              <span>Exportar Excel</span>
+            </Button>
+          </div>
+        )}
       </div>
   );
 }

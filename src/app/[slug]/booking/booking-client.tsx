@@ -34,6 +34,8 @@ export interface Barber {
   description: string;
   imageUrl?: string;
   active: boolean;
+  services?: { id: number }[];
+  weekly_hours?: any;
 }
 import Link from "next/link";
 import { Loader2 } from "lucide-react";
@@ -136,7 +138,7 @@ function BookingContent() {
         setUnits(unitsData);
         if (unitsData.length === 1) {
           setSelectedUnit(unitsData[0]);
-          setStep(2); // Pula para Barbeiros
+          setStep(s => s === 1 ? 2 : s); // Só pula para Barbeiros se estiver no passo 1
         }
       }
       setIsLoadingUnits(false);
@@ -180,10 +182,14 @@ function BookingContent() {
         .then(res => res.json())
         .then(data => {
             setBarbers(data);
-            if (data.length === 1 && step === 2) {
-                setSelectedBarber(data[0]);
-                setStep(3);
-            }
+            setStep((currentStep) => {
+              // Só auto-avança se houver apenas 1 barbeiro e o usuário ainda estiver na tela de seleção de barbeiros
+              if (data.length === 1 && currentStep === 2) {
+                  setSelectedBarber(data[0]);
+                  return 3;
+              }
+              return currentStep;
+            });
         });
         
       fetch(`/api/services?unitId=${selectedUnit.id}`, { headers: { "x-tenant-slug": tenant.slug } })
@@ -235,7 +241,7 @@ function BookingContent() {
 
   useEffect(() => {
     // Only proceed if all requirements are met
-    if (!isMpLoaded || !mpPublicKey || step !== 5 || paymentMethod !== "card" || isPrePaid) {
+    if (!isMpLoaded || !mpPublicKey || step !== 6 || paymentMethod !== "card" || isPrePaid) {
       console.log("DEBUG: MP Brick não inicializou. Razões:", {
         isMpLoaded,
         hasMpKey: !!mpPublicKey,
@@ -331,7 +337,7 @@ function BookingContent() {
   const createCheckout = useCreateCheckout();
   const confirmAppointment = useConfirmAppointment();
 
-  const handleNextStep = () => setStep((s) => Math.min(s + 1, 5));
+  const handleNextStep = () => setStep((s) => Math.min(s + 1, 6));
   const handlePrevStep = () => setStep((s) => {
     // Não permitir voltar para o passo 1 se houver apenas um barbeiro
     if (barbers.length === 1 && s === 2) return s;
@@ -445,6 +451,13 @@ function BookingContent() {
       setIsGeneratingPix(false);
     }
   };
+
+  // Auto-gerar Pix quando selecionar a aba
+  useEffect(() => {
+    if (step === 6 && paymentMethod === "pix" && !pixData && !isGeneratingPix && sessionId) {
+      handleGeneratePix();
+    }
+  }, [step, paymentMethod, pixData, isGeneratingPix, sessionId]);
 
   const handlePaymentSubmit = async (e?: any, overrideSessionId?: string, directMpData?: any) => {
     if (e && typeof e.preventDefault === "function") {
@@ -671,7 +684,12 @@ function BookingContent() {
                 </div>
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {services?.map((service) => (
+                  {services?.filter(s => {
+                    // Se não houver barbeiro selecionado (fluxo alternativo), mostrar tudo
+                    if (!selectedBarber) return true;
+                    // Mostrar apenas serviços que o barbeiro selecionado realiza
+                    return selectedBarber.services?.some(bs => bs.id === s.id);
+                  })?.map((service) => (
                     <div
                       key={service.id}
                       onClick={() => {
@@ -719,6 +737,18 @@ function BookingContent() {
                         const dateStr = format(date, "yyyy-MM-dd");
                         if (date < today) return true;
                         if (busyDates.includes(dateStr)) return true;
+                        
+                        // Verificar se o barbeiro (ou a barbearia) trabalha neste dia da semana
+                        const daysOfWeek = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+                        const dayName = daysOfWeek[date.getDay()];
+                        
+                        // Prioridade: Horário do Barbeiro > Horário Geral da Barbearia
+                        const schedule = selectedBarber?.weekly_hours || settings?.weekly_hours;
+                        
+                        if (schedule && schedule[dayName]) {
+                          return !schedule[dayName].active;
+                        }
+
                         return false;
                       }}
                       className="w-full"
