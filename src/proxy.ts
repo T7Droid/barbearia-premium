@@ -94,15 +94,18 @@ export async function proxy(request: NextRequest) {
     console.log(`[Proxy] OK: Found ${tenant.name} for Path: ${pathname}`);
     requestHeaders.set("x-tenant-id", tenant.id);
 
-    // Lógica de proteção de rotas (Admin, Perfil) dento do tenant
-    const isTenantAdminPath = !pathname.startsWith("/api") && pathname.startsWith(`/${slug}/admin`) && !pathname.endsWith("/admin/login");
-    const isTenantProfilePath = !pathname.startsWith("/api") && pathname.startsWith(`/${slug}/meu-perfil`);
+    // Lógica de proteção de rotas (Admin, Barbeiro, Perfil)
+    const isAdminApi = pathname.startsWith("/api/admin") || pathname.startsWith("/api/stats/summary");
+    const isBarberApi = pathname.startsWith("/api/barber");
+    const isTenantAdminPath = (!pathname.startsWith("/api") && pathname.startsWith(`/${slug}/admin`) && !pathname.endsWith("/admin/login")) || isAdminApi;
+    const isTenantBarberPath = (!pathname.startsWith("/api") && pathname.startsWith(`/${slug}/barber`)) || isBarberApi;
+    const isTenantProfilePath = (!pathname.startsWith("/api") && pathname.startsWith(`/${slug}/meu-perfil`)) || pathname.startsWith("/api/user/profile");
     const isTenantAuthPath = !pathname.startsWith("/api") &&
       (pathname === `/${slug}/login` || pathname === `/${slug}/cadastro`);
 
     const token = request.cookies.get("session_token")?.value;
 
-    if (token && (isTenantAdminPath || isTenantProfilePath || isTenantAuthPath)) {
+    if (token && (isTenantAdminPath || isTenantBarberPath || isTenantProfilePath || isTenantAuthPath)) {
       const { data: { user } } = await supabase.auth.getUser(token);
 
       if (user) {
@@ -113,9 +116,10 @@ export async function proxy(request: NextRequest) {
           .eq("id", user.id)
           .single();
 
+        // Usando a mesma lógica centralizada para identificar admins
+        const { isAdminEmail } = await import("./lib/config/auth-config");
         let role = "client";
-        const adminEmails = ["thyagonevesa.sa@gmail.com"];
-        if (adminEmails.includes(user.email || "") || profile?.role === "admin") {
+        if (isAdminEmail(user.email) || profile?.role === "admin") {
           role = "admin";
         } else if (profile && tenant.id && profile.tenant_id === tenant.id) {
           role = profile.role || "client";
@@ -129,17 +133,36 @@ export async function proxy(request: NextRequest) {
         }
 
         if (isTenantAdminPath && role !== "admin") {
-          console.log(`[Proxy] ACCESS DENIED: User role ${role} tried to access ${pathname}. Redirecting to login.`);
+          console.log(`[Proxy] ACCESS DENIED: User role ${role} tried to access ADMIN path ${pathname}.`);
+          if (pathname.startsWith("/api")) {
+            return NextResponse.json({ error: "Acesso restrito a administradores" }, { status: 403 });
+          }
           return NextResponse.redirect(new URL(`/${slug}/admin/login`, request.url));
         }
-      } else if (isTenantAdminPath || isTenantProfilePath) {
+
+        if (isTenantBarberPath && role !== "barber" && role !== "admin") {
+          console.log(`[Proxy] ACCESS DENIED: User role ${role} tried to access BARBER path ${pathname}.`);
+          if (pathname.startsWith("/api")) {
+            return NextResponse.json({ error: "Acesso restrito a barbeiros ou administradores" }, { status: 403 });
+          }
+          return NextResponse.redirect(new URL(`/${slug}/meu-perfil`, request.url));
+        }
+      } else if (isTenantAdminPath || isTenantBarberPath || isTenantProfilePath) {
         console.log(`[Proxy] SESSION EXPIRED or INVALID for token. Redirecting ${pathname} to login.`);
+        if (pathname.startsWith("/api")) {
+          return NextResponse.json({ error: "Sessão expirada ou inválida" }, { status: 401 });
+        }
         const loginUrl = new URL(isTenantAdminPath ? `/${slug}/admin/login` : `/${slug}/login`, request.url);
         loginUrl.searchParams.set("from", pathname);
-        return NextResponse.redirect(loginUrl);
+        const response = NextResponse.redirect(loginUrl);
+        response.cookies.delete("session_token");
+        return response;
       }
-    } else if (!token && (isTenantAdminPath || isTenantProfilePath)) {
+    } else if (!token && (isTenantAdminPath || isTenantBarberPath || isTenantProfilePath)) {
       console.log(`[Proxy] NO TOKEN for protected path ${pathname}. Redirecting to login.`);
+      if (pathname.startsWith("/api")) {
+        return NextResponse.json({ error: "Token de sessão não encontrado" }, { status: 401 });
+      }
       const loginUrl = new URL(isTenantAdminPath ? `/${slug}/admin/login` : `/${slug}/login`, request.url);
       loginUrl.searchParams.set("from", pathname);
       return NextResponse.redirect(loginUrl);

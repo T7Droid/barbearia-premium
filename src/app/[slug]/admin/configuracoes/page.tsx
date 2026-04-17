@@ -255,8 +255,11 @@ export default function SettingsPage() {
                   <Input
                     type="number"
                     min={0}
-                    value={settings.pointsPerAppointment || 50}
-                    onChange={(e) => setSettings({ ...settings, pointsPerAppointment: parseInt(e.target.value) || 0 })}
+                    value={settings.pointsPerAppointment === 0 ? "0" : settings.pointsPerAppointment.toString().replace(/^0+/, '') || "0"}
+                    onChange={(e) => {
+                      const val = parseInt(e.target.value.replace(/^0+/, ''), 10);
+                      setSettings({ ...settings, pointsPerAppointment: isNaN(val) ? 0 : val });
+                    }}
                     className="text-lg font-medium"
                   />
                   <span className="text-muted-foreground">Pts</span>
@@ -269,8 +272,11 @@ export default function SettingsPage() {
                   <Input
                     type="number"
                     min={0}
-                    value={settings.initialPoints || 0}
-                    onChange={(e) => setSettings({ ...settings, initialPoints: parseInt(e.target.value) || 0 })}
+                    value={settings.initialPoints === 0 ? "0" : settings.initialPoints.toString().replace(/^0+/, '') || "0"}
+                    onChange={(e) => {
+                      const val = parseInt(e.target.value.replace(/^0+/, ''), 10);
+                      setSettings({ ...settings, initialPoints: isNaN(val) ? 0 : val });
+                    }}
                     className="text-lg font-medium"
                   />
                   <span className="text-muted-foreground">Pts</span>
@@ -296,8 +302,11 @@ export default function SettingsPage() {
               <Input
                 type="number"
                 min={0}
-                value={settings.cancellationWindowDays}
-                onChange={(e) => setSettings({ ...settings, cancellationWindowDays: parseInt(e.target.value) || 0 })}
+                value={settings.cancellationWindowDays === 0 ? "0" : settings.cancellationWindowDays.toString().replace(/^0+/, '') || "0"}
+                onChange={(e) => {
+                  const val = parseInt(e.target.value.replace(/^0+/, ''), 10);
+                  setSettings({ ...settings, cancellationWindowDays: isNaN(val) ? 0 : val });
+                }}
                 className="text-lg font-medium"
               />
               <span className="text-muted-foreground">Dias</span>

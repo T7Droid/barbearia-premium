@@ -45,6 +45,7 @@ interface Barber {
   description: string;
   imageUrl?: string;
   active: boolean;
+  commissionPercentage?: number;
 }
 
 export default function AdminBarbers() {
@@ -67,7 +68,8 @@ export default function AdminBarbers() {
     serviceIds: [] as string[],
     loginEmail: "",
     loginPassword: "",
-    createLogin: true
+    createLogin: true,
+    commissionPercentage: 50
   });
 
   const [units, setUnits] = useState<any[]>([]);
@@ -89,7 +91,7 @@ export default function AdminBarbers() {
     try {
       const headers = { "x-tenant-slug": tenant.slug };
       const [barbersRes, unitsRes, servicesRes] = await Promise.all([
-        fetch("/api/barbers", { headers }),
+        fetch("/api/barbers", { headers, cache: "no-store" }),
         fetch("/api/units", { headers }),
         fetch("/api/services", { headers })
       ]);
@@ -124,7 +126,8 @@ export default function AdminBarbers() {
         unitIds: (barber.units || []).map((u: any) => String(u.id)),
         serviceIds: (barber.services || []).map((s: any) => String(s.id)),
         loginEmail: "",
-        loginPassword: ""
+        loginPassword: "",
+        commissionPercentage: barber.commissionPercentage || 50
       });
     } else {
       setEditingBarber(null);
@@ -137,7 +140,8 @@ export default function AdminBarbers() {
         serviceIds: [],
         loginEmail: "",
         loginPassword: "",
-        createLogin: true
+        createLogin: true,
+        commissionPercentage: 50
       });
     }
     setIsModalOpen(true);
@@ -245,6 +249,7 @@ export default function AdminBarbers() {
               <TableHead className="w-[80px]">ID</TableHead>
               <TableHead>Barbeiro</TableHead>
               <TableHead>Status</TableHead>
+              <TableHead>Comissão</TableHead>
               <TableHead className="text-right">Ações</TableHead>
             </TableRow>
           </TableHeader>
@@ -287,6 +292,9 @@ export default function AdminBarbers() {
                     <span className={`px-2 py-1 rounded-full text-[10px] font-bold uppercase ${barber.active ? 'bg-green-500/10 text-green-500' : 'bg-red-500/10 text-red-500'}`}>
                       {barber.active ? 'Ativo' : 'Inativo'}
                     </span>
+                  </TableCell>
+                  <TableCell>
+                    <span className="font-medium">{barber.commissionPercentage || 50}%</span>
                   </TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-2">
@@ -377,6 +385,27 @@ export default function AdminBarbers() {
                           placeholder="https://images.unsplash.com/..."
                         />
                       </div>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="commissionPercentage">Comissão (%)</Label>
+                      <Input
+                        id="commissionPercentage"
+                        type="number"
+                        required
+                        min="0"
+                        max="100"
+                        value={formData.commissionPercentage === 0 ? "0" : formData.commissionPercentage.toString().replace(/^0+/, '') || "0"}
+                        onChange={e => {
+                          const inputValue = e.target.value.replace(/^0+/, '');
+                          let val = parseInt(inputValue, 10);
+                          if (isNaN(val)) val = 0;
+                          if (val > 100) val = 100;
+                          if (val < 0) val = 0;
+                          setFormData({...formData, commissionPercentage: val});
+                        }}
+                        placeholder="Ex: 50"
+                      />
+                      <p className="text-[10px] text-muted-foreground italic">Porcentagem que o barbeiro recebe por serviço realizado.</p>
                     </div>
                     <div className="flex items-center justify-between p-3 border rounded-lg bg-muted/20">
                       <div className="space-y-0.5">

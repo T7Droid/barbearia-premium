@@ -26,7 +26,7 @@ export async function PUT(
     const body = await request.json();
 
     // Garantir que o barbeiro pertence ao tenant antes de atualizar
-    const { name, description, imageUrl, active, unitIds, serviceIds, loginData, weeklyHours } = body;
+    const { name, description, imageUrl, active, unitIds, serviceIds, loginData, weeklyHours, commissionPercentage } = body;
 
     let userId = undefined;
 
@@ -56,6 +56,7 @@ export async function PUT(
       description,
       image_url: imageUrl,
       active,
+      commission_percentage: commissionPercentage !== undefined ? commissionPercentage : 50
     };
     if (userId) updateFields.user_id = userId;
     if (weeklyHours) updateFields.weekly_hours = weeklyHours;

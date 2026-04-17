@@ -1,4 +1,5 @@
 import { supabase, supabaseAdmin } from "@/lib/supabase";
+import { isAdminEmail } from "@/lib/config/auth-config";
 
 export class AuthService {
   static async getCurrentUser(token: string, tenantId?: string) {
@@ -20,15 +21,18 @@ export class AuthService {
     // 3. Se o perfil diz que é barber, permitimos.
     // 4. Caso contrário, verificamos se o tenant_id bate.
     let userRole = "client";
-    const adminEmails = ["thyagonevesa.sa@gmail.com"];
     
-    if (adminEmails.includes(user.email || "") || profile?.role === "admin") {
+    console.log(`[AuthService] Determining role for ${user.email}. Profile role: ${profile?.role}`);
+
+    if (isAdminEmail(user.email) || profile?.role === "admin") {
       userRole = "admin";
     } else if (profile?.role === "barber") {
       userRole = "barber";
     } else if (profile && tenantId && profile.tenant_id === tenantId) {
       userRole = profile.role || "client";
     }
+
+    console.log(`[AuthService] Final calculated role: ${userRole}`);
 
     return {
       id: user.id,
@@ -47,16 +51,31 @@ export class AuthService {
   }
 
   static async verifySession(request: any, tenantId?: string) {
-    const cookieHeader = request.headers.get("cookie") || "";
-    const token = cookieHeader
-      .split("; ")
-      .find((row: string) => row.startsWith("session_token="))
-      ?.split("=")[1];
+    let token: string | undefined;
 
-    if (!token) return { authenticated: false };
+    // Se for NextRequest, usar o utilitário de cookies nativo
+    if (request.cookies && typeof request.cookies.get === "function") {
+      token = request.cookies.get("session_token")?.value;
+    } else {
+      // Fallback para parse manual de header (útil se for um Request padrão ou outro contexto)
+      const cookieHeader = request.headers.get("cookie") || "";
+      token = cookieHeader
+        .split(";")
+        .map((c: string) => c.trim())
+        .find((row: string) => row.startsWith("session_token="))
+        ?.split("=")[1];
+    }
+
+    if (!token) {
+      console.log("[AuthService] No session_token found in cookies");
+      return { authenticated: false };
+    }
 
     const user = await this.getCurrentUser(token, tenantId);
-    if (!user) return { authenticated: false };
+    if (!user) {
+      console.log("[AuthService] Invalid session or user not found for token");
+      return { authenticated: false };
+    }
 
     return { authenticated: true, user };
   }

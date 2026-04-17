@@ -3,6 +3,8 @@ import { supabase, supabaseAdmin, isSupabaseConfigured } from "@/lib/supabase";
 import { TenantContext } from "@/lib/services/tenant-context";
 import { AuthService } from "@/lib/services/auth.service";
 
+export const dynamic = "force-dynamic";
+
 export async function GET(request: NextRequest) {
   if (!isSupabaseConfigured || !supabaseAdmin) {
     return NextResponse.json({ error: "Supabase not configured" }, { status: 500 });
@@ -42,6 +44,7 @@ export async function GET(request: NextRequest) {
     active: b.active,
     user_id: b.user_id,
     weekly_hours: b.weekly_hours,
+    commissionPercentage: b.commission_percentage !== null && b.commission_percentage !== undefined ? b.commission_percentage : 50,
     units: (b.barber_units || []).map((bu: any) => ({ id: bu.unit_id })),
     services: (b.barber_services || []).map((bs: any) => ({ id: bs.service_id }))
   }));
@@ -72,7 +75,7 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json();
-    const { name, description, imageUrl, active, unitIds, serviceIds, loginData } = body;
+    const { name, description, imageUrl, active, unitIds, serviceIds, loginData, commissionPercentage } = body;
 
     let userId = null;
 
@@ -136,7 +139,8 @@ export async function POST(request: NextRequest) {
         active: active !== undefined ? active : true,
         tenant_id: tenant.id,
         user_id: userId,
-        weekly_hours: initialWeeklyHours
+        weekly_hours: initialWeeklyHours,
+        commission_percentage: commissionPercentage || 50
       })
       .select()
       .single();

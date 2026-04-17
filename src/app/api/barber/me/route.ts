@@ -13,10 +13,20 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "Tenant não identificado" }, { status: 400 });
   }
 
-  // Verificar se o usuário é um barbeiro
+  // Verificar se o usuário é um barbeiro ou administrador
+  console.log(`[API /api/barber/me] Checking session for tenant: ${tenant.id}`);
   const auth = await AuthService.verifySession(request, tenant.id);
-  if (!auth.authenticated || auth.user?.role !== "barber") {
-    return NextResponse.json({ error: "Não autorizado" }, { status: 403 });
+  
+  if (!auth.authenticated) {
+    console.log(`[API /api/barber/me] Authentication failed`);
+    return NextResponse.json({ error: "Sessão inválida ou expirada" }, { status: 401 });
+  }
+
+  console.log(`[API /api/barber/me] Authenticated: ${auth.user.email}, Role: ${auth.user.role}`);
+
+  if (auth.user?.role !== "barber" && auth.user?.role !== "admin") {
+    console.log(`[API /api/barber/me] Role check failed: ${auth.user?.role}`);
+    return NextResponse.json({ error: `ER-BAR-ME: Acesso não autorizado. Seu papel atual é: ${auth.user?.role}` }, { status: 403 });
   }
 
   try {

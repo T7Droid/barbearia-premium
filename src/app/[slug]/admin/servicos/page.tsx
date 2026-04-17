@@ -340,8 +340,11 @@ export default function AdminServices() {
                             type="number"
                             step="0.01"
                             required
-                            value={formData.price}
-                            onChange={e => setFormData({...formData, price: e.target.value})}
+                            value={formData.price === "0" || formData.price === "" ? "0" : formData.price.replace(/^0+(?=\d)/, '') || "0"}
+                            onChange={e => {
+                              const val = e.target.value.replace(/^0+(?=\d)/, '');
+                              setFormData({...formData, price: val || "0"});
+                            }}
                             className="pl-9"
                             placeholder="0.00"
                           />
@@ -355,8 +358,11 @@ export default function AdminServices() {
                             id="duration"
                             type="number"
                             required
-                            value={formData.durationMinutes}
-                            onChange={e => setFormData({...formData, durationMinutes: e.target.value})}
+                            value={formData.durationMinutes === "0" || formData.durationMinutes === "" ? "0" : formData.durationMinutes.replace(/^0+/, '') || "0"}
+                            onChange={e => {
+                              const val = e.target.value.replace(/^0+/, '');
+                              setFormData({...formData, durationMinutes: val || "0"});
+                            }}
                             className="pl-9"
                             placeholder="45"
                           />

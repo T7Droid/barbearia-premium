@@ -5,11 +5,20 @@ import { Layout } from "@/components/layout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { Clock, Save, Loader2, Calendar } from "lucide-react";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
+import { useRouter } from "next/navigation";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { useTenant } from "@/hooks/use-tenant";
-import { Clock, Save, Loader2, Calendar } from "lucide-react";
+import { Label } from "@/components/ui/label";
 
 const DAYS_OF_WEEK = [
   { id: "monday", label: "Segunda-feira" },
@@ -24,28 +33,68 @@ const DAYS_OF_WEEK = [
 export default function BarberSchedulePage() {
   const { toast } = useToast();
   const tenant = useTenant();
+  const router = useRouter();
   const [weeklyHours, setWeeklyHours] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [barberId, setBarberId] = useState<number | null>(null);
 
+  const generateTimeOptions = () => {
+    const options = [];
+    const interval = 30; // Poderia vir das configurações do tenant, mas fixamos 30 para o barbeiro
+    const totalMinutesInDay = 24 * 60;
+    for (let minutes = 0; minutes < totalMinutesInDay; minutes += interval) {
+      const hours = Math.floor(minutes / 60);
+      const mins = minutes % 60;
+      const time = `${hours.toString().padStart(2, "0")}:${mins.toString().padStart(2, "0")}`;
+      options.push(time);
+    }
+    return options;
+  };
+
   const fetchSchedule = async () => {
     try {
-      const headers = { "x-tenant-slug": tenant.slug };
-      const res = await fetch("/api/barber/me", { headers });
+      const res = await fetch("/api/barber/me", { 
+        headers: { "x-tenant-slug": tenant.slug },
+        cache: "no-store" 
+      });
+      
+      if (!res.ok) {
+        console.error(`BarberSchedule: GET /api/barber/me failed with status ${res.status}`);
+        if (res.status === 403) {
+          toast({ 
+            title: "Acesso negado", 
+            description: "ER-BAR-STS: Não autorizado",
+            variant: "destructive" 
+          });
+          return;
+        }
+        if (res.status === 404) {
+          toast({ 
+            title: "Perfil não encontrado", 
+            description: "Você será redirecionado para ativar sua conta profissional.",
+            variant: "destructive" 
+          });
+          setTimeout(() => router.push(`/${tenant.slug}/barber`), 2000);
+          return;
+        }
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(`Status ${res.status}: ${errorData.error || "Erro ao buscar perfil"}`);
+      }
+
       const data = await res.json();
       
       if (data.weekly_hours) {
         setWeeklyHours(data.weekly_hours);
       } else {
-        // Se não tiver horários, carregar do global como fallback
         const settingsRes = await fetch("/api/settings", { headers });
         const settings = await settingsRes.json();
         setWeeklyHours(settings.weekly_hours || {});
       }
       setBarberId(data.id);
     } catch (error) {
-      toast({ title: "Erro", description: "Falha ao carregar horários", variant: "destructive" });
+      console.error("fetchSchedule error:", error);
+      toast({ title: "Erro", description: "Falha ao carregar horários. Verifique se você já ativou seu perfil profissional.", variant: "destructive" });
     } finally {
       setIsLoading(false);
     }
@@ -56,10 +105,13 @@ export default function BarberSchedulePage() {
   }, [tenant.slug]);
 
   const handleToggleDay = (dayId: string, active: boolean) => {
-    setWeeklyHours((prev: any) => ({
-      ...prev,
-      [dayId]: { ...prev[dayId], active }
-    }));
+    setWeeklyHours((prev: any) => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        [dayId]: { ...prev[dayId], active }
+      };
+    });
   };
 
   const handleTimeChange = (dayId: string, field: "start" | "end", value: string) => {
@@ -76,6 +128,12 @@ export default function BarberSchedulePage() {
         "Content-Type": "application/json",
         "x-tenant-slug": tenant.slug 
       };
+      if (!barberId) {
+        toast({ title: "Erro", description: "Sua conta profissional não foi identificada. Tente recarregar a página.", variant: "destructive" });
+        setIsSaving(false);
+        return;
+      }
+
       const res = await fetch(`/api/barbers/${barberId}`, {
         method: "PUT",
         headers,
@@ -112,10 +170,6 @@ export default function BarberSchedulePage() {
             </h1>
             <p className="text-muted-foreground">Configure os dias e horários em que você está disponível para atendimento.</p>
           </div>
-          <Button onClick={handleSave} disabled={isSaving} className="gap-2 shadow-lg">
-            {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-            {isSaving ? "Salvando..." : "Salvar Horários"}
-          </Button>
         </div>
 
         <Card className="border-border/50 shadow-xl overflow-hidden">
@@ -144,37 +198,47 @@ export default function BarberSchedulePage() {
                       </div>
 
                       {config.active && (
-                        <div className="flex flex-1 items-center gap-4 animate-in fade-in slide-in-from-left-2 duration-300">
-                          <div className="flex-1 space-y-2">
-                            <Label className="text-[10px] uppercase tracking-widest font-bold text-muted-foreground ml-1">Início</Label>
-                            <div className="relative">
-                              <Clock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                              <Input 
-                                type="time" 
-                                value={config.start} 
-                                onChange={(e) => handleTimeChange(day.id, "start", e.target.value)}
-                                className="pl-9 h-11 bg-background"
-                              />
-                            </div>
+                        <div className="flex flex-1 items-center gap-4 animate-in fade-in slide-in-from-left-2 duration-300 justify-end">
+                          <div className="flex items-center gap-2">
+                             <span className="text-[10px] uppercase font-bold text-muted-foreground">Início</span>
+                             <Select
+                               value={config.start || "09:00"}
+                               onValueChange={(val) => handleTimeChange(day.id, "start", val)}
+                             >
+                               <SelectTrigger className="w-[110px] h-10 text-sm bg-background border-border/50">
+                                 <SelectValue />
+                               </SelectTrigger>
+                               <SelectContent>
+                                 {generateTimeOptions().map(time => (
+                                   <SelectItem key={time} value={time}>{time}</SelectItem>
+                                 ))}
+                               </SelectContent>
+                             </Select>
                           </div>
-                          <div className="pt-6 text-muted-foreground font-light text-xl">→</div>
-                          <div className="flex-1 space-y-2">
-                            <Label className="text-[10px] uppercase tracking-widest font-bold text-muted-foreground ml-1">Fim</Label>
-                            <div className="relative">
-                              <Clock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                              <Input 
-                                type="time" 
-                                value={config.end} 
-                                onChange={(e) => handleTimeChange(day.id, "end", e.target.value)}
-                                className="pl-9 h-11 bg-background"
-                              />
-                            </div>
+                          
+                          <div className="flex items-center gap-2">
+                             <span className="text-[10px] uppercase font-bold text-muted-foreground">Fim</span>
+                             <Select
+                               value={config.end || "18:00"}
+                               onValueChange={(val) => handleTimeChange(day.id, "end", val)}
+                             >
+                               <SelectTrigger className="w-[110px] h-10 text-sm bg-background border-border/50">
+                                 <SelectValue />
+                               </SelectTrigger>
+                               <SelectContent>
+                                 {generateTimeOptions()
+                                   .filter(t => t > (config.start || "00:00"))
+                                   .map(time => (
+                                     <SelectItem key={time} value={time}>{time}</SelectItem>
+                                   ))}
+                               </SelectContent>
+                             </Select>
                           </div>
                         </div>
                       )}
 
                       {!config.active && (
-                        <div className="flex-1 flex items-center justify-center p-4 border border-dashed rounded-lg bg-muted/10 text-muted-foreground text-sm italic">
+                        <div className="flex-1 text-right italic text-xs text-muted-foreground">
                           Dia de descanso ou folga
                         </div>
                       )}

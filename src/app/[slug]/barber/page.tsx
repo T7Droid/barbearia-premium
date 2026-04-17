@@ -30,8 +30,12 @@ export default function BarberDashboard() {
   const [stats, setStats] = useState<any>(null);
   const [todayAppointments, setTodayAppointments] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [hasProfile, setHasProfile] = useState(true);
+  const [isActivating, setIsActivating] = useState(false);
 
   // Segurança: Apenas barbeiros e admins acessam este painel
+  // NOTA: A segurança REAL é feita no servidor via Proxy (src/proxy.ts).
+  // Este useEffect serve apenas para uma melhor experiência (redirecionamento rápido no cliente).
   useEffect(() => {
     if (!isLoading && user && user.role !== 'barber' && user.role !== 'admin') {
       router.push(`/${tenant.slug}`);
@@ -42,14 +46,61 @@ export default function BarberDashboard() {
     try {
       const headers = { "x-tenant-slug": tenant.slug };
       const res = await fetch("/api/barber/stats", { headers });
+      
+      if (!res.ok) {
+        console.error("BarberDashboard: Erro ao buscar estatísticas", res.status);
+        setIsLoading(false);
+        return;
+      }
+
       const data = await res.json();
       
-      setStats(data.stats);
-      setTodayAppointments(data.todayAppointments);
+      setHasProfile(data.hasProfile ?? true);
+      if (data.stats) setStats(data.stats);
+      if (data.todayAppointments) setTodayAppointments(data.todayAppointments);
     } catch (error) {
-       // Silently fail or show toast if needed
+       console.error("BarberDashboard: Erro na requisição", error);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleActivateProfile = async () => {
+    setIsActivating(true);
+    try {
+      const res = await fetch("/api/barber/setup", {
+        method: "POST",
+        headers: { 
+          "Content-Type": "application/json",
+          "x-tenant-slug": tenant.slug 
+        },
+        body: JSON.stringify({
+          description: `Administrador e Profissional da ${tenant.name}`
+        })
+      });
+
+      if (res.ok) {
+        toast({
+          title: "Perfil Ativado!",
+          description: "Você agora já pode receber agendamentos como barbeiro.",
+        });
+        await fetchBarberData();
+      } else {
+        const error = await res.json();
+        toast({
+          title: "Erro na ativação",
+          description: error.error || "Não foi possível ativar seu perfil.",
+          variant: "destructive"
+        });
+      }
+    } catch (err) {
+      toast({
+        title: "Erro de conexão",
+        description: "Falha ao comunicar com o servidor.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsActivating(false);
     }
   };
 
@@ -69,18 +120,75 @@ export default function BarberDashboard() {
 
   return (
     <Layout>
-      <div className="container mx-auto px-4 py-8 max-w-6xl">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
-          <div>
-            <h1 className="text-3xl font-serif font-bold tracking-tight">Olá, {user?.name || "Barbeiro"}</h1>
-            <p className="text-muted-foreground">Aqui está um resumo do seu dia na {tenant.name}.</p>
+      <div className="container mx-auto px-4 py-8 max-w-7xl">
+        {!hasProfile && user?.role === 'admin' ? (
+          <div className="min-h-[70vh] flex items-center justify-center">
+            <Card className="max-w-2xl w-full border-primary/20 shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-500">
+              <div className="h-2 bg-gradient-to-r from-primary via-primary/80 to-primary/40" />
+              <CardHeader className="pb-4">
+                <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mb-4">
+                  <Scissors className="w-8 h-8 text-primary" />
+                </div>
+                <CardTitle className="text-3xl font-serif">Bem-vindo, {user.name}!</CardTitle>
+                <CardDescription className="text-lg">
+                  Você é o administrador da **{tenant.name}**, mas ainda não possui um perfil profissional vinculado.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="p-4 rounded-xl bg-accent/50 border border-border/50">
+                  <p className="text-sm text-muted-foreground leading-relaxed">
+                    Ao ativar seu modo profissional, você aparecerá na lista de agendamentos para seus clientes e 
+                    poderá gerenciar sua própria agenda aqui neste painel.
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="flex items-start gap-3 p-3 rounded-lg border border-border/40">
+                    <CheckCircle2 className="w-5 h-5 text-primary shrink-0 mt-0.5" />
+                    <div>
+                      <p className="text-sm font-bold">Agenda Própria</p>
+                      <p className="text-xs text-muted-foreground">Controle seus horários e serviços individuais.</p>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-3 p-3 rounded-lg border border-border/40">
+                    <TrendingUp className="w-5 h-5 text-primary shrink-0 mt-0.5" />
+                    <div>
+                      <p className="text-sm font-bold">Estatísticas de Venda</p>
+                      <p className="text-xs text-muted-foreground">Acompanhe seu desempenho profissional.</p>
+                    </div>
+                  </div>
+                </div>
+
+                <Button 
+                  onClick={handleActivateProfile} 
+                  disabled={isActivating}
+                  className="w-full h-14 text-lg font-bold shadow-xl shadow-primary/20 group"
+                >
+                  {isActivating ? (
+                    <Loader2 className="w-6 h-6 animate-spin mr-2" />
+                  ) : (
+                    <Scissors className="w-5 h-5 mr-2 group-hover:rotate-12 transition-transform" />
+                  )}
+                  Ativar Meu Perfil Profissional
+                </Button>
+                
+                <p className="text-center text-[10px] text-muted-foreground uppercase font-bold tracking-widest">
+                  Ativação Instantânea • Sem custos adicionais
+                </p>
+              </CardContent>
+            </Card>
           </div>
-          <Button asChild className="gap-2">
+        ) : (
+          <>
+            <div className="mb-8">
+              <h1 className="text-4xl font-serif font-bold tracking-tight">Painel do Barbeiro</h1>
+              <p className="text-muted-foreground mt-2">Olá, {user?.name}. Veja como estão as coisas hoje em {tenant.name}.</p>
+            </div>
+          <Button asChild className="gap-2 mb-8">
             <Link href={`/${tenant.slug}/barber/horarios`}>
               <Clock className="w-4 h-4" /> Gerenciar Meus Horários
             </Link>
           </Button>
-        </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           <Card className="border-border/50 bg-card/50 backdrop-blur-sm">
@@ -136,8 +244,8 @@ export default function BarberDashboard() {
           </Card>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          <div className="lg:col-span-2 space-y-6">
+        <div className="grid grid-cols-1 gap-8">
+          <div className="space-y-6">
             <Card className="border-border/50">
               <CardHeader className="flex flex-row items-center justify-between">
                 <div>
@@ -149,7 +257,7 @@ export default function BarberDashboard() {
                 </div>
               </CardHeader>
               <CardContent>
-                {todayAppointments.length === 0 ? (
+                {(!todayAppointments || todayAppointments.length === 0) ? (
                   <div className="text-center py-12 text-muted-foreground flex flex-col items-center gap-3">
                     <AlertCircle className="w-8 h-8 text-muted-foreground/30" />
                     <p>Nenhum agendamento para hoje.</p>
@@ -183,23 +291,9 @@ export default function BarberDashboard() {
               </CardContent>
             </Card>
           </div>
-
-          <div className="space-y-6">
-             <Card className="border-border/50 bg-primary/5">
-                <CardHeader>
-                  <CardTitle className="font-serif text-lg font-bold">Dicas do Dia</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                   <div className="p-3 bg-white rounded-lg border border-primary/10 shadow-sm">
-                      <p className="text-sm font-medium">Lembre-se de confirmar o status dos atendimentos concluídos para que os pontos de fidelidade sejam creditados aos clientes.</p>
-                   </div>
-                   <div className="p-3 bg-white rounded-lg border border-primary/10 shadow-sm">
-                      <p className="text-sm font-medium">Mantenha seu perfil atualizado com suas melhores fotos!</p>
-                   </div>
-                </CardContent>
-             </Card>
-          </div>
         </div>
+        </>
+      )}
       </div>
     </Layout>
   );

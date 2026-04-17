@@ -46,6 +46,12 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Tenant não identificado" }, { status: 400 });
   }
 
+  // Verificar se o usuário é admin deste tenant (Segurança Crítica)
+  const auth = await AuthService.verifySession(request, tenant.id);
+  if (!auth.authenticated || auth.user?.role !== "admin") {
+    return NextResponse.json({ error: "Não autorizado. Apenas administradores podem criar serviços." }, { status: 403 });
+  }
+
   try {
     const body = await request.json();
     const { name, description, price, durationMinutes, imageUrl, unitIds } = body;

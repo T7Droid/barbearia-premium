@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { DemoStore } from '../persistence/demo-store';
 
 type Listener = () => void;
 
@@ -93,7 +94,20 @@ export const useUserStore = () => {
         if (data.authenticated) {
           userStore.setUser(data.user);
           return data.user;
+        } else {
+          // Se o servidor retornar explicitamente não autenticado
+          console.log("STORE: User is not authenticated, clearing store.");
+          userStore.setUser(null);
+          DemoStore.clearUser();
         }
+      } else if (res.status === 401) {
+        // Se retornar 401 Unauthorized
+        console.log("STORE: Session expired (401), clearing store.");
+        userStore.setUser(null);
+        DemoStore.clearUser();
+      } else {
+        // Para outros erros (500, etc), pelo menos paramos o loading
+        userStore.setLoading(false);
       }
     } catch (error: any) {
       if (error.name === 'TypeError' && error.message === 'Failed to fetch') {

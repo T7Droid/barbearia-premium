@@ -50,8 +50,13 @@ export function Layout({ children }: { children: React.ReactNode }) {
         if (userData) {
           DemoStore.saveUser(userData);
         } else {
+          // Se não houver sessão ativa no servidor, limpamos o cache local para evitar redirecionamentos errados
           const savedUser = DemoStore.getUser();
-          if (savedUser) setUser(savedUser);
+          if (savedUser) {
+            // Se tínhamos um user no cache mas o servidor disse que não estamos logados, o cache está expirado
+            DemoStore.clearUser();
+          }
+          setUser(null);
         }
 
         const settingsRes = await fetch("/api/settings", { headers, cache: "no-store" });

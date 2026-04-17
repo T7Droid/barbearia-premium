@@ -14,10 +14,10 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "Tenant não identificado" }, { status: 400 });
   }
 
-  // Verificar se o usuário é um barbeiro
+  // Verificar se o usuário é um barbeiro ou administrador
   const auth = await AuthService.verifySession(request, tenant.id);
-  if (!auth.authenticated || auth.user?.role !== "barber") {
-    return NextResponse.json({ error: "Não autorizado" }, { status: 403 });
+  if (!auth.authenticated || (auth.user?.role !== "barber" && auth.user?.role !== "admin")) {
+    return NextResponse.json({ error: "ER-BAR-STS-403: Não autorizado" }, { status: 403 });
   }
 
   try {
@@ -30,6 +30,15 @@ export async function GET(request: NextRequest) {
       .single();
 
     if (barberError || !barber) {
+      // Se for admin, não retornamos erro, apenas um estado vazio
+      const isAdmin = auth.user?.role === "admin";
+      if (isAdmin) {
+        return NextResponse.json({
+          hasProfile: false,
+          stats: { todayCount: 0, completedCount: 0, pendingCount: 0, efficiency: 100 },
+          todayAppointments: []
+        });
+      }
       return NextResponse.json({ error: "Barbeiro não vinculado ao sistema" }, { status: 404 });
     }
 
@@ -56,6 +65,7 @@ export async function GET(request: NextRequest) {
     const efficiency = validTotal > 0 ? Math.round((completedCount / validTotal) * 100) : 100;
 
     return NextResponse.json({
+      hasProfile: true,
       stats: {
         todayCount,
         completedCount,
