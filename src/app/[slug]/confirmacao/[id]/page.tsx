@@ -225,8 +225,21 @@ END:VCARD`;
               <div className="grid gap-8 md:grid-cols-2">
                 <div className="space-y-6">
                   <div>
-                    <p className="text-sm text-muted-foreground mb-1">Serviço</p>
-                    <p className="text-xl font-medium text-foreground">{appointment.serviceName || appointment.service_name}</p>
+                    <p className="text-sm text-muted-foreground mb-1">Serviço(s)</p>
+                    <div className="space-y-1">
+                      {appointment.servicesJson && Array.isArray(appointment.servicesJson) ? (
+                        appointment.servicesJson.map((s: any, idx: number) => (
+                          <div key={idx} className="flex justify-between items-center group">
+                            <p className="text-xl font-medium text-foreground">{s.name}</p>
+                            <span className="text-sm text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity">
+                              {formatCurrencyFromCents(s.price)}
+                            </span>
+                          </div>
+                        ))
+                      ) : (
+                        <p className="text-xl font-medium text-foreground">{appointment.serviceName || appointment.service_name}</p>
+                      )}
+                    </div>
                   </div>
 
                   <div>
@@ -352,7 +365,16 @@ function generateICS(appointment: any, settings: any) {
   if (!dateStr || !timeStr) return "";
   
   const startDate = new Date(`${dateStr}T${timeStr}`);
-  const endDate = new Date(startDate.getTime() + (settings?.slot_interval || 45) * 60 * 1000);
+  
+  // Calcular duração total baseada nos serviços (JSONB) ou fallback para slot_interval
+  let duration = settings?.slot_interval || 45;
+  if (appointment.servicesJson && Array.isArray(appointment.servicesJson)) {
+    duration = appointment.servicesJson.reduce((sum: number, s: any) => sum + (s.durationMinutes || s.duration_minutes || 0), 0);
+  } else if (appointment.service_duration || appointment.serviceDuration) {
+    duration = appointment.service_duration || appointment.serviceDuration;
+  }
+  
+  const endDate = new Date(startDate.getTime() + duration * 60 * 1000);
 
   const formatDate = (date: Date) => {
     return date.toISOString().replace(/[-:]/g, "").split(".")[0] + "Z";

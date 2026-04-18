@@ -47,7 +47,7 @@ export async function GET(request: NextRequest) {
     // 2. Buscar agendamentos de hoje
     const { data: appointments, error: appError } = await supabaseAdmin
       .from("appointments")
-      .select("*")
+      .select("id, appointment_date, appointment_time, customer_name, customer_email, customer_phone, status, is_paid, is_reschedule, reschedule_id, user_id, created_at, barber_id, barber_name, tenant_id, unit_id, total_price, total_duration, services_json")
       .eq("barber_id", barber.id)
       .eq("appointment_date", today)
       .order("appointment_time", { ascending: true });

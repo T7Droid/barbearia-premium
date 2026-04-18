@@ -35,7 +35,7 @@ export async function GET(request: NextRequest) {
     const interval = settings.slot_interval || 45;
 
     // 2. Buscar agendamentos no intervalo
-    const appointments = await AppointmentService.getBookedSlotsInRange(start, end);
+    const appointments = await AppointmentService.getBookedSlotsInRange(start, end, tenant.id);
 
     // Agrupar agendamentos por data
     const bookedCountByDate: Record<string, number> = {};

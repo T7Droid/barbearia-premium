@@ -86,7 +86,7 @@ function BookingContent() {
   const [services, setServices] = useState<Service[]>([]);
   const [barbers, setBarbers] = useState<Barber[]>([]);
   const [selectedBarber, setSelectedBarber] = useState<Barber | null>(null);
-  const [selectedService, setSelectedService] = useState<Service | null>(null);
+  const [selectedServices, setSelectedServices] = useState<Service[]>([]);
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
   const [selectedTime, setSelectedTime] = useState<string | null>(null);
   const [busyDates, setBusyDates] = useState<string[]>([]);
@@ -171,6 +171,14 @@ function BookingContent() {
     });
   }, [tenant]);
 
+  // Pre-selecionar serviço se vier via URL
+  useEffect(() => {
+    if (preSelectedServiceId && Array.isArray(services) && selectedServices.length === 0) {
+      const s = services.find(srv => String(srv.id) === String(preSelectedServiceId));
+      if (s) setSelectedServices([s]);
+    }
+  }, [preSelectedServiceId, services, selectedServices.length]);
+
   // Filtrar barbeiros e serviços quando a unidade é selecionada
   useEffect(() => {
     if (selectedUnit && Array.isArray(allServices)) {
@@ -214,21 +222,29 @@ function BookingContent() {
   }, []);
 
   const dateStr = selectedDate ? format(selectedDate, "yyyy-MM-dd") : "";
+  const serviceIdsStr = selectedServices.map(s => s.id).join(",");
+
   const { data: availability, isLoading: isLoadingAvailability } = useGetAvailability(
     { 
       date: dateStr, 
-      serviceId: selectedService?.id || 0, 
+      serviceId: selectedServices[0]?.id || 0, // Fallback para compatibilidade se API esperar um ID
       barberId: selectedBarber?.id as any,
-      query: { reschedule: rescheduleId || undefined }
+      query: { 
+        reschedule: rescheduleId || undefined,
+        serviceIds: serviceIdsStr || undefined 
+      }
     },
     {
       query: {
-        enabled: !!selectedDate && !!selectedService?.id && !!selectedBarber?.id,
+        enabled: !!selectedDate && selectedServices.length > 0 && !!selectedBarber?.id,
         queryKey: getGetAvailabilityQueryKey({ 
           date: dateStr, 
-          serviceId: selectedService?.id || 0, 
+          serviceId: selectedServices[0]?.id || 0, 
           barberId: selectedBarber?.id as any,
-          query: { reschedule: rescheduleId || undefined }
+          query: { 
+            reschedule: rescheduleId || undefined,
+            serviceIds: serviceIdsStr || undefined
+          }
         })
       }
     }
@@ -237,7 +253,7 @@ function BookingContent() {
   // Update ref to latest handlePaymentSubmit to avoid stale closures in useEffect
   useEffect(() => {
     paymentSubmitRef.current = handlePaymentSubmit;
-  }, [sessionId, mpPaymentToken, mpPaymentData, isPrePaid, paymentMethod, selectedService, customerInfo]);
+  }, [sessionId, mpPaymentToken, mpPaymentData, isPrePaid, paymentMethod, selectedServices, customerInfo]);
 
   useEffect(() => {
     // Only proceed if all requirements are met
@@ -255,14 +271,15 @@ function BookingContent() {
     let cardPaymentBrickController: any = null;
 
     const initCardBrick = async () => {
-      const amount = (selectedService?.price || 0) / 100;
+      const totalAmount = selectedServices.reduce((sum, s) => sum + (s.price || 0), 0);
+      const amount = totalAmount / 100;
       const email = customerInfo.email;
 
       console.log("DEBUG: Mercado Pago Initialization Config:", {
         amount,
         email,
         publicKey: mpPublicKey?.substring(0, 10) + "...",
-        service: selectedService?.name
+        services: selectedServices.map(s => s.name).join(", ")
       });
 
       if (amount <= 0) {
@@ -281,7 +298,7 @@ function BookingContent() {
           'cardPaymentBrick_container',
           {
             initialization: {
-              amount: (selectedService?.price || 0) / 100,
+              amount: selectedServices.reduce((sum, s) => sum + (s.price || 0), 0) / 100,
               payer: { email: customerInfo.email },
             },
             customization: {
@@ -332,7 +349,7 @@ function BookingContent() {
         cardPaymentBrickController.unmount();
       }
     };
-  }, [isMpLoaded, mpPublicKey, step, paymentMethod, isPrePaid, selectedService, customerInfo.email]);
+  }, [isMpLoaded, mpPublicKey, step, paymentMethod, isPrePaid, selectedServices, customerInfo.email]);
 
   const createCheckout = useCreateCheckout();
   const confirmAppointment = useConfirmAppointment();
@@ -351,9 +368,15 @@ function BookingContent() {
   };
 
   const handleServiceSelect = (service: Service) => {
-    setSelectedService(service);
+    setSelectedServices(prev => {
+      const exists = prev.find(s => s.id === service.id);
+      if (exists) {
+        return prev.filter(s => s.id !== service.id);
+      } else {
+        return [...prev, service];
+      }
+    });
     setSelectedTime(null);
-    handleNextStep();
   };
 
   const handleDateSelect = (date: Date | undefined) => {
@@ -376,7 +399,7 @@ function BookingContent() {
 
   const handleInfoSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedService || !selectedDate || !selectedTime || !customerInfo.name || !customerInfo.email) return;
+    if (selectedServices.length === 0 || !selectedDate || !selectedTime || !customerInfo.name || !customerInfo.email) return;
 
     try {
       const result = await createCheckout.mutateAsync({
@@ -385,7 +408,7 @@ function BookingContent() {
           customerEmail: customerInfo.email,
           customerPhone: customerInfo.phone,
           customerCpf: customerInfo.cpf,
-          serviceId: selectedService.id,
+          serviceIds: selectedServices.map(s => s.id),
           barberId: selectedBarber?.id,
           barberName: selectedBarber?.name,
           appointmentDate: format(selectedDate, "yyyy-MM-dd"),
@@ -467,17 +490,20 @@ function BookingContent() {
     if (!sid) return null;
 
     try {
+      const totalAmount = selectedServices.reduce((sum, s) => sum + (s.price || 0), 0);
+      const combinedNames = selectedServices.map(s => s.name).join(" + ");
+
       const currentMpData = directMpData ? {
         ...directMpData,
         transaction_amount: directMpData.transaction_amount * 100,
-        description: selectedService?.name,
+        description: combinedNames,
         payer: { email: customerInfo.email }
       } : (paymentMethod === "card" && !isPrePaid ? {
         token: mpPaymentToken,
         payment_method_id: mpPaymentData?.payment_method_id || "master",
         installments: mpPaymentData?.installments || 1,
-        transaction_amount: selectedService?.price || 0,
-        description: selectedService?.name,
+        transaction_amount: totalAmount,
+        description: combinedNames,
         payer: { email: customerInfo.email }
       } : undefined);
 
@@ -503,7 +529,21 @@ function BookingContent() {
       }
 
       DemoStore.saveAppointment(appointment);
-      router.push(getLink(`/confirmacao/${appointment.id}`));
+      
+      console.log("DEBUG: Agendamento retornado pela API:", appointment);
+      
+      // Captura robusta do ID (tenta vários formatos de resposta da API)
+      const rawId = appointment?.id || 
+                    appointment?.data?.id || 
+                    appointment?.appointment?.id || 
+                    (appointment as any)?.appointmentId;
+
+      if (rawId) {
+        router.push(getLink(`/confirmacao/${rawId}`));
+      } else {
+        console.warn("Agendamento confirmado, mas ID não identificado no payload. Verifique o log de DEBUG acima.", appointment);
+        router.push(getLink("/meu-perfil/historico"));
+      }
     } catch (error: any) {
       // Traduzir mensagens técnicas do Mercado Pago
       let errorMessage = error.response?.data?.error || error.message || "Não foi possível confirmar o agendamento.";
@@ -535,7 +575,7 @@ function BookingContent() {
           </h1>
           {rescheduleId && (
             <p className="text-center text-muted-foreground mb-8">
-              Você está alterando o horário do serviço: <strong className="text-primary">{selectedService?.name}</strong>
+              Você está alterando o horário para o agendamento atual.
             </p>
           )}
 
@@ -676,40 +716,59 @@ function BookingContent() {
             <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4">
               <div className="flex items-center justify-between">
                 <h2 className="text-xl font-serif font-semibold">Escolha o Serviço</h2>
-                <Button variant="ghost" size="sm" onClick={() => setStep(2)}>Voltar</Button>
+                <Button variant="ghost" size="sm" onClick={() => { setSelectedServices([]); setStep(2); }}>Voltar</Button>
               </div>
               {isLoadingServices ? (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   {[1, 2, 3, 4].map(i => <Skeleton key={i} className="h-24 w-full" />)}
                 </div>
               ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {services?.filter(s => {
-                    // Se não houver barbeiro selecionado (fluxo alternativo), mostrar tudo
-                    if (!selectedBarber) return true;
-                    // Mostrar apenas serviços que o barbeiro selecionado realiza
-                    return selectedBarber.services?.some(bs => bs.id === s.id);
-                  })?.map((service) => (
-                    <div
-                      key={service.id}
-                      onClick={() => {
-                        setSelectedService(service);
-                        setStep(4);
-                      }}
-                      className={`p-4 border rounded-lg cursor-pointer transition-all hover:border-primary/50
-                        ${selectedService?.id === service.id ? 'border-primary bg-primary/5' : 'border-border/50 bg-background'}`}
-                    >
-                      <div className="flex justify-between items-start mb-2">
-                        <h3 className="font-medium text-lg">{service.name}</h3>
-                        <span className="text-primary font-medium">{formatCurrencyFromCents(service.price)}</span>
+                <div className="space-y-6">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {services?.filter(s => {
+                      if (!selectedBarber) return true;
+                      return selectedBarber.services?.some(bs => bs.id === s.id);
+                    })?.map((service) => {
+                      const isSelected = selectedServices.some(s => s.id === service.id);
+                      return (
+                        <div
+                          key={service.id}
+                          onClick={() => handleServiceSelect(service)}
+                          className={`p-4 border rounded-lg cursor-pointer transition-all hover:border-primary/50 relative
+                            ${isSelected ? 'border-primary bg-primary/5 ring-1 ring-primary' : 'border-border/50 bg-background'}`}
+                        >
+                          {isSelected && (
+                            <div className="absolute -top-2 -right-2 bg-primary text-primary-foreground rounded-full p-0.5 shadow-lg">
+                              <CheckCircle2 className="w-5 h-5" />
+                            </div>
+                          )}
+                          <div className="flex justify-between items-start mb-2">
+                            <h3 className="font-medium text-lg">{service.name}</h3>
+                            <span className="text-primary font-medium">{formatCurrencyFromCents(service.price)}</span>
+                          </div>
+                          <p className="text-sm text-muted-foreground line-clamp-2">{service.description}</p>
+                          <div className="flex items-center gap-1 mt-3 text-xs text-muted-foreground">
+                            <Clock className="w-3 h-3" />
+                            {service.durationMinutes} min
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {selectedServices.length > 0 && (
+                    <div className="flex flex-col sm:flex-row items-center justify-between gap-4 py-6 mt-4 animate-in fade-in zoom-in-95">
+                      <div>
+                        <p className="text-sm font-medium">{selectedServices.length} serviço(s) selecionado(s)</p>
+                        <p className="text-lg font-bold text-primary">
+                          Total: {formatCurrencyFromCents(selectedServices.reduce((sum, s) => sum + (s.price || 0), 0))}
+                        </p>
                       </div>
-                      <p className="text-sm text-muted-foreground line-clamp-2">{service.description}</p>
-                      <div className="flex items-center gap-1 mt-3 text-xs text-muted-foreground">
-                        <Clock className="w-3 h-3" />
-                        {service.durationMinutes} min
-                      </div>
+                      <Button onClick={() => setStep(4)} className="w-full sm:w-auto px-10 h-12 text-lg font-bold shadow-lg">
+                        Continuar <ChevronRight className="ml-2 w-5 h-5" />
+                      </Button>
                     </div>
-                  ))}
+                  )}
                 </div>
               )}
             </div>
@@ -899,8 +958,12 @@ function BookingContent() {
                       <span className="font-medium text-right text-foreground">{selectedBarber?.name || "Qualquer um"}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-muted-foreground flex items-center gap-2"><Scissors className="w-4 h-4" /> Serviço</span>
-                      <span className="font-medium text-right text-foreground">{selectedService?.name}</span>
+                      <span className="text-muted-foreground flex items-center gap-2"><Scissors className="w-4 h-4" /> Serviços</span>
+                      <div className="text-right">
+                        {selectedServices.map(s => (
+                          <div key={s.id} className="font-medium text-foreground">{s.name}</div>
+                        ))}
+                      </div>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-muted-foreground flex items-center gap-2"><Clock className="w-4 h-4" /> Data e Hora</span>
@@ -912,7 +975,9 @@ function BookingContent() {
                   <Separator className="my-4" />
                   <div className="flex justify-between items-center text-lg font-serif">
                     <span className="text-foreground">Total</span>
-                    <span className="text-primary font-bold">{formatCurrencyFromCents(selectedService?.price)}</span>
+                    <span className="text-primary font-bold">
+                      {formatCurrencyFromCents(selectedServices.reduce((sum, s) => sum + (s.price || 0), 0))}
+                    </span>
                   </div>
                   {isPrePaid && (
                     <div className="mt-4 p-3 bg-primary/10 border border-primary/20 rounded-lg text-xs text-primary font-medium flex items-center gap-2">

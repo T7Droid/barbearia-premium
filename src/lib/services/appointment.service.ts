@@ -4,9 +4,9 @@ import { config } from "@/lib/config";
 
 export interface Appointment {
   id: number;
-  serviceId: number;
-  serviceName: string;
-  servicePrice: number;
+  totalPrice: number;
+  totalDuration: number;
+  servicesJson?: any[];
   barberId?: number;
   barberName?: string;
   appointmentDate: string;
@@ -34,9 +34,9 @@ export interface Appointment {
 export class AppointmentService {
   private static mapToSupabase(data: any) {
     const mapped: any = {};
-    if (data.serviceId !== undefined) mapped.service_id = data.serviceId;
-    if (data.serviceName !== undefined) mapped.service_name = data.serviceName;
-    if (data.servicePrice !== undefined) mapped.service_price = data.servicePrice;
+    if (data.totalPrice !== undefined) mapped.total_price = data.totalPrice;
+    if (data.totalDuration !== undefined) mapped.total_duration = data.totalDuration;
+    if (data.servicesJson !== undefined) mapped.services_json = data.servicesJson;
     if (data.barberId !== undefined) mapped.barber_id = data.barberId;
     if (data.barberName !== undefined) mapped.barber_name = data.barberName;
     if (data.appointmentDate !== undefined) mapped.appointment_date = data.appointmentDate;
@@ -56,12 +56,19 @@ export class AppointmentService {
   }
 
   private static mapFromSupabase(data: any): Appointment {
-    if (!data) return null as any;
+    if (!data) return {} as Appointment;
+    
+    // Captura o ID de forma resiliente
+    const id = data.id || data.appointment_id || (data as any)._id;
+    
     return {
-      id: Number(data.id),
-      serviceId: Number(data.service_id),
-      serviceName: data.service_name,
-      servicePrice: Number(data.service_price),
+      id: id,
+      totalPrice: Number(data.total_price),
+      totalDuration: Number(data.total_duration),
+      servicesJson: data.services_json,
+      serviceId: data.services_json && data.services_json.length > 0 ? Number(data.services_json[0].id) : 0,
+      serviceName: data.services_json && data.services_json.length > 0 ? data.services_json.map((s: any) => s.name).join(" + ") : "",
+      servicePrice: Number(data.total_price),
       barberId: data.barber_id ? Number(data.barber_id) : undefined,
       barberName: data.barber_name,
       appointmentDate: data.appointment_date,
@@ -88,23 +95,36 @@ export class AppointmentService {
   }
 
   static async createCheckoutSession(data: any): Promise<any> {
-    const { rescheduleId, serviceId } = data;
+    const { rescheduleId, serviceIds, serviceId: legacyId } = data;
     let isPaid = false;
 
+    // Support both single ID (legacy) and array of IDs
+    const ids = Array.isArray(serviceIds) ? serviceIds : (legacyId ? [legacyId] : []);
+    if (ids.length === 0) throw new Error("No services selected");
+
     const { ServiceService } = require("./service.service");
-    const service = await ServiceService.getById(serviceId);
-    if (!service) throw new Error("Service not found");
+    
+    // Fetch all services
+    const services = await Promise.all(ids.map(id => ServiceService.getById(id)));
+    const validServices = services.filter(s => !!s);
+    
+    if (validServices.length === 0) throw new Error("Services not found");
 
     if (rescheduleId) {
       const oldAppointment = await this.getById(parseInt(rescheduleId));
       if (oldAppointment?.isPaid) isPaid = true;
     }
 
+    const totalAmount = validServices.reduce((sum, s) => sum + (s.price || 0), 0);
+    const combinedNames = validServices.map(s => s.name).join(" + ");
+
     const sessionData = {
       ...data,
       isPaid,
-      amount: service.price,
-      serviceName: service.name
+      amount: totalAmount,
+      serviceName: combinedNames,
+      servicesJson: validServices,
+      serviceId: validServices[0].id // Mantenha o primeiro ID para retrocompatibilidade se necessário
     };
 
     if (!config.supabase.isConfigured || !supabaseAdmin) {
@@ -132,7 +152,7 @@ export class AppointmentService {
 
     const { data, error } = await supabaseAdmin
       .from("appointments")
-      .select("*, units(*)")
+      .select("id, appointment_date, appointment_time, customer_name, customer_email, customer_phone, status, is_paid, is_reschedule, reschedule_id, user_id, created_at, barber_id, barber_name, tenant_id, unit_id, total_price, total_duration, services_json, units(*)")
       .eq("id", id)
       .single();
 
@@ -164,9 +184,9 @@ export class AppointmentService {
     );
 
     const appointmentData = this.mapToSupabase({
-      serviceId: session.serviceId,
-      serviceName: session.serviceName,
-      servicePrice: session.amount,
+      totalPrice: session.amount,
+      totalDuration: session.servicesJson?.reduce((acc: number, s: any) => acc + (s.durationMinutes || 0), 0) || 0,
+      servicesJson: session.servicesJson,
       barberId: session.barberId,
       barberName: session.barberName,
       appointmentDate: session.appointmentDate,
@@ -188,6 +208,8 @@ export class AppointmentService {
       .insert(appointmentData)
       .select()
       .single();
+
+    console.log("[SERVER DEBUG] Agendamento inserido no Supabase:", appointment);
 
     if (appError) throw appError;
 
@@ -320,13 +342,9 @@ export class AppointmentService {
   }
 
   static async list(): Promise<Appointment[]> {
-    if (!config.supabase.isConfigured || !supabaseAdmin) {
-      throw new Error("Supabase Admin is required for listing appointments on server.");
-    }
-
     const { data, error } = await supabaseAdmin
       .from("appointments")
-      .select("*")
+      .select("id, appointment_date, appointment_time, customer_name, customer_email, customer_phone, status, is_paid, is_reschedule, reschedule_id, user_id, created_at, barber_id, barber_name, tenant_id, unit_id, total_price, total_duration, services_json")
       .order("created_at", { ascending: false });
 
     if (error) throw error;

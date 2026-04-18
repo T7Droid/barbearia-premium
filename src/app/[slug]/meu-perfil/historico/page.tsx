@@ -73,6 +73,7 @@ export default function AppointmentHistory() {
           serviceName: app.service_name || app.serviceName,
           serviceId: app.service_id || app.serviceId,
           servicePrice: app.service_price || app.servicePrice || 0,
+          servicesJson: app.services_json || app.servicesJson,
           isPaid: app.is_paid || app.isPaid || false,
           appointmentDate: app.appointment_date || app.appointmentDate,
           appointmentTime: app.appointment_time || app.appointmentTime,
@@ -231,14 +232,20 @@ export default function AppointmentHistory() {
                     </TableCell>
                   </TableRow>
                 ) : (
-                  appointments.map((app) => (
-                    <TableRow key={app.id} className="border-border/50 hover:bg-muted/30 group">
+                  appointments.map((app, idx) => (
+                    <TableRow key={app.id || `app-${idx}`} className="border-border/50 hover:bg-muted/30 group">
                       <TableCell>
                         <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 rounded bg-primary/10 flex items-center justify-center">
+                          <div className="w-8 h-8 rounded bg-primary/10 flex items-center justify-center flex-shrink-0">
                             <Scissors className="w-4 h-4 text-primary" />
                           </div>
-                          <span className="font-medium text-foreground">{app.serviceName || app.service_name || "Serviço"}</span>
+                          <div className="flex flex-col">
+                            <span className="font-medium text-foreground leading-tight">
+                              {app.servicesJson && Array.isArray(app.servicesJson) 
+                                ? app.servicesJson.map((s: any) => s.name).join(", ")
+                                : (app.serviceName || "Serviço")}
+                            </span>
+                          </div>
                         </div>
                       </TableCell>
                       <TableCell className="text-foreground">
@@ -254,7 +261,7 @@ export default function AppointmentHistory() {
                         </div>
                       </TableCell>
                       <TableCell className="text-foreground font-semibold">
-                        {formatCurrencyFromCents(app.servicePrice)}
+                        {formatCurrencyFromCents(app.total_price || app.totalPrice || app.servicePrice || 0)}
                       </TableCell>
                       <TableCell>
                          {app.isPaid ? (

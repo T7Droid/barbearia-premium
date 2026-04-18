@@ -22,7 +22,7 @@ export async function GET(request: NextRequest) {
     // Buscando agendamentos do tenant
     const { data: appointments, error: appointmentsError } = await supabaseAdmin!
       .from("appointments")
-      .select("*")
+      .select("id, appointment_date, appointment_time, customer_name, customer_email, customer_phone, status, is_paid, is_reschedule, reschedule_id, user_id, created_at, barber_id, barber_name, tenant_id, unit_id, total_price, total_duration, services_json")
       .eq("tenant_id", tenant.id);
 
     if (appointmentsError) throw appointmentsError;
@@ -31,7 +31,7 @@ export async function GET(request: NextRequest) {
     const todayAppointments = appointments.filter(a => a.appointment_date === todayStr).length;
     const totalRevenue = appointments
       .filter(a => a.is_paid && a.status !== "cancelled")
-      .reduce((sum, a) => sum + (a.service_price || 0), 0);
+      .reduce((sum, a) => sum + (a.total_price || 0), 0);
 
     const serviceCounts: Record<string, number> = {};
     appointments.forEach(a => {

@@ -80,6 +80,8 @@ export async function GET(request: NextRequest) {
     const endMinutes = endH * 60 + endM;
 
     const rescheduleId = searchParams.get("reschedule");
+    const serviceIdsRaw = searchParams.get("serviceIds") || serviceId;
+    const serviceIds = serviceIdsRaw?.split(",").map(id => parseInt(id)) || [];
 
     // 4. Buscar agendamentos já feitos para este dia e tenant
     const bookedTimes = await AppointmentService.getBookedSlots(
@@ -89,16 +91,39 @@ export async function GET(request: NextRequest) {
       rescheduleId ? parseInt(rescheduleId) : undefined
     );
 
+    // 5. Calcular duração total necessária
+    const { ServiceService } = require("@/lib/services/service.service");
+    const services = await Promise.all(serviceIds.map(id => ServiceService.getById(id)));
+    const totalDuration = services.reduce((sum, s) => sum + (s?.durationMinutes || 0), 0);
+    const slotsNeeded = Math.ceil(totalDuration / interval);
+
     while (currentMinutes + interval <= endMinutes) {
       const h = Math.floor(currentMinutes / 60);
       const m = currentMinutes % 60;
       const timeStr = `${h.toString().padStart(2, "0")}:${m.toString().padStart(2, "0")}`;
       
-      const isBooked = bookedTimes.includes(timeStr);
+      // Verificar se este slot e os subsequentes necessários estão livres
+      let isAvailable = true;
+      for (let i = 0; i < slotsNeeded; i++) {
+        const checkMinutes = currentMinutes + (i * interval);
+        if (checkMinutes + interval > endMinutes) {
+          isAvailable = false;
+          break;
+        }
+        
+        const ch = Math.floor(checkMinutes / 60);
+        const cm = checkMinutes % 60;
+        const checkTimeStr = `${ch.toString().padStart(2, "0")}:${cm.toString().padStart(2, "0")}`;
+        
+        if (bookedTimes.includes(checkTimeStr)) {
+          isAvailable = false;
+          break;
+        }
+      }
       
       slots.push({
         time: timeStr,
-        available: !isBooked
+        available: isAvailable
       });
       
       currentMinutes += interval;
