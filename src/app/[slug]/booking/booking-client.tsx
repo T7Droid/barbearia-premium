@@ -111,6 +111,26 @@ function BookingContent() {
   const [mpPaymentData, setMpPaymentData] = useState<any>(null);
   const paymentSubmitRef = useRef<any>(null);
 
+  const [isPollingPix, setIsPollingPix] = useState(false);
+  const [pixCountdown, setPixCountdown] = useState(0);
+
+  const isValidCpf = (cpfStr: string) => {
+    if (!cpfStr) return true; // se vazio não valida (ignorado)
+    const strCPF = cpfStr.replace(/[^\d]+/g, "");
+    if (strCPF.length !== 11 || /^(\d)\1{10}$/.test(strCPF)) return false;
+    let sum = 0, rest;
+    for (let i = 1; i <= 9; i++) sum += parseInt(strCPF.substring(i - 1, i)) * (11 - i);
+    rest = (sum * 10) % 11;
+    if ((rest === 10) || (rest === 11)) rest = 0;
+    if (rest !== parseInt(strCPF.substring(9, 10))) return false;
+    sum = 0;
+    for (let i = 1; i <= 10; i++) sum += parseInt(strCPF.substring(i - 1, i)) * (12 - i);
+    rest = (sum * 10) % 11;
+    if ((rest === 10) || (rest === 11)) rest = 0;
+    if (rest !== parseInt(strCPF.substring(10, 11))) return false;
+    return true;
+  };
+
   // Script do Mercado Pago
   useEffect(() => {
     const script = document.createElement("script");
@@ -440,13 +460,15 @@ function BookingContent() {
   };
 
   const handleGeneratePix = async () => {
-    if (!sessionId || !customerInfo.cpf) {
-      toast({
-        title: "Dados incompletos",
-        description: "Por favor, preencha o seu CPF na etapa anterior.",
-        variant: "destructive"
-      });
-      setStep(3);
+    if (!sessionId || !customerInfo.cpf || pixData || isGeneratingPix) {
+      if (!customerInfo.cpf) {
+        toast({
+          title: "Dados incompletos",
+          description: "Por favor, preencha o seu CPF na etapa anterior.",
+          variant: "destructive"
+        });
+        setStep(3);
+      }
       return;
     }
 
@@ -481,10 +503,44 @@ function BookingContent() {
 
   // Auto-gerar Pix quando selecionar a aba
   useEffect(() => {
-    if (step === 6 && paymentMethod === "pix" && !pixData && !isGeneratingPix && sessionId) {
+    if (step === 6 && paymentMethod === "pix" && !pixData && !isGeneratingPix && sessionId && customerInfo.cpf) {
       handleGeneratePix();
     }
-  }, [step, paymentMethod, pixData, isGeneratingPix, sessionId]);
+  }, [step, paymentMethod, pixData, isGeneratingPix, sessionId, customerInfo.cpf]);
+
+  // Efeito de Polling PIX
+  useEffect(() => {
+    let timer: NodeJS.Timeout;
+    
+    // Para o polling se sair do passo 6 ou trocar de método
+    if (step !== 6 || paymentMethod !== "pix") {
+      if (isPollingPix) {
+        setIsPollingPix(false);
+        setPixCountdown(0);
+      }
+      return;
+    }
+
+    if (isPollingPix) {
+      timer = setInterval(() => {
+        setPixCountdown((prev) => {
+          if (prev <= 1) {
+            handlePaymentSubmit(undefined, sessionId, pixData);
+            return 10;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    }
+
+    return () => clearInterval(timer);
+  }, [isPollingPix, step, paymentMethod, sessionId, pixData]);
+
+  const handleStartPixVerification = () => {
+    handlePaymentSubmit(undefined, sessionId, pixData);
+    setIsPollingPix(true);
+    setPixCountdown(10);
+  };
 
   const handlePaymentSubmit = async (e?: any, overrideSessionId?: string, directMpData?: any) => {
     if (e && typeof e.preventDefault === "function") {
@@ -552,17 +608,19 @@ function BookingContent() {
       // Traduzir mensagens técnicas do Mercado Pago
       let errorMessage = error.response?.data?.error || error.message || "Não foi possível confirmar o agendamento.";
       
-      if (errorMessage === "pending_waiting_transfer") {
-        errorMessage = "Aguardando o pagamento do Pix. Por favor, realize o pagamento no app do seu banco e clique em 'Verificar Pagamento' novamente.";
-      } else if (errorMessage === "Pagamento não aprovado") {
-        errorMessage = "O pagamento ainda não foi aprovado. Se você já pagou, aguarde alguns segundos e tente novamente.";
+      if (errorMessage.includes("pending_waiting_transfer")) {
+        errorMessage = "Aguardando confirmação do banco. Fique na tela, estamos verificando automaticamente o seu pagamento a cada 10 segundos.";
+      } else if (errorMessage.includes("Pagamento não aprovado") || errorMessage.includes("não aprovado")) {
+        errorMessage = "O pagamento ainda não foi aprovado. Se você já pagou, aguarde a verificação automática.";
       }
 
-      toast({
-        title: "Aguardando Pagamento",
-        description: errorMessage,
-        variant: "destructive"
-      });
+      if (!isPollingPix) {
+        toast({
+          title: "Aguardando Pagamento",
+          description: errorMessage,
+          variant: "default" // Alterado para não exibir vermelho/destrutivo
+        });
+      }
       
       // Não lançamos mais o erro aqui para evitar 'unhandledRejection' no console do navegador,
       // a menos que seja um erro crítico que precise travar o Card Brick.
@@ -925,8 +983,11 @@ function BookingContent() {
                       value={customerInfo.cpf}
                       onChange={(e) => setCustomerInfo(prev => ({ ...prev, cpf: formatCPF(e.target.value) }))}
                       required={paymentMethod === "pix"}
-                      className="bg-background/50 border-border h-11"
+                      className={`bg-background/50 border-border h-11 ${customerInfo.cpf && !isValidCpf(customerInfo.cpf) ? 'border-destructive focus-visible:ring-destructive' : ''}`}
                     />
+                    {customerInfo.cpf && !isValidCpf(customerInfo.cpf) && (
+                      <p className="text-xs text-destructive mt-1 font-medium">CPF inválido. Por favor, revise os números.</p>
+                    )}
                   </div>
                 </div>
 
@@ -1013,17 +1074,25 @@ function BookingContent() {
                     <CardContent className="pt-6">
                       {(() => {
                         const canPayLocal = !settings?.isPrepaymentRequired && currentUser?.canPayAtShop !== false;
+                        const isPixAvailable = !!(customerInfo.cpf && isValidCpf(customerInfo.cpf));
                         const defaultPaymentMethod = canPayLocal ? "local" : "card";
+                        
+                        let tabCount = 1; // Cartão sempre existe
+                        if (canPayLocal) tabCount++;
+                        if (isPixAvailable) tabCount++;
+                        const gridColsClass = tabCount === 3 ? "grid-cols-3" : (tabCount === 2 ? "grid-cols-2" : "grid-cols-1");
                         
                         return (
                           <Tabs defaultValue={defaultPaymentMethod} onValueChange={(v) => setPaymentMethod(v as any)}>
-                            <TabsList className={`grid w-full mb-6 ${canPayLocal ? "grid-cols-3" : "grid-cols-2"}`}>
+                            <TabsList className={`grid w-full mb-6 ${gridColsClass}`}>
                           <TabsTrigger value="card" className="gap-2">
                             <CreditCard className="w-4 h-4" /> Cartão
                           </TabsTrigger>
-                          <TabsTrigger value="pix" className="gap-2" onClick={handleGeneratePix}>
-                            <QrCode className="w-4 h-4" /> Pix
-                          </TabsTrigger>
+                          {(customerInfo.cpf && isValidCpf(customerInfo.cpf)) && (
+                            <TabsTrigger value="pix" className="gap-2" onClick={handleGeneratePix}>
+                              <QrCode className="w-4 h-4" /> Pix
+                            </TabsTrigger>
+                          )}
                           {!settings?.isPrepaymentRequired && currentUser?.canPayAtShop !== false && (
                             <TabsTrigger value="local" className="gap-2">
                               <Wallet className="w-4 h-4" /> No Local
@@ -1091,11 +1160,16 @@ function BookingContent() {
                                 <p className="text-sm font-medium text-primary">Após pagar, clique no botão abaixo para concluir!</p>
                                 <div className="space-y-2 w-full">
                                   <Button 
-                                    onClick={() => handlePaymentSubmit(undefined, sessionId, pixData)}
+                                    onClick={handleStartPixVerification}
                                     className="w-full bg-secondary hover:bg-secondary/90 text-secondary-foreground gap-2"
                                   >
-                                    <Check className="w-4 h-4" /> Verificar Pagamento
+                                    {isPollingPix ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />} Verificar Pagamento
                                   </Button>
+                                  {isPollingPix && (
+                                    <p className="text-xs text-muted-foreground mt-2 animate-pulse">
+                                      (Próxima verificação em {pixCountdown} segundos)
+                                    </p>
+                                  )}
                                 </div>
                               </div>
                             </div>
