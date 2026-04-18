@@ -58,11 +58,12 @@ export class AppointmentService {
   private static mapFromSupabase(data: any): Appointment {
     if (!data) return {} as Appointment;
     
-    // Captura o ID de forma resiliente
-    const id = data.id || data.appointment_id || (data as any)._id;
+    // Captura o ID de forma agressiva e garante que seja um número (BigInt fix)
+    const rawId = data.id ?? data.appointment_id ?? (data as any)._id;
+    const finalId = typeof rawId === 'bigint' ? Number(rawId) : rawId;
     
     return {
-      id: id,
+      id: finalId,
       totalPrice: Number(data.total_price),
       totalDuration: Number(data.total_duration),
       servicesJson: data.services_json,
