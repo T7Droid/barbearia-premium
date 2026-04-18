@@ -189,20 +189,23 @@ function BookingContent() {
       fetch(`/api/barbers?active=true&unitId=${selectedUnit.id}`, { headers: { "x-tenant-slug": tenant.slug } })
         .then(res => res.json())
         .then(data => {
-            setBarbers(data);
+            const barbersList = Array.isArray(data) ? data : [];
+            setBarbers(barbersList);
             setStep((currentStep) => {
               // Só auto-avança se houver apenas 1 barbeiro e o usuário ainda estiver na tela de seleção de barbeiros
-              if (data.length === 1 && currentStep === 2) {
-                  setSelectedBarber(data[0]);
+              if (barbersList.length === 1 && currentStep === 2) {
+                  setSelectedBarber(barbersList[0]);
                   return 3;
               }
               return currentStep;
             });
-        });
+        })
+        .catch(() => setBarbers([]));
         
       fetch(`/api/services?unitId=${selectedUnit.id}`, { headers: { "x-tenant-slug": tenant.slug } })
         .then(res => res.json())
-        .then(data => setServices(data));
+        .then(data => setServices(Array.isArray(data) ? data : []))
+        .catch(() => setServices([]));
     } else if (Array.isArray(allServices)) {
       setServices(allServices);
     }

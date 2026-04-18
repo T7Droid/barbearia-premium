@@ -96,7 +96,8 @@ export async function proxy(request: NextRequest) {
 
     // Lógica de proteção de rotas (Admin, Barbeiro, Perfil)
     const isAdminApi = pathname.startsWith("/api/admin") || pathname.startsWith("/api/stats/summary");
-    const isBarberApi = pathname.startsWith("/api/barber");
+    // Exigimos a barra / no final para não bloquear a rota pública /api/barbers
+    const isBarberApi = pathname.startsWith("/api/barber/");
     const isTenantAdminPath = (!pathname.startsWith("/api") && pathname.startsWith(`/${slug}/admin`) && !pathname.endsWith("/admin/login")) || isAdminApi;
     const isTenantBarberPath = (!pathname.startsWith("/api") && pathname.startsWith(`/${slug}/barber`)) || isBarberApi;
     const isTenantProfilePath = (!pathname.startsWith("/api") && pathname.startsWith(`/${slug}/meu-perfil`)) || pathname.startsWith("/api/user/profile");

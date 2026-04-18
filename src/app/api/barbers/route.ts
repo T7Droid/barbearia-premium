@@ -42,16 +42,22 @@ export async function GET(request: NextRequest) {
     description: b.description,
     imageUrl: b.image_url,
     active: b.active,
-    user_id: b.user_id,
-    weekly_hours: b.weekly_hours,
+    userId: b.user_id,
+    weeklyHours: b.weekly_hours,
     commissionPercentage: b.commission_percentage !== null && b.commission_percentage !== undefined ? b.commission_percentage : 50,
     units: (b.barber_units || []).map((bu: any) => ({ id: bu.unit_id })),
     services: (b.barber_services || []).map((bs: any) => ({ id: bs.service_id }))
   }));
 
+  // Filtrar por unidade se o parâmetro unitId for fornecido
+  const unitId = request.nextUrl.searchParams.get("unitId");
+  if (unitId) {
+    mapped = mapped.filter((b: any) => b.units.some((u: any) => String(u.id) === String(unitId)));
+  }
+
   // Filtro adicional para garantir que o barbeiro tem tudo necessário
   if (bookableOnly) {
-    mapped = mapped.filter(b => b.units.length > 0 && b.services.length > 0);
+    mapped = mapped.filter((b: any) => b.units.length > 0 && b.services.length > 0);
   }
 
   return NextResponse.json(mapped);
