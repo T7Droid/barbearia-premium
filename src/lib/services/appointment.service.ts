@@ -151,9 +151,9 @@ export class AppointmentService {
       throw new Error("Supabase Admin is required for backend lookups.");
     }
 
-    const { data, error } = await supabaseAdmin
+    const { data, error } = await supabaseAdmin!
       .from("appointments")
-      .select("id, appointment_date, appointment_time, customer_name, customer_email, customer_phone, status, is_paid, is_reschedule, reschedule_id, user_id, created_at, barber_id, barber_name, tenant_id, unit_id, total_price, total_duration, services_json, units(*)")
+      .select("*, units(*)")
       .eq("id", id)
       .single();
 

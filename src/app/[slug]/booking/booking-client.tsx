@@ -414,6 +414,7 @@ function BookingContent() {
           appointmentDate: format(selectedDate, "yyyy-MM-dd"),
           appointmentTime: selectedTime,
           userId: currentUser?.id,
+          unitId: selectedUnit?.id,
           rescheduleId: rescheduleId ? parseInt(rescheduleId) : undefined
         } as any
       }) as any;

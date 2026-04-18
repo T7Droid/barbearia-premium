@@ -277,24 +277,33 @@ END:VCARD`;
                   </div>
                 </div>
 
-                <div className="bg-background rounded-lg p-6 border border-border flex flex-col justify-center">
-                  <div className="flex items-start gap-3 mb-4">
+                <div className="bg-background rounded-lg p-6 border border-border flex flex-col gap-6">
+                  <div className="flex items-start gap-3">
+                    <CheckCircle2 className="w-5 h-5 text-primary shrink-0 mt-1" />
+                    <div>
+                      <p className="text-xs text-muted-foreground uppercase tracking-widest font-bold">Barbearia</p>
+                      <p className="font-serif text-lg font-bold text-foreground">{settings?.shopName || tenant.name || "King Barber"}</p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start gap-3">
                     <MapPin className="w-5 h-5 text-primary shrink-0 mt-1" />
                     <div>
-                      <p className="font-medium text-foreground">{appointment.unit?.name || settings?.shopName || tenant.name || "King Barber"}</p>
-                      <p className="text-sm text-muted-foreground">
+                      <p className="text-xs text-muted-foreground uppercase tracking-widest font-bold">Unidade</p>
+                      <p className="font-medium text-foreground">{appointment.unit?.name || "Unidade Centro"}</p>
+                      <p className="text-sm text-muted-foreground mt-0.5 leading-relaxed">
                         {appointment.unit 
-                          ? `${appointment.unit.address}, ${appointment.unit.number || ""}` 
+                          ? `${appointment.unit.address}${appointment.unit.number ? `, ${appointment.unit.number}` : ""} - ${appointment.unit.city || ""}` 
                           : settings?.address || "Endereço não informado"}
                       </p>
                     </div>
                   </div>
                   
-                  <div className="flex items-start gap-3 mb-4">
+                  <div className="flex items-start gap-3">
                     <Award className="w-5 h-5 text-primary shrink-0 mt-1" />
                     <div>
-                      <p className="font-medium text-foreground">Profissional</p>
-                      <p className="text-sm text-muted-foreground">{appointment.barberName || appointment.barber_name || "Qualquer Especialista"}</p>
+                      <p className="text-xs text-muted-foreground uppercase tracking-widest font-bold">Profissional</p>
+                      <p className="font-medium text-foreground">{appointment.barberName || appointment.barber_name || "Qualquer Especialista"}</p>
                     </div>
                   </div>
 
