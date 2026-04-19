@@ -37,7 +37,9 @@ export async function GET(request: NextRequest) {
       query = query.gte("appointment_date", startDate).lte("appointment_date", endDate);
     }
 
-    const { data, error } = await query.order("appointment_date", { ascending: false });
+    const { data, error } = await query
+      .order("appointment_date", { ascending: false })
+      .order("appointment_time", { ascending: false });
 
     if (error) throw error;
     

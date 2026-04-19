@@ -13,6 +13,13 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Calendar, Clock, History as HistoryIcon, RefreshCw, Scissors, AlertCircle, Loader2, XCircle, DollarSign, CheckCircle2, Wallet } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import Link from "next/link";
@@ -30,8 +37,33 @@ export default function AppointmentHistory() {
   const [appointments, setAppointments] = useState<any[]>([]);
   const [settings, setSettings] = useState<any>(null);
   const [cancellingId, setCancellingId] = useState<number | null>(null);
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
 
   const getLink = (path: string) => `/${tenant.slug}${path}`;
+
+  const getServiceNames = (app: any) => {
+    const services = app.services_json || app.servicesJson;
+    if (services && Array.isArray(services) && services.length > 0) {
+      const firstService = services[0].name;
+      const othersCount = services.length - 1;
+      return othersCount > 0 ? `${firstService} +${othersCount}` : firstService;
+    }
+    return app.service_name || app.serviceName || 'N/D';
+  };
+
+  const getFormattedPriceDetails = (app: any) => {
+    const total = app.total_price || app.totalPrice || app.service_price || app.servicePrice || 0;
+    const services = app.services_json || app.servicesJson;
+    const totalFormatted = formatCurrencyFromCents(total);
+
+    if (services && Array.isArray(services) && services.length > 1) {
+      const details = services
+        .map((s: any) => `${s.name} ${formatCurrencyFromCents(s.price)}`)
+        .join('/');
+      return `${totalFormatted} (${details})`;
+    }
+    return totalFormatted;
+  };
 
   useEffect(() => {
     if (!tenant.slug) return;
@@ -77,6 +109,7 @@ export default function AppointmentHistory() {
           isPaid: app.is_paid || app.isPaid || false,
           appointmentDate: app.appointment_date || app.appointmentDate,
           appointmentTime: app.appointment_time || app.appointmentTime,
+          barberName: app.barber_name || app.barberName,
         }));
 
         // 3. Mesclar com dados locais (DemoStore) se necessário
@@ -127,6 +160,12 @@ export default function AppointmentHistory() {
 
     loadData();
   }, [tenant.slug]);
+
+  const sortedAppointments = [...appointments].sort((a: any, b: any) => {
+    const valA = `${a.appointmentDate || a.appointment_date}T${a.appointmentTime || a.appointment_time}`;
+    const valB = `${b.appointmentDate || b.appointment_date}T${b.appointmentTime || b.appointment_time}`;
+    return sortOrder === "asc" ? valA.localeCompare(valB) : valB.localeCompare(valA);
+  });
 
   const canReschedule = (dateStr: string, status?: string) => {
     if (!settings || status === "cancelled") return false;
@@ -202,9 +241,23 @@ export default function AppointmentHistory() {
             </h1>
             <p className="text-muted-foreground mt-1">Visualize e gerencie seu histórico na {tenant.name}.</p>
           </div>
-          <Button asChild>
-            <Link href={getLink("/booking")}>Novo Agendamento</Link>
-          </Button>
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-muted-foreground whitespace-nowrap">Ordem:</span>
+              <Select value={sortOrder} onValueChange={(v: any) => setSortOrder(v)}>
+                <SelectTrigger className="w-[130px] h-9 bg-card border-border/50">
+                  <SelectValue placeholder="Ordem" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="asc">Crescente</SelectItem>
+                  <SelectItem value="desc">Decrescente</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <Button asChild>
+              <Link href={getLink("/booking")}>Novo Agendamento</Link>
+            </Button>
+          </div>
         </div>
 
         <Card className="bg-card border-border/50 shadow-xl overflow-hidden">
@@ -213,6 +266,7 @@ export default function AppointmentHistory() {
               <TableHeader>
                 <TableRow className="border-border/50 hover:bg-transparent">
                   <TableHead className="text-foreground h-12">Serviço</TableHead>
+                  <TableHead className="text-foreground">Barbeiro</TableHead>
                   <TableHead className="text-foreground">Data / Hora</TableHead>
                   <TableHead className="text-foreground">Preço</TableHead>
                   <TableHead className="text-foreground">Pagamento</TableHead>
@@ -223,7 +277,7 @@ export default function AppointmentHistory() {
               <TableBody>
                 {appointments.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={4} className="text-center py-16 text-muted-foreground">
+                    <TableCell colSpan={7} className="text-center py-16 text-muted-foreground">
                       <div className="flex flex-col items-center gap-2">
                         <AlertCircle className="w-8 h-8 opacity-20" />
                         <p>Nenhum agendamento encontrado.</p>
@@ -232,7 +286,7 @@ export default function AppointmentHistory() {
                     </TableCell>
                   </TableRow>
                 ) : (
-                  appointments.map((app, idx) => (
+                  sortedAppointments.map((app, idx) => (
                     <TableRow key={app.id || `app-${idx}`} className="border-border/50 hover:bg-muted/30 group">
                       <TableCell>
                         <div className="flex items-center gap-3">
@@ -241,12 +295,13 @@ export default function AppointmentHistory() {
                           </div>
                           <div className="flex flex-col">
                             <span className="font-medium text-foreground leading-tight">
-                              {app.servicesJson && Array.isArray(app.servicesJson) 
-                                ? app.servicesJson.map((s: any) => s.name).join(", ")
-                                : (app.serviceName || "Serviço")}
+                              {getServiceNames(app)}
                             </span>
                           </div>
                         </div>
+                      </TableCell>
+                      <TableCell className="text-foreground">
+                        {app.barberName || app.barber_name || "N/D"}
                       </TableCell>
                       <TableCell className="text-foreground">
                         <div className="flex flex-col">
@@ -261,7 +316,7 @@ export default function AppointmentHistory() {
                         </div>
                       </TableCell>
                       <TableCell className="text-foreground font-semibold">
-                        {formatCurrencyFromCents(app.total_price || app.totalPrice || app.servicePrice || 0)}
+                        {getFormattedPriceDetails(app)}
                       </TableCell>
                       <TableCell>
                          {app.isPaid ? (

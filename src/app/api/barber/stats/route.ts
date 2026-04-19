@@ -42,15 +42,25 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Barbeiro não vinculado ao sistema" }, { status: 404 });
     }
 
-    const today = format(new Date(), "yyyy-MM-dd");
+    const year = request.nextUrl.searchParams.get("year");
+    const month = request.nextUrl.searchParams.get("month");
 
-    // 2. Buscar agendamentos de hoje
-    const { data: appointments, error: appError } = await supabaseAdmin
+    // 2. Buscar agendamentos deste barbeiro
+    let query = supabaseAdmin!
       .from("appointments")
       .select("id, appointment_date, appointment_time, customer_name, customer_email, customer_phone, status, is_paid, is_reschedule, reschedule_id, user_id, created_at, barber_id, barber_name, tenant_id, unit_id, total_price, total_duration, services_json")
-      .eq("barber_id", barber.id)
-      .eq("appointment_date", today)
-      .order("appointment_time", { ascending: true });
+      .eq("barber_id", barber.id);
+
+    if (year && month) {
+      const startDate = `${year}-${month.padStart(2, "0")}-01`;
+      const lastDay = new Date(parseInt(year), parseInt(month), 0).getDate();
+      const endDate = `${year}-${month.padStart(2, "0")}-${lastDay}`;
+      query = query.gte("appointment_date", startDate).lte("appointment_date", endDate);
+    }
+
+    const { data: appointments, error: appError } = await query
+      .order("appointment_date", { ascending: false })
+      .order("appointment_time", { ascending: false });
 
     if (appError) throw appError;
 

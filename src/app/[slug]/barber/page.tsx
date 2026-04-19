@@ -16,11 +16,34 @@ import {
   TrendingUp,
   CheckCircle2,
   AlertCircle,
-  Loader2
+  Loader2,
+  Wallet,
+  FileText,
+  FileSpreadsheet,
+  Download
 } from "lucide-react";
+import { 
+  Select, 
+  SelectContent, 
+  SelectItem, 
+  SelectTrigger, 
+  SelectValue 
+} from "@/components/ui/select";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
+import * as XLSX from "xlsx";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useRouter } from "next/navigation";
+import { formatCurrencyFromCents } from "@/lib/format";
 
 export default function BarberDashboard() {
   const { toast } = useToast();
@@ -28,6 +51,35 @@ export default function BarberDashboard() {
   const { user } = useUserStore();
   const router = useRouter();
   const [stats, setStats] = useState<any>(null);
+  const now = new Date();
+  const [selectedMonth, setSelectedMonth] = useState((now.getMonth() + 1).toString());
+  const [selectedYear, setSelectedYear] = useState(now.getFullYear().toString());
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
+
+  const getServiceNames = (app: any) => {
+    const services = app.services_json || app.servicesJson;
+    if (services && Array.isArray(services) && services.length > 0) {
+      const firstService = services[0].name;
+      const othersCount = services.length - 1;
+      return othersCount > 0 ? `${firstService} +${othersCount}` : firstService;
+    }
+    return app.service_name || app.serviceName || 'N/D';
+  };
+
+  const getFormattedPriceDetails = (app: any) => {
+    const total = app.total_price || app.totalPrice || app.service_price || app.servicePrice || 0;
+    const services = app.services_json || app.servicesJson;
+    const totalFormatted = formatCurrencyFromCents(total);
+
+    if (services && Array.isArray(services) && services.length > 1) {
+      const details = services
+        .map((s: any) => `${s.name} ${formatCurrencyFromCents(s.price)}`)
+        .join('/');
+      return `${totalFormatted} (${details})`;
+    }
+    return totalFormatted;
+  };
+
   const [todayAppointments, setTodayAppointments] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [hasProfile, setHasProfile] = useState(true);
@@ -42,7 +94,7 @@ export default function BarberDashboard() {
   const fetchBarberData = async () => {
     try {
       const headers = { "x-tenant-slug": tenant.slug };
-      const res = await fetch("/api/barber/stats", { headers });
+      const res = await fetch(`/api/barber/stats?month=${selectedMonth}&year=${selectedYear}`, { headers });
 
       if (!res.ok) {
         console.error("BarberDashboard: Erro ao buscar estatísticas", res.status);
@@ -103,7 +155,61 @@ export default function BarberDashboard() {
 
   useEffect(() => {
     if (tenant.slug) fetchBarberData();
-  }, [tenant.slug]);
+  }, [tenant.slug, selectedMonth, selectedYear]);
+
+  const sortedAppointments = todayAppointments ? [...todayAppointments].sort((a: any, b: any) => {
+    const valA = `${a.appointment_date}T${a.appointment_time}`;
+    const valB = `${b.appointment_date}T${b.appointment_time}`;
+    return sortOrder === "asc" ? valA.localeCompare(valB) : valB.localeCompare(valA);
+  }) : [];
+
+  const handleExportPDF = () => {
+    if (!sortedAppointments || sortedAppointments.length === 0) return;
+
+    const doc = new jsPDF();
+    const tableData = sortedAppointments.map((app: any) => [
+      `${app.appointment_date ? app.appointment_date.split('-').reverse().join('/') : 'N/D'} ${app.appointment_time || ''}`,
+      app.customer_name || 'N/D',
+      getServiceNames(app),
+      getFormattedPriceDetails(app),
+      app.is_paid ? 'Pago' : 'No Local',
+      app.status === 'confirmed' ? 'Confirmado' : app.status === 'pending' ? 'Pendente' : 'Cancelado'
+    ]);
+
+    autoTable(doc, {
+      head: [['Data/Hora', 'Cliente', 'Serviço', 'Valor', 'Pagamento', 'Status']],
+      body: tableData,
+      theme: 'grid',
+      headStyles: { fillColor: [142, 68, 173] },
+      styles: { fontSize: 8 },
+    });
+
+    const fileName = `meus_agendamentos_${selectedMonth}_${selectedYear}.pdf`;
+    doc.save(fileName);
+    toast({ title: "Sucesso", description: "Relatório PDF gerado com sucesso." });
+  };
+
+  const handleExportExcel = () => {
+    if (!sortedAppointments || sortedAppointments.length === 0) return;
+
+    const tableData = sortedAppointments.map((app: any) => ({
+      'Data/Hora': `${app.appointment_date ? app.appointment_date.split('-').reverse().join('/') : 'N/D'} ${app.appointment_time || ''}`,
+      'Cliente': app.customer_name || 'N/D',
+      'Telefone': app.customer_phone || 'N/D',
+      'Serviço': getServiceNames(app),
+      'Valor': getFormattedPriceDetails(app),
+      'Pagamento': app.is_paid ? 'Pago' : 'No Local',
+      'Status': app.status === 'confirmed' ? 'Confirmado' : app.status === 'pending' ? 'Pendente' : 'Cancelado'
+    }));
+
+    const ws = XLSX.utils.json_to_sheet(tableData);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Agendamentos");
+
+    const fileName = `meus_agendamentos_${selectedMonth}_${selectedYear}.xlsx`;
+    XLSX.writeFile(wb, fileName);
+    toast({ title: "Sucesso", description: "Relatório Excel gerado com sucesso." });
+  };
 
   if (isLoading) {
     return (
@@ -181,7 +287,7 @@ export default function BarberDashboard() {
               <h1 className="text-4xl font-serif font-bold tracking-tight">Painel do Barbeiro</h1>
               <p className="text-muted-foreground mt-2">Olá, {user?.name}. Veja como estão as coisas hoje em {tenant.name}.</p>
             </div>
-            <Button asChild className="gap-2">
+            <Button asChild className="gap-2 mb-8">
               <Link href={`/${tenant.slug}/barber/horarios`}>
                 <Clock className="w-4 h-4" /> Gerenciar Meus Horários
               </Link>
@@ -243,50 +349,134 @@ export default function BarberDashboard() {
 
             <div className="grid grid-cols-1 gap-8">
               <div className="space-y-6">
+                <div className="flex flex-col md:flex-row md:items-center justify-end gap-4 mb-6">
+                  <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm text-muted-foreground whitespace-nowrap">Ordem:</span>
+                      <Select value={sortOrder} onValueChange={(v: any) => setSortOrder(v)}>
+                        <SelectTrigger className="w-[130px] h-9 bg-card border-border/50">
+                          <SelectValue placeholder="Ordem" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="asc">Crescente</SelectItem>
+                          <SelectItem value="desc">Decrescente</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm text-muted-foreground whitespace-nowrap">Mês:</span>
+                      <Select value={selectedMonth} onValueChange={setSelectedMonth}>
+                        <SelectTrigger className="w-[130px] h-9 bg-card border-border/50">
+                          <SelectValue placeholder="Mês" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {["1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12"].map((m) => (
+                            <SelectItem key={m} value={m}>
+                              {format(new Date(2000, parseInt(m) - 1, 1), "MMMM", { locale: ptBR })}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm text-muted-foreground whitespace-nowrap">Ano:</span>
+                      <Select value={selectedYear} onValueChange={setSelectedYear}>
+                        <SelectTrigger className="w-[100px] h-9 bg-card border-border/50">
+                          <SelectValue placeholder="Ano" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {["2024", "2025", "2026"].map((y) => (
+                            <SelectItem key={y} value={y}>{y}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                </div>
+
                 <Card className="border-border/50">
                   <CardHeader className="flex flex-row items-center justify-between">
                     <div>
-                      <CardTitle className="font-serif text-xl font-bold">Agenda de Hoje</CardTitle>
-                      <CardDescription>Próximos clientes que você irá atender.</CardDescription>
-                    </div>
-                    <div className="bg-primary/10 px-3 py-1 rounded-full text-xs font-bold text-primary border border-primary/20">
-                      {format(new Date(), "dd 'de' MMMM", { locale: ptBR })}
+                      <CardTitle className="font-serif text-xl font-bold">Meus Agendamentos</CardTitle>
+                      <CardDescription>Lista completa de todos os seus atendimentos.</CardDescription>
                     </div>
                   </CardHeader>
                   <CardContent>
                     {(!todayAppointments || todayAppointments.length === 0) ? (
                       <div className="text-center py-12 text-muted-foreground flex flex-col items-center gap-3">
                         <AlertCircle className="w-8 h-8 text-muted-foreground/30" />
-                        <p>Nenhum agendamento para hoje.</p>
+                        <p>Nenhum agendamento encontrado.</p>
                       </div>
                     ) : (
-                      <div className="space-y-4">
-                        {todayAppointments.map((app) => (
-                          <div key={app.id} className="flex items-center gap-4 p-4 border rounded-xl hover:bg-muted/30 transition-colors border-border/50 shadow-sm bg-background">
-                            <div className="w-16 h-16 rounded-lg bg-primary/5 border border-primary/10 flex flex-col items-center justify-center p-2">
-                              <span className="text-lg font-bold text-primary">{app.appointment_time}</span>
-                              <span className="text-[10px] text-muted-foreground font-medium uppercase tracking-tighter">Início</span>
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <h4 className="font-bold text-lg truncate">{app.customer_name}</h4>
-                              <p className="text-sm text-muted-foreground flex items-center gap-1.5 font-medium">
-                                <Scissors className="w-3.5 h-3.5" /> {app.service_name}
-                              </p>
-                            </div>
-                            <div className="hidden sm:flex flex-col items-end gap-2">
-                              <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider
-                            ${app.status === 'confirmed' ? 'bg-green-500/10 text-green-500 border border-green-500/20' :
-                                  app.status === 'pending' ? 'bg-amber-500/10 text-amber-500 border border-amber-500/20' :
-                                    'bg-muted text-muted-foreground border border-border'}`}>
-                                {app.status === 'confirmed' ? 'Confirmado' : app.status === 'pending' ? 'Pendente' : app.status}
-                              </span>
-                            </div>
-                          </div>
-                        ))}
+                      <div className="overflow-x-auto">
+                        <Table>
+                          <TableHeader>
+                            <TableRow className="border-border/50 hover:bg-transparent">
+                              <TableHead className="text-foreground">Data / Hora</TableHead>
+                              <TableHead className="text-foreground">Cliente</TableHead>
+                              <TableHead className="text-foreground">Serviço</TableHead>
+                              <TableHead className="text-foreground">Valor</TableHead>
+                              <TableHead className="text-foreground">Status</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {sortedAppointments.map((app) => (
+                              <TableRow key={app.id} className="border-border/50 hover:bg-muted/50">
+                                <TableCell className="font-medium text-foreground">
+                                  {app.appointment_date ? app.appointment_date.split('-').reverse().join('/') : 'N/D'} às {app.appointment_time || 'N/D'}
+                                </TableCell>
+                                <TableCell className="text-foreground font-bold">
+                                  {app.customer_name}
+                                </TableCell>
+                                <TableCell className="text-foreground">
+                                  {getServiceNames(app)}
+                                </TableCell>
+                                <TableCell className="text-foreground">
+                                  {getFormattedPriceDetails(app)}
+                                </TableCell>
+                                <TableCell>
+                                  <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider
+                                    ${app.status === 'confirmed' ? 'bg-green-500/10 text-green-500 border border-green-500/20' :
+                                      app.status === 'pending' ? 'bg-amber-500/10 text-amber-500 border border-amber-500/20' :
+                                        'bg-muted text-muted-foreground border border-border'}`}>
+                                    {app.status === 'confirmed' ? 'Confirmado' : app.status === 'pending' ? 'Pendente' : app.status}
+                                  </span>
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
                       </div>
                     )}
                   </CardContent>
                 </Card>
+
+                {sortedAppointments && sortedAppointments.length > 0 && (
+                  <div className="mt-4 flex gap-2">
+                    <Button 
+                      onClick={handleExportPDF} 
+                      variant="ghost" 
+                      size="sm" 
+                      className="h-8 gap-2 text-red-500 transition-colors hover:bg-red-500/10"
+                      disabled={isLoading}
+                    >
+                      <FileText className="w-4 h-4" />
+                      <span>Exportar PDF</span>
+                    </Button>
+                    <Button 
+                      onClick={handleExportExcel} 
+                      variant="ghost" 
+                      size="sm" 
+                      className="h-8 gap-2 text-green-500 transition-colors hover:bg-green-500/10"
+                      disabled={isLoading}
+                    >
+                      <FileSpreadsheet className="w-4 h-4" />
+                      <span>Exportar Excel</span>
+                    </Button>
+                  </div>
+                )}
               </div>
             </div>
           </>

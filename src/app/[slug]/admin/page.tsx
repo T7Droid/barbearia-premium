@@ -35,6 +35,7 @@ export default function Admin() {
   const now = new Date();
   const [selectedMonth, setSelectedMonth] = useState((now.getMonth() + 1).toString());
   const [selectedYear, setSelectedYear] = useState(now.getFullYear().toString());
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
 
   const { data: stats, isLoading: isLoadingStats } = useGetStatsSummary();
   const { data: appointments, isLoading: isLoadingAppointments } = useListAppointments({
@@ -61,21 +62,52 @@ export default function Admin() {
 
   const getLink = (path: string) => `/${tenant.slug}${path}`;
 
+  const getServiceNames = (app: any) => {
+    const services = app.services_json || app.servicesJson;
+    if (services && Array.isArray(services) && services.length > 0) {
+      const firstService = services[0].name;
+      const othersCount = services.length - 1;
+      return othersCount > 0 ? `${firstService} +${othersCount}` : firstService;
+    }
+    return app.service_name || app.serviceName || 'N/D';
+  };
+
+  const getFormattedPriceDetails = (app: any) => {
+    const total = app.total_price || app.totalPrice || app.service_price || app.servicePrice || 0;
+    const services = app.services_json || app.servicesJson;
+    const totalFormatted = formatCurrencyFromCents(total);
+
+    if (services && Array.isArray(services) && services.length > 1) {
+      const details = services
+        .map((s: any) => `${s.name} ${formatCurrencyFromCents(s.price)}`)
+        .join('/');
+      return `${totalFormatted} (${details})`;
+    }
+    return totalFormatted;
+  };
+
+  const sortedAppointments = appointments ? [...appointments].sort((a: any, b: any) => {
+    const valA = `${a.appointment_date}T${a.appointment_time}`;
+    const valB = `${b.appointment_date}T${b.appointment_time}`;
+    return sortOrder === "asc" ? valA.localeCompare(valB) : valB.localeCompare(valA);
+  }) : [];
+
   const handleExportPDF = () => {
-    if (!appointments || appointments.length === 0) return;
+    if (!sortedAppointments || sortedAppointments.length === 0) return;
 
     const doc = new jsPDF();
-    const tableData = appointments.map((app: any) => [
+    const tableData = sortedAppointments.map((app: any) => [
       `${app.appointment_date ? app.appointment_date.split('-').reverse().join('/') : 'N/D'} ${app.appointment_time || ''}`,
       app.customer_name || 'N/D',
-      app.service_name || 'N/D',
-      formatCurrencyFromCents(app.service_price),
+      app.barber_name || 'N/D',
+      getServiceNames(app),
+      getFormattedPriceDetails(app),
       app.is_paid ? 'Pago' : 'No Local',
       app.status === 'confirmed' ? 'Confirmado' : app.status === 'pending' ? 'Pendente' : 'Cancelado'
     ]);
 
     autoTable(doc, {
-      head: [['Data/Hora', 'Cliente', 'Serviço', 'Valor', 'Pagamento', 'Status']],
+      head: [['Data/Hora', 'Cliente', 'Barbeiro', 'Serviço', 'Valor', 'Pagamento', 'Status']],
       body: tableData,
       theme: 'grid',
       headStyles: { fillColor: [142, 68, 173] }, // Roxo premium
@@ -88,14 +120,15 @@ export default function Admin() {
   };
 
   const handleExportExcel = () => {
-    if (!appointments || appointments.length === 0) return;
+    if (!sortedAppointments || sortedAppointments.length === 0) return;
 
-    const tableData = appointments.map((app: any) => ({
+    const tableData = sortedAppointments.map((app: any) => ({
       'Data/Hora': `${app.appointment_date ? app.appointment_date.split('-').reverse().join('/') : 'N/D'} ${app.appointment_time || ''}`,
       'Cliente': app.customer_name || 'N/D',
       'Telefone': app.customer_phone || 'N/D',
-      'Serviço': app.service_name || 'N/D',
-      'Valor': formatCurrencyFromCents(app.service_price),
+      'Barbeiro': app.barber_name || 'N/D',
+      'Serviço': getServiceNames(app),
+      'Valor': getFormattedPriceDetails(app),
       'Pagamento': app.is_paid ? 'Pago' : 'No Local',
       'Status': app.status === 'confirmed' ? 'Confirmado' : app.status === 'pending' ? 'Pendente' : 'Cancelado'
     }));
@@ -199,6 +232,19 @@ export default function Admin() {
           
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-2">
+              <span className="text-sm text-muted-foreground whitespace-nowrap">Ordem:</span>
+              <Select value={sortOrder} onValueChange={(v: any) => setSortOrder(v)}>
+                <SelectTrigger className="w-[130px] h-9 bg-card border-border/50">
+                  <SelectValue placeholder="Ordem" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="asc">Crescente</SelectItem>
+                  <SelectItem value="desc">Decrescente</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="flex items-center gap-2">
               <span className="text-sm text-muted-foreground whitespace-nowrap">Mês:</span>
               <Select value={selectedMonth} onValueChange={setSelectedMonth}>
                 <SelectTrigger className="w-[130px] h-9 bg-card border-border/50">
@@ -244,6 +290,7 @@ export default function Admin() {
                 <TableRow className="border-border/50 hover:bg-transparent">
                   <TableHead className="text-foreground">Data / Hora</TableHead>
                   <TableHead className="text-foreground">Cliente</TableHead>
+                  <TableHead className="text-foreground">Barbeiro</TableHead>
                   <TableHead className="text-foreground">Serviço</TableHead>
                   <TableHead className="text-foreground">Valor</TableHead>
                   <TableHead className="text-foreground">Pagamento</TableHead>
@@ -257,19 +304,20 @@ export default function Admin() {
                       <TableCell><Skeleton className="h-5 w-32" /></TableCell>
                       <TableCell><Skeleton className="h-5 w-40" /></TableCell>
                       <TableCell><Skeleton className="h-5 w-32" /></TableCell>
+                      <TableCell><Skeleton className="h-5 w-32" /></TableCell>
                       <TableCell><Skeleton className="h-5 w-16" /></TableCell>
                       <TableCell><Skeleton className="h-5 w-24" /></TableCell>
                       <TableCell><Skeleton className="h-5 w-20" /></TableCell>
                     </TableRow>
                   ))
-                ) : appointments?.length === 0 ? (
+                ) : sortedAppointments?.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                    <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
                       Nenhum agendamento encontrado.
                     </TableCell>
                   </TableRow>
                 ) : (
-                  appointments?.map((app: any) => (
+                  sortedAppointments?.map((app: any) => (
                     <TableRow key={app.id} className="border-border/50 hover:bg-muted/50">
                       <TableCell className="font-medium text-foreground">
                         {app.appointment_date ? app.appointment_date.split('-').reverse().join('/') : 'Data N/D'} às {app.appointment_time || 'N/D'}
@@ -278,8 +326,11 @@ export default function Admin() {
                         <div>{app.customer_name || 'Cliente N/D'}</div>
                         <div className="text-xs text-muted-foreground">{app.customer_phone}</div>
                       </TableCell>
-                      <TableCell className="text-foreground">{app.service_name || 'Serviço N/D'}</TableCell>
-                      <TableCell className="text-foreground">{formatCurrencyFromCents(app.service_price)}</TableCell>
+                      <TableCell className="text-foreground">
+                        {app.barber_name || 'N/D'}
+                      </TableCell>
+                      <TableCell className="text-foreground">{getServiceNames(app)}</TableCell>
+                      <TableCell className="text-foreground">{getFormattedPriceDetails(app)}</TableCell>
                       <TableCell>
                          {app.is_paid ? (
                            <div className="flex items-center gap-1.5 text-green-500 font-medium text-xs">
@@ -302,13 +353,13 @@ export default function Admin() {
           </div>
         </Card>
 
-        {appointments && appointments.length > 0 && (
+        {sortedAppointments && sortedAppointments.length > 0 && (
           <div className="mt-4 flex gap-2">
             <Button 
               onClick={handleExportPDF} 
               variant="ghost" 
               size="sm" 
-              className="h-8 gap-2 text-muted-foreground hover:text-primary transition-colors hover:bg-muted/50"
+              className="h-8 gap-2 text-red-500 transition-colors hover:bg-red-500/10"
               disabled={isLoadingAppointments}
             >
               <FileText className="w-4 h-4" />
@@ -318,7 +369,7 @@ export default function Admin() {
               onClick={handleExportExcel} 
               variant="ghost" 
               size="sm" 
-              className="h-8 gap-2 text-muted-foreground hover:text-green-500 transition-colors hover:bg-muted/50"
+              className="h-8 gap-2 text-green-500 transition-colors hover:bg-green-500/10"
               disabled={isLoadingAppointments}
             >
               <FileSpreadsheet className="w-4 h-4" />
