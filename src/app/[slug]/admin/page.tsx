@@ -92,6 +92,15 @@ export default function Admin() {
     return sortOrder === "asc" ? valA.localeCompare(valB) : valB.localeCompare(valA);
   }) : [];
 
+  const pendingRevenueFromTable = appointments?.reduce((sum: number, app: any) => {
+    const isPaid = app.is_paid === true || app.isPaid === true;
+    if (!isPaid && app.status !== 'cancelled') {
+      const price = app.total_price || app.totalPrice || app.service_price || app.servicePrice || 0;
+      return sum + price;
+    }
+    return sum;
+  }, 0) || 0;
+
   const handleExportPDF = () => {
     if (!sortedAppointments || sortedAppointments.length === 0) return;
 
@@ -208,7 +217,14 @@ export default function Admin() {
             </CardHeader>
             <CardContent>
               {isLoadingStats ? <Skeleton className="h-8 w-24" /> : (
-                <div className="text-3xl font-bold text-primary">{formatCurrencyFromCents(stats?.totalRevenue)}</div>
+                <div className="flex flex-col gap-1">
+                  <div className="text-3xl font-bold text-primary leading-none">
+                    {formatCurrencyFromCents(stats?.totalRevenue)}
+                  </div>
+                  <div className="text-xs font-semibold text-amber-500/80">
+                    + {formatCurrencyFromCents(pendingRevenueFromTable)} a receber
+                  </div>
+                </div>
               )}
             </CardContent>
           </Card>
