@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, Suspense } from "react";
+import { useState, Suspense, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Layout } from "@/components/layout";
 import { Button } from "@/components/ui/button";
@@ -26,6 +26,7 @@ function CadastroContent() {
   const phoneParam = searchParams.get("phone") || "";
 
   const [isLoading, setIsLoading] = useState(false);
+  const [isEmailFrozen, setIsEmailFrozen] = useState(!!emailParam);
   const [formData, setFormData] = useState({
     name: nameParam,
     email: emailParam,
@@ -33,6 +34,23 @@ function CadastroContent() {
     password: "",
     confirmPassword: ""
   });
+
+  useEffect(() => {
+    const dataStr = sessionStorage.getItem("cadastroTransfer");
+    if (dataStr) {
+      try {
+        const data = JSON.parse(dataStr);
+        setFormData(prev => ({
+          ...prev,
+          name: data.name || prev.name,
+          email: data.email || prev.email,
+          phone: data.phone || prev.phone
+        }));
+        if (data.email) setIsEmailFrozen(true);
+        sessionStorage.removeItem("cadastroTransfer");
+      } catch (e) {}
+    }
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -152,7 +170,7 @@ function CadastroContent() {
                 onChange={(e) => setFormData({...formData, email: e.target.value})}
                 required
                 placeholder="carlos@exemplo.com"
-                disabled={!!emailParam}
+                disabled={isEmailFrozen}
               />
             </div>
             <div className="space-y-2">

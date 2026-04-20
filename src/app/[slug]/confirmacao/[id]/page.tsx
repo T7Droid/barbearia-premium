@@ -12,6 +12,7 @@ import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { formatCurrencyFromCents } from "@/lib/format";
 import { DemoStore } from "@/lib/persistence/demo-store";
 import { useTenant } from "@/hooks/use-tenant";
@@ -21,6 +22,7 @@ export default function ConfirmationPage(props: { params: Promise<{ slug: string
   const id = parseInt(params.id);
   const tenant = useTenant();
   const { toast } = useToast();
+  const router = useRouter();
 
   const { data: apiAppointment, isLoading } = useGetAppointment(id, {
     query: {
@@ -184,6 +186,15 @@ END:VCARD`;
     window.URL.revokeObjectURL(url);
   };
 
+  const handleCreateAccount = () => {
+    sessionStorage.setItem("cadastroTransfer", JSON.stringify({
+      email: appointment.customerEmail || appointment.customer_email || "",
+      name: appointment.customerName || appointment.customer_name || "",
+      phone: appointment.customerPhone || appointment.customer_phone || ""
+    }));
+    router.push(getLink("/cadastro"));
+  };
+
   const getLink = (path: string) => `/${tenant.slug}${path}`;
 
   const dateValue = appointment.appointmentDate || appointment.appointment_date || "";
@@ -330,10 +341,8 @@ END:VCARD`;
                   <CardDescription>Crie sua conta agora e comece a ganhar pontos de fidelidade!</CardDescription>
                 </CardHeader>
                 <CardContent className="flex flex-col sm:flex-row gap-4 items-center">
-                  <Button asChild className="w-full sm:w-auto gap-2" variant="default">
-                    <Link href={getLink(`/cadastro?email=${encodeURIComponent(appointment.customerEmail || appointment.customer_email || "")}&name=${encodeURIComponent(appointment.customerName || appointment.customer_name || "")}&phone=${encodeURIComponent(appointment.customerPhone || appointment.customer_phone || "")}`)}>
-                      Criar minha conta
-                    </Link>
+                  <Button onClick={handleCreateAccount} className="w-full sm:w-auto gap-2" variant="default">
+                    Criar minha conta
                   </Button>
                   <p className="text-xs text-muted-foreground">
                     Próximos agendamentos em apenas 2 cliques.
