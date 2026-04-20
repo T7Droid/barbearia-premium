@@ -114,6 +114,37 @@ function BookingContent() {
   const [isPollingPix, setIsPollingPix] = useState(false);
   const [pixCountdown, setPixCountdown] = useState(0);
 
+  // Estados de Disponibilidade
+  const [isGloballyClosed, setIsGloballyClosed] = useState(false);
+  const [closureReason, setClosureReason] = useState<"settings" | "barbers" | null>(null);
+
+  const checkAvailability = (sData: any, bData: any[]) => {
+    // 1. Verificar settings (Horários da barbearia)
+    const hours = sData?.weeklyHours || sData?.weekly_hours;
+    let hasOpenDay = false;
+    if (hours) {
+      hasOpenDay = Object.values(hours).some((h: any) => h.active === true);
+    } else {
+      hasOpenDay = true; // Fallback se não houver configurações
+    }
+
+    if (!hasOpenDay) {
+      setIsGloballyClosed(true);
+      setClosureReason("settings");
+      return;
+    }
+
+    // 2. Verificar se há barbeiros bookable
+    if (!bData || bData.length === 0) {
+      setIsGloballyClosed(true);
+      setClosureReason("barbers");
+      return;
+    }
+
+    setIsGloballyClosed(false);
+    setClosureReason(null);
+  };
+
   const isValidCpf = (cpfStr: string) => {
     if (!cpfStr) return true; // se vazio não valida (ignorado)
     const strCPF = cpfStr.replace(/[^\d]+/g, "");
@@ -164,13 +195,19 @@ function BookingContent() {
       setIsLoadingUnits(false);
 
       // 2. Barbeiros (Global por enquanto, filtraremos no clique)
+      let finalBarbers = [] as any[];
       if (Array.isArray(barbersData)) {
+        finalBarbers = barbersData;
         setBarbers(barbersData);
       }
       setIsLoadingBarbers(false);
 
       // 3. Sincronizar configurações
       setSettings(settingsData);
+      
+      // EXECUTAR VERIFICAÇÃO DE DISPONIBILIDADE GLOBAL
+      checkAvailability(settingsData, finalBarbers);
+
       DemoStore.saveSettings(settingsData);
       setMpPublicKey(settingsData.mpPublicKey || "");
 
@@ -206,6 +243,7 @@ function BookingContent() {
       // carregar as associações no fetch inicial. 
       // Para simplificar agora, vamos assumir que se houver associações, filtramos.
       // Em uma implementação real, o GET /api/barbers?unitId=... faria isso.
+      setIsLoadingBarbers(true);
       fetch(`/api/barbers?active=true&unitId=${selectedUnit.id}`, { headers: { "x-tenant-slug": tenant.slug } })
         .then(res => res.json())
         .then(data => {
@@ -220,7 +258,8 @@ function BookingContent() {
               return currentStep;
             });
         })
-        .catch(() => setBarbers([]));
+        .catch(() => setBarbers([]))
+        .finally(() => setIsLoadingBarbers(false));
         
       fetch(`/api/services?unitId=${selectedUnit.id}`, { headers: { "x-tenant-slug": tenant.slug } })
         .then(res => res.json())
@@ -641,7 +680,42 @@ function BookingContent() {
             </p>
           )}
 
-          <div className="flex items-center justify-between relative mt-10">
+          {isGloballyClosed && !isLoadingUnits && !isLoadingBarbers && (
+            <div className="mt-12 animate-in fade-in slide-in-from-top-4 duration-500">
+              <Card className="border-destructive/20 bg-destructive/5 shadow-2xl overflow-hidden relative">
+                <div className="absolute top-0 left-0 w-1 h-full bg-destructive" />
+                <CardHeader className="pb-2">
+                  <div className="w-16 h-16 rounded-full bg-destructive/10 flex items-center justify-center text-destructive mb-4 mx-auto">
+                    <Clock className="w-10 h-10" />
+                  </div>
+                  <CardTitle className="text-3xl font-serif text-center">
+                    {closureReason === "settings" ? "Barbearia Fechada" : "Indisponível no Momento"}
+                  </CardTitle>
+                  <CardDescription className="text-center text-lg mt-2">
+                    {closureReason === "settings" 
+                      ? "Não estamos aceitando novos agendamentos no momento de acordo com nosso horário de funcionamento."
+                      : "No momento não temos profissionais disponíveis para agendamento online."}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="flex flex-col items-center gap-6 pb-8">
+                  <p className="text-muted-foreground text-center max-w-md">
+                    Siga-nos nas redes sociais ou entre em contato pelo WhatsApp para mais informações sobre horários e disponibilidade futura.
+                  </p>
+                  <div className="flex gap-4">
+                    <Button variant="outline" asChild>
+                      <Link href="/">Voltar ao Início</Link>
+                    </Button>
+                    <Button onClick={() => window.location.reload()} className="gap-2">
+                      <Clock className="w-4 h-4" /> Tentar Novamente
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          )}
+
+          {!isGloballyClosed && (
+            <div className="flex items-center justify-between relative mt-10">
             <div className="absolute left-0 top-1/2 -translate-y-1/2 w-full h-1 bg-border z-0"></div>
             {(() => {
               const hasUnits = units.length > 1;
@@ -688,9 +762,11 @@ function BookingContent() {
               );
             })()}
           </div>
+          )}
         </div>
 
-        <div className="bg-card border border-border/50 rounded-lg p-6 shadow-xl">
+        {!isGloballyClosed && (
+          <div className="bg-card border border-border/50 rounded-lg p-6 shadow-xl">
           {step === 1 && (
             <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4">
               <h2 className="text-xl font-serif font-semibold">Selecione a Unidade</h2>
@@ -700,26 +776,49 @@ function BookingContent() {
                 </div>
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {units?.map((unit) => (
-                    <div
-                      key={unit.id}
-                      onClick={() => {
-                        setSelectedUnit(unit);
-                        setStep(2);
-                      }}
-                      className={`p-4 border rounded-lg cursor-pointer transition-all hover:border-primary/50 flex items-center gap-4
-                        ${selectedUnit?.id === unit.id ? 'border-primary bg-primary/5' : 'border-border/50 bg-background'}`}
-                    >
-                      <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center text-primary flex-shrink-0">
-                        <MapPin className="w-6 h-6" />
+                  {units?.map((unit) => {
+                    const barbersInUnit = barbers.filter(b => b.active && b.units?.some((u: any) => u.id === unit.id));
+                    const isUnitClosed = barbersInUnit.length === 0;
+
+                    return (
+                      <div
+                        key={unit.id}
+                        onClick={() => {
+                          if (isUnitClosed) return;
+                          setSelectedUnit(unit);
+                          setStep(2);
+                        }}
+                        className={`p-4 border rounded-lg transition-all flex items-center gap-4 relative overflow-hidden
+                          ${isUnitClosed 
+                            ? 'opacity-60 grayscale cursor-not-allowed bg-muted/50 border-border' 
+                            : selectedUnit?.id === unit.id 
+                              ? 'border-primary bg-primary/5 cursor-pointer ring-1 ring-primary' 
+                              : 'border-border/50 bg-background cursor-pointer hover:border-primary/50'}`}
+                      >
+                        <div className={`w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0
+                          ${isUnitClosed ? 'bg-muted text-muted-foreground' : 'bg-primary/10 text-primary'}`}>
+                          <MapPin className="w-6 h-6" />
+                        </div>
+                        <div className="flex-1">
+                          <div className="flex items-center justify-between">
+                             <h3 className="font-medium text-lg leading-tight">{unit.name}</h3>
+                             {isUnitClosed && (
+                               <span className="text-[10px] font-bold bg-destructive/10 text-destructive px-2 py-0.5 rounded-full uppercase tracking-wider">
+                                 Fechada
+                               </span>
+                             )}
+                          </div>
+                          <p className="text-sm text-muted-foreground mt-1">{unit.address}, {unit.number}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {isUnitClosed ? "Sem profissionais disponíveis nesta unidade" : `${unit.city}/${unit.state}`}
+                          </p>
+                        </div>
+                        {isUnitClosed && (
+                          <div className="absolute inset-0 bg-background/5 pointer-events-none" />
+                        )}
                       </div>
-                      <div>
-                        <h3 className="font-medium text-lg leading-tight">{unit.name}</h3>
-                        <p className="text-sm text-muted-foreground mt-1">{unit.address}, {unit.number}</p>
-                        <p className="text-xs text-muted-foreground">{unit.city}/{unit.state}</p>
-                      </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </div>
@@ -1003,7 +1102,6 @@ function BookingContent() {
             </div>
           )}
 
-          { }
           {step === 6 && (
             <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4">
               <div className="flex items-center justify-between">
@@ -1014,7 +1112,6 @@ function BookingContent() {
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
-                { }
                 <div className="bg-background rounded-lg p-6 border border-border/50 h-fit">
                   <h3 className="font-medium text-lg mb-4 text-foreground">Resumo do Agendamento</h3>
                   <div className="space-y-3 text-sm">
@@ -1051,7 +1148,6 @@ function BookingContent() {
                   )}
                 </div>
 
-                { }
                 {isPrePaid ? (
                   <Card className="border-primary/20 bg-primary/5">
                     <CardHeader>
@@ -1213,15 +1309,22 @@ function BookingContent() {
               </div>
             </div>
           )}
-        </div>
+          </div>
+        )}
       </div>
     </Layout>
   );
 }
 
-export default function BookingClient() {
+export default function BookingPage() {
   return (
-    <Suspense fallback={<div className="container mx-auto px-4 py-24 flex items-center justify-center"><Loader2 className="w-8 h-8 animate-spin text-primary" /></div>}>
+    <Suspense fallback={
+      <Layout>
+        <div className="container mx-auto px-4 py-12 flex justify-center items-center min-h-[60vh]">
+          <Loader2 className="w-12 h-12 animate-spin text-primary" />
+        </div>
+      </Layout>
+    }>
       <BookingContent />
     </Suspense>
   );

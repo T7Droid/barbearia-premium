@@ -77,12 +77,12 @@ export default function AdminBarbers() {
   const [isLoadingUnits, setIsLoadingUnits] = useState(true);
   
   // Lógica de Validação
-  const isGeneralValid = formData.name.trim() !== "" && formData.description.trim() !== "";
+  const isGeneralValid = (formData.name?.trim() || "") !== "" && (formData.description?.trim() || "") !== "";
   const isServicesValid = formData.serviceIds.length > 0;
   const isAccessValid = formData.unitIds.length > 0;
   const isCredentialsValid = editingBarber 
     ? true // Na edição, as credenciais estão ocultas/não editáveis
-    : (formData.loginEmail.trim() !== "" && formData.loginPassword.trim().length >= 6);
+    : ((formData.loginEmail?.trim() || "") !== "" && (formData.loginPassword?.trim() || "").length >= 6);
 
   const isFormValid = isGeneralValid && isServicesValid && isAccessValid && isCredentialsValid;
 
@@ -119,8 +119,8 @@ export default function AdminBarbers() {
     if (barber) {
       setEditingBarber(barber);
       setFormData({
-        name: barber.name,
-        description: barber.description,
+        name: barber.name || "",
+        description: barber.description || "",
         imageUrl: barber.imageUrl || barber.image_url || "",
         active: barber.active,
         unitIds: (barber.units || []).map((u: any) => String(u.id)),

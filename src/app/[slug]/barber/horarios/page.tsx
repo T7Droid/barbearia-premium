@@ -87,6 +87,7 @@ export default function BarberSchedulePage() {
       if (data.weekly_hours) {
         setWeeklyHours(data.weekly_hours);
       } else {
+        const headers = { "x-tenant-slug": tenant.slug };
         const settingsRes = await fetch("/api/settings", { headers });
         const settings = await settingsRes.json();
         setWeeklyHours(settings.weekly_hours || {});

@@ -22,26 +22,30 @@ export async function GET(request: NextRequest) {
     // Buscando agendamentos do tenant
     const { data: appointments, error: appointmentsError } = await supabaseAdmin!
       .from("appointments")
-      .select("id, appointment_date, appointment_time, customer_name, customer_email, customer_phone, status, is_paid, is_reschedule, reschedule_id, user_id, created_at, barber_id, barber_name, tenant_id, unit_id, total_price, service_price, total_duration, services_json")
+      .select("id, appointment_date, status, is_paid, total_price, services_json")
       .eq("tenant_id", tenant.id);
 
     if (appointmentsError) throw appointmentsError;
 
     const totalAppointments = appointments.length;
     const todayAppointments = appointments.filter(a => a.appointment_date === todayStr).length;
+    
     const totalRevenue = appointments
       .filter(a => a.is_paid && a.status !== "cancelled")
-      .reduce((sum, a) => sum + (a.total_price || a.service_price || 0), 0);
+      .reduce((sum, a) => sum + (Number(a.total_price) || 0), 0);
 
     const pendingRevenue = appointments
       .filter(a => !a.is_paid && a.status !== "cancelled")
-      .reduce((sum, a) => sum + (a.total_price || a.service_price || 0), 0);
+      .reduce((sum, a) => sum + (Number(a.total_price) || 0), 0);
 
     const serviceCounts: Record<string, number> = {};
     appointments.forEach(a => {
-      if (a.service_name) {
-        serviceCounts[a.service_name] = (serviceCounts[a.service_name] || 0) + 1;
-      }
+      // Extrair nomes dos serviços do JSON
+      const services = a.services_json || [];
+      services.forEach((s: any) => {
+        const name = s.name || "Serviço";
+        serviceCounts[name] = (serviceCounts[name] || 0) + 1;
+      });
     });
 
     let popularService = "Nenhum";

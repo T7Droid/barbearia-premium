@@ -9,6 +9,8 @@ export async function proxy(request: NextRequest) {
     pathname.includes(".") ||
     pathname.startsWith("/_next") ||
     pathname === "/" ||
+    pathname.startsWith("/onboarding") ||
+    pathname.startsWith("/api/onboarding") ||
     pathname.startsWith("/api/webhooks") ||
     pathname.startsWith("/api/auth/mercadopago")
   ) {
@@ -45,7 +47,7 @@ export async function proxy(request: NextRequest) {
   } else {
     // Para páginas, o slug é a primeira parte do path
     const firstPart = pathParts[0];
-    const reserved = ["api", "admin", "dashboard", "meu-perfil", "favicon.ico", "images", "login", "cadastro"];
+    const reserved = ["api", "admin", "dashboard", "meu-perfil", "favicon.ico", "images", "login", "cadastro", "onboarding"];
     if (!reserved.includes(firstPart)) {
       slug = firstPart;
     }

@@ -61,6 +61,8 @@ export default function AdminServices() {
     unitIds: [] as string[]
   });
 
+  const [activeTab, setActiveTab] = useState("geral");
+
   const [units, setUnits] = useState<any[]>([]);
   const [isLoadingUnits, setIsLoadingUnits] = useState(true);
 
@@ -112,6 +114,7 @@ export default function AdminServices() {
         unitIds: []
       });
     }
+    setActiveTab("geral");
     setIsModalOpen(true);
   };
 
@@ -122,6 +125,17 @@ export default function AdminServices() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (formData.unitIds.length === 0) {
+      setActiveTab("unidades");
+      toast({
+        title: "Atenção",
+        description: "Selecione pelo menos uma unidade para oferecer este serviço.",
+        variant: "destructive"
+      });
+      return;
+    }
+
     setIsSubmitting(true);
 
     const headers = { 
@@ -297,13 +311,16 @@ export default function AdminServices() {
               </CardDescription>
             </CardHeader>
             <CardContent className="p-0">
-              <Tabs defaultValue="geral" className="w-full">
+              <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
                 <TabsList className="w-full grid grid-cols-2 rounded-none border-b h-14 bg-muted/20">
                   <TabsTrigger value="geral" className="gap-2">
                     <Scissors className="w-4 h-4" /> Informações
                   </TabsTrigger>
-                  <TabsTrigger value="unidades" className="gap-2">
+                  <TabsTrigger value="unidades" className="gap-2 relative">
                     <MapPin className="w-4 h-4" /> Unidades
+                    {formData.unitIds.length === 0 && (
+                      <span className="absolute -top-1 -right-1 w-2 h-2 bg-destructive rounded-full" />
+                    )}
                   </TabsTrigger>
                 </TabsList>
 
@@ -441,6 +458,11 @@ export default function AdminServices() {
                       {editingService ? "Salvar Alterações" : "Criar Serviço"}
                     </Button>
                   </div>
+                  {formData.unitIds.length === 0 && (
+                    <p className="px-6 pb-4 text-[10px] text-destructive font-bold text-center animate-pulse">
+                      * Você precisa selecionar pelo menos uma unidade na aba "Unidades".
+                    </p>
+                  )}
                 </form>
               </Tabs>
             </CardContent>

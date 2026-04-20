@@ -1,6 +1,7 @@
 import { NextResponse, NextRequest } from "next/server";
 import { supabase, supabaseAdmin, isSupabaseConfigured } from "@/lib/supabase";
 import { TenantContext } from "@/lib/services/tenant-context";
+import { AuthService } from "@/lib/services/auth.service";
 
 export async function GET(request: NextRequest) {
   if (!isSupabaseConfigured || !supabaseAdmin) {
