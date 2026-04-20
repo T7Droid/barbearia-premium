@@ -293,7 +293,8 @@ function BookingContent() {
       barberId: selectedBarber?.id as any,
       query: { 
         reschedule: rescheduleId || undefined,
-        serviceIds: serviceIdsStr || undefined 
+        serviceIds: serviceIdsStr || undefined,
+        unitId: selectedUnit?.id || undefined
       }
     },
     {

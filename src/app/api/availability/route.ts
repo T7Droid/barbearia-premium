@@ -8,6 +8,7 @@ export async function GET(request: NextRequest) {
   const date = searchParams.get("date");
   const serviceId = searchParams.get("serviceId");
   const barberId = searchParams.get("barberId");
+  const unitId = searchParams.get("unitId");
 
   const tenant = await TenantContext.getTenant(request);
   if (!tenant) {
@@ -23,10 +24,26 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    // 1. Buscar barbeiro específico para pegar seus horários individuais
-    let dayConfig = { active: false };
+    // Determinar o dia da semana
+    const targetDate = new Date(date + "T00:00:00");
+    const daysMap = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"];
+    const dayName = daysMap[targetDate.getDay()];
+
+    let dayConfig = { active: false, start: "09:00", end: "18:00" };
     let interval = 45;
 
+    // 1. Buscar configurações da Unidade (OBRIGATÓRIO para limites)
+    let unitHours = null;
+    if (unitId) {
+      const { data: unit } = await supabaseAdmin
+        .from("units")
+        .select("weekly_hours")
+        .eq("id", parseInt(unitId))
+        .single();
+      unitHours = unit?.weekly_hours;
+    }
+
+    // 2. Buscar configurações do barbeiro
     if (barberId) {
       const { data: barber } = await supabaseAdmin
         .from("barbers")
@@ -35,15 +52,19 @@ export async function GET(request: NextRequest) {
         .single();
       
       if (barber?.weekly_hours) {
-        // Determinar o dia da semana
-        const targetDate = new Date(date + "T00:00:00");
-        const daysMap = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"];
-        const dayName = daysMap[targetDate.getDay()];
-        dayConfig = barber.weekly_hours[dayName] || { active: false };
+        // Verificar se é mapa (por unidade) ou plano (antigo)
+        const isMap = !!barber.weekly_hours[unitId || ""] || !barber.weekly_hours[dayName];
+        
+        if (isMap && unitId && barber.weekly_hours[unitId]) {
+          dayConfig = barber.weekly_hours[unitId][dayName] || { active: false };
+        } else if (!isMap) {
+          // Fallback para estrutura plana antiga
+          dayConfig = barber.weekly_hours[dayName] || { active: false };
+        }
       }
     }
 
-    // 2. Buscar configurações do tenant para o intervalo (slot_interval)
+    // 3. Buscar configurações do tenant para o intervalo (slot_interval)
     const { data: settings } = await supabaseAdmin
       .from("settings")
       .select("slot_interval, weekly_hours")
@@ -53,12 +74,11 @@ export async function GET(request: NextRequest) {
     if (settings) {
       interval = settings.slot_interval || 45;
       
-      // Se o barbeiro NÃO tiver horários próprios (ainda não migrado), usamos o global
+      // Se o barbeiro NÃO estiver ativo hoje, ou se estivermos sem config do barbeiro,
+      // verificamos se o dia está aberto na UNIDADE (ou no global como fallback extremo)
       if (!dayConfig.active) {
-        const targetDate = new Date(date + "T00:00:00");
-        const daysMap = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"];
-        const dayName = daysMap[targetDate.getDay()];
-        dayConfig = settings.weekly_hours?.[dayName] || { active: false };
+         const fallbackHours = unitHours || settings.weekly_hours;
+         dayConfig = fallbackHours?.[dayName] || { active: false };
       }
     }
 

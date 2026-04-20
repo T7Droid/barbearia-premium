@@ -5,7 +5,7 @@ import { Layout } from "@/components/layout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
-import { Clock, Save, Loader2, Calendar } from "lucide-react";
+import { Clock, Save, Loader2, Calendar, MapPin } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useRouter } from "next/navigation";
@@ -34,11 +34,11 @@ export default function BarberSchedulePage() {
   const { toast } = useToast();
   const tenant = useTenant();
   const router = useRouter();
-  const [weeklyHours, setWeeklyHours] = useState<any>(null);
+  const [units, setUnits] = useState<any[]>([]);
+  const [weeklyHours, setWeeklyHours] = useState<Record<string, any>>({});
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [barberId, setBarberId] = useState<number | null>(null);
-  const [shopSettings, setShopSettings] = useState<any>(null);
 
   const generateTimeOptions = (minTime?: string, maxTime?: string) => {
     const options = [];
@@ -49,7 +49,6 @@ export default function BarberSchedulePage() {
       const mins = minutes % 60;
       const time = `${hours.toString().padStart(2, "0")}:${mins.toString().padStart(2, "0")}`;
       
-      // Filtro por intervalo da barbearia
       if (minTime && time < minTime) continue;
       if (maxTime && time > maxTime) continue;
       
@@ -65,78 +64,46 @@ export default function BarberSchedulePage() {
         cache: "no-store" 
       });
       
-      if (!res.ok) {
-        console.error(`BarberSchedule: GET /api/barber/me failed with status ${res.status}`);
-        if (res.status === 403) {
-          toast({ 
-            title: "Acesso negado", 
-            description: "ER-BAR-STS: Não autorizado",
-            variant: "destructive" 
-          });
-          return;
-        }
-        if (res.status === 404) {
-          toast({ 
-            title: "Perfil não encontrado", 
-            description: "Você será redirecionado para ativar sua conta profissional.",
-            variant: "destructive" 
-          });
-          setTimeout(() => router.push(`/${tenant.slug}/barber`), 2000);
-          return;
-        }
-        const errorData = await res.json().catch(() => ({}));
-        throw new Error(`Status ${res.status}: ${errorData.error || "Erro ao buscar perfil"}`);
-      }
+      if (!res.ok) throw new Error("Falha ao buscar perfil");
 
       const data = await res.json();
-      
-      // data agora contém data.units vindos da API barber/me
       const barberUnits = data.units || [];
-      
-      // Construir um "shopSettings" virtual baseado nas unidades vinculadas ao barbeiro
-      const virtualShopHours: any = {};
-      const DAYS_OF_WEEK_IDS = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"];
-      
-      DAYS_OF_WEEK_IDS.forEach(dayId => {
-        const activeUnitsOnDay = barberUnits.filter((u: any) => u.weekly_hours?.[dayId]?.active);
-        
-        if (activeUnitsOnDay.length === 0) {
-          // Se nenhuma unidade do barbeiro abre nesse dia, o dia é "fechado" para ele
-          virtualShopHours[dayId] = { active: false, start: "00:00", end: "23:59" };
-        } else {
-          // Intervalo permitido: União (menor início e maior fim de todas as suas unidades)
-          let minStart = "23:59";
-          let maxEnd = "00:00";
-          activeUnitsOnDay.forEach((u: any) => {
-            const h = u.weekly_hours[dayId];
-            if (h.start < minStart) minStart = h.start;
-            if (h.end > maxEnd) maxEnd = h.end;
-          });
-          virtualShopHours[dayId] = { active: true, start: minStart, end: maxEnd };
-        }
-      });
-      
-      setShopSettings({ weeklyHours: virtualShopHours });
-
-      if (data.weekly_hours) {
-        setWeeklyHours(data.weekly_hours);
-      } else {
-        // Fallback: Se barbeiro não tem horários, inicia todos como desativados por padrão
-        const initialHours = DAYS_OF_WEEK_IDS.reduce((acc: any, dayId: string) => {
-          const sDay = virtualShopHours[dayId];
-          acc[dayId] = { 
-            active: false, 
-            start: sDay.active ? sDay.start : "09:00", 
-            end: sDay.active ? sDay.end : "18:00" 
-          };
-          return acc;
-        }, {});
-        setWeeklyHours(initialHours);
-      }
+      setUnits(barberUnits);
       setBarberId(data.id);
+
+      const dbHours = data.weekly_hours || {};
+      const newWeeklyHours: Record<string, any> = {};
+
+      barberUnits.forEach((unit: any) => {
+        const uId = String(unit.id);
+        // Tenta pegar do mapa por unidade, senão tenta o formato plano antigo, senão cria vazio (desativado)
+        let unitSpecificHours = dbHours[uId];
+        
+        if (!unitSpecificHours) {
+          // Se não tem no mapa, verifica se os dados no DB são o formato plano antigo e migra pra este unit
+          const isLegacyFlat = dbHours.monday || dbHours.tuesday;
+          if (isLegacyFlat) {
+            unitSpecificHours = { ...dbHours };
+          } else {
+            // Novo unit ou sem dados: Tudo desativado por padrão conforme solicitado
+            unitSpecificHours = DAYS_OF_WEEK.reduce((acc: any, day) => {
+              const uDay = unit.weekly_hours?.[day.id];
+              acc[day.id] = { 
+                active: false, 
+                start: uDay?.start || "09:00", 
+                end: uDay?.end || "18:00" 
+              };
+              return acc;
+            }, {});
+          }
+        }
+        newWeeklyHours[uId] = unitSpecificHours;
+      });
+
+      setWeeklyHours(newWeeklyHours);
     } catch (error) {
       console.error("fetchSchedule error:", error);
-      toast({ title: "Erro", description: "Falha ao carregar horários. Verifique se você já ativou seu perfil profissional.", variant: "destructive" });
+      toast({ title: "Erro", description: "Falha ao carregar horários.", variant: "destructive" });
     } finally {
       setIsLoading(false);
     }
@@ -146,64 +113,40 @@ export default function BarberSchedulePage() {
     if (tenant.slug) fetchSchedule();
   }, [tenant.slug]);
 
-  const handleToggleDay = (dayId: string, active: boolean) => {
-    setWeeklyHours((prev: any) => {
-      if (!prev) return prev;
-      return {
-        ...prev,
-        [dayId]: { ...prev[dayId], active }
-      };
-    });
+  const handleToggleDay = (unitId: string, dayId: string, active: boolean) => {
+    setWeeklyHours((prev) => ({
+      ...prev,
+      [unitId]: {
+        ...prev[unitId],
+        [dayId]: { ...prev[unitId][dayId], active }
+      }
+    }));
   };
 
-  const handleTimeChange = (dayId: string, field: "start" | "end", value: string) => {
-    setWeeklyHours((prev: any) => ({
+  const handleTimeChange = (unitId: string, dayId: string, field: "start" | "end", value: string) => {
+    setWeeklyHours((prev) => ({
       ...prev,
-      [dayId]: { ...prev[dayId], [field]: value }
+      [unitId]: {
+        ...prev[unitId],
+        [dayId]: { ...prev[unitId][dayId], [field]: value }
+      }
     }));
   };
 
   const handleSave = async () => {
     setIsSaving(true);
     try {
-      const headers = { 
-        "Content-Type": "application/json",
-        "x-tenant-slug": tenant.slug 
-      };
-      if (!barberId) {
-        toast({ title: "Erro", description: "Sua conta profissional não foi identificada. Tente recarregar a página.", variant: "destructive" });
-        setIsSaving(false);
-        return;
-      }
-
-      // Validação de Integridade: Garantir que o barbeiro não "furou" o horário da barbearia
-      if (shopSettings?.weeklyHours || shopSettings?.weekly_hours) {
-        const shopHours = shopSettings.weeklyHours || shopSettings.weekly_hours;
-        for (const dayId of Object.keys(weeklyHours)) {
-          const config = weeklyHours[dayId];
-          const shopConfig = shopHours[dayId];
-          if (config.active && shopConfig) {
-            if (!shopConfig.active) {
-              toast({ title: "Erro de Sincronização", description: `A barbearia está fechada na ${dayId}. Desative este dia.`, variant: "destructive" });
-              setIsSaving(false); return;
-            }
-            if (config.start < shopConfig.start || config.end > shopConfig.end) {
-              toast({ title: "Horário Inválido", description: `Seus horários em ${dayId} devem estar entre ${shopConfig.start} e ${shopConfig.end}.`, variant: "destructive" });
-              setIsSaving(false); return;
-            }
-          }
-        }
-      }
-
       const res = await fetch(`/api/barbers/${barberId}`, {
         method: "PUT",
-        headers,
+        headers: { 
+          "Content-Type": "application/json",
+          "x-tenant-slug": tenant.slug 
+        },
         body: JSON.stringify({ weeklyHours })
       });
 
       if (!res.ok) throw new Error("Erro ao salvar");
-
-      toast({ title: "Sucesso!", description: "Seus horários foram atualizados." });
+      toast({ title: "Sucesso!", description: "Seus horários foram atualizados em todas as unidades." });
     } catch (error) {
       toast({ title: "Erro", description: "Falha ao atualizar horários", variant: "destructive" });
     } finally {
@@ -223,107 +166,114 @@ export default function BarberSchedulePage() {
 
   return (
     <Layout>
-      <div className="container mx-auto px-4 py-8 max-w-4xl">
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
-          <div>
-            <h1 className="text-3xl font-serif font-bold tracking-tight flex items-center gap-3">
-              <Calendar className="w-8 h-8 text-primary" /> Meus Horários
-            </h1>
-            <p className="text-muted-foreground">Configure os dias e horários em que você está disponível para atendimento.</p>
-          </div>
+      <div className="container mx-auto px-4 py-8 max-w-4xl space-y-8">
+        <div>
+          <h1 className="text-3xl font-serif font-bold tracking-tight flex items-center gap-3">
+            <Calendar className="w-8 h-8 text-primary" /> Meus Horários
+          </h1>
+          <p className="text-muted-foreground">Configure os seus horários de atendimento para cada unidade em que você atua.</p>
         </div>
 
-        <Card className="border-border/50 shadow-xl overflow-hidden">
-          <CardHeader className="bg-muted/30 border-b">
-            <CardTitle className="text-lg">Expediente Semanal</CardTitle>
-            <CardDescription>Defina sua jornada de trabalho para cada dia da semana.</CardDescription>
-          </CardHeader>
-          <CardContent className="p-0">
-            <div className="divide-y divide-border/50">
-              {DAYS_OF_WEEK.map((day) => {
-                const config = weeklyHours?.[day.id] || { active: false, start: "09:00", end: "18:00" };
-                const shopHours = shopSettings?.weeklyHours || shopSettings?.weekly_hours;
-                const shopConfig = shopHours?.[day.id] || { active: true, start: "00:00", end: "23:59" };
-                const isShopClosed = !shopConfig.active;
+        {units.length === 0 ? (
+          <Card className="p-12 text-center text-muted-foreground">
+            Você ainda não está vinculado a nenhuma unidade. Entre em contato com o administrador.
+          </Card>
+        ) : (
+          units.map((unit) => (
+            <Card key={unit.id} className="border-border/50 shadow-xl overflow-hidden">
+              <CardHeader className="bg-primary/5 border-b">
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <MapPin className="w-4 h-4 text-primary" />
+                  Expediente semanal na unidade: <span className="text-primary">{unit.name}</span>
+                </CardTitle>
+                <CardDescription>Defina sua jornada nesta unidade específica.</CardDescription>
+              </CardHeader>
+              <CardContent className="p-0">
+                <div className="divide-y divide-border/50">
+                  {DAYS_OF_WEEK.map((day) => {
+                    const uId = String(unit.id);
+                    const config = weeklyHours[uId]?.[day.id] || { active: false, start: "09:00", end: "18:00" };
+                    const unitConfig = unit.weekly_hours?.[day.id] || { active: false };
+                    const isUnitClosed = !unitConfig.active;
 
-                return (
-                  <div key={day.id} className={`p-6 transition-colors hover:bg-muted/5 ${isShopClosed ? 'bg-muted/20 opacity-80' : ''}`}>
-                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-                      <div className="flex flex-col gap-1 min-w-[150px]">
-                        <span className="font-bold text-lg text-foreground">{day.label}</span>
-                        <div className="flex items-center gap-2">
-                          <Switch 
-                            checked={config.active && !isShopClosed} 
-                            disabled={isShopClosed}
-                            onCheckedChange={(checked) => handleToggleDay(day.id, checked)} 
-                          />
-                          <span className={`text-xs font-bold uppercase tracking-wider ${isShopClosed ? 'text-destructive' : config.active ? 'text-green-500' : 'text-muted-foreground'}`}>
-                            {isShopClosed ? 'Barbearia Fechada' : config.active ? 'Atendimento Ativo' : 'Não Atendo'}
-                          </span>
+                    return (
+                      <div key={day.id} className={`p-6 transition-colors hover:bg-muted/5 ${isUnitClosed ? 'bg-muted/20 opacity-80' : ''}`}>
+                        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+                          <div className="flex flex-col gap-1 min-w-[150px]">
+                            <span className="font-bold text-lg text-foreground">{day.label}</span>
+                            <div className="flex items-center gap-2">
+                              <Switch 
+                                checked={config.active && !isUnitClosed} 
+                                disabled={isUnitClosed}
+                                onCheckedChange={(checked) => handleToggleDay(uId, day.id, checked)} 
+                              />
+                              <span className={`text-xs font-bold uppercase tracking-wider ${isUnitClosed ? 'text-destructive' : config.active ? 'text-green-500' : 'text-muted-foreground'}`}>
+                                {isUnitClosed ? 'Unidade Fechada' : config.active ? 'Atendimento Ativo' : 'Não Atendo'}
+                              </span>
+                            </div>
+                          </div>
+
+                          {config.active && !isUnitClosed && (
+                            <div className="flex flex-1 items-center gap-4 animate-in fade-in slide-in-from-left-2 duration-300 justify-end">
+                              <div className="flex items-center gap-2">
+                                 <span className="text-[10px] uppercase font-bold text-muted-foreground">Início</span>
+                                 <Select
+                                   value={config.start || unitConfig.start || "09:00"}
+                                   onValueChange={(val) => handleTimeChange(uId, day.id, "start", val)}
+                                 >
+                                   <SelectTrigger className="w-[110px] h-10 text-sm bg-background border-border/50 shadow-sm">
+                                     <SelectValue />
+                                   </SelectTrigger>
+                                   <SelectContent>
+                                     {generateTimeOptions(unitConfig.start, unitConfig.end).map(time => (
+                                       <SelectItem key={time} value={time}>{time}</SelectItem>
+                                     ))}
+                                   </SelectContent>
+                                 </Select>
+                              </div>
+                              
+                              <div className="flex items-center gap-2">
+                                 <span className="text-[10px] uppercase font-bold text-muted-foreground">Fim</span>
+                                 <Select
+                                   value={config.end || unitConfig.end || "18:00"}
+                                   onValueChange={(val) => handleTimeChange(uId, day.id, "end", val)}
+                                 >
+                                   <SelectTrigger className="w-[110px] h-10 text-sm bg-background border-border/50 shadow-sm">
+                                     <SelectValue />
+                                   </SelectTrigger>
+                                   <SelectContent>
+                                     {generateTimeOptions(unitConfig.start, unitConfig.end)
+                                       .filter(t => t > (config.start || "00:00"))
+                                       .map(time => (
+                                         <SelectItem key={time} value={time}>{time}</SelectItem>
+                                       ))}
+                                   </SelectContent>
+                                 </Select>
+                              </div>
+                            </div>
+                          )}
+
+                          {!config.active && !isUnitClosed && (
+                            <div className="flex-1 text-right italic text-xs text-muted-foreground">
+                              Dia indisponível para esta unidade
+                            </div>
+                          )}
                         </div>
-                        {isShopClosed && (
-                          <p className="text-[10px] text-muted-foreground italic mt-1">O administrador desativou este dia nas configurações globais.</p>
-                        )}
                       </div>
+                    );
+                  })}
+                </div>
+              </CardContent>
+            </Card>
+          ))
+        )}
 
-                      {config.active && !isShopClosed && (
-                        <div className="flex flex-1 items-center gap-4 animate-in fade-in slide-in-from-left-2 duration-300 justify-end">
-                          <div className="flex items-center gap-2">
-                             <span className="text-[10px] uppercase font-bold text-muted-foreground">Início</span>
-                             <Select
-                               value={config.start || shopConfig.start || "09:00"}
-                               onValueChange={(val) => handleTimeChange(day.id, "start", val)}
-                             >
-                               <SelectTrigger className="w-[110px] h-10 text-sm bg-background border-border/50">
-                                 <SelectValue />
-                               </SelectTrigger>
-                               <SelectContent>
-                                 {generateTimeOptions(shopConfig.start, shopConfig.end).map(time => (
-                                   <SelectItem key={time} value={time}>{time}</SelectItem>
-                                 ))}
-                               </SelectContent>
-                             </Select>
-                          </div>
-                          
-                          <div className="flex items-center gap-2">
-                             <span className="text-[10px] uppercase font-bold text-muted-foreground">Fim</span>
-                             <Select
-                               value={config.end || shopConfig.end || "18:00"}
-                               onValueChange={(val) => handleTimeChange(day.id, "end", val)}
-                             >
-                               <SelectTrigger className="w-[110px] h-10 text-sm bg-background border-border/50">
-                                 <SelectValue />
-                               </SelectTrigger>
-                               <SelectContent>
-                                 {generateTimeOptions(shopConfig.start, shopConfig.end)
-                                   .filter(t => t > (config.start || "00:00"))
-                                   .map(time => (
-                                     <SelectItem key={time} value={time}>{time}</SelectItem>
-                                   ))}
-                               </SelectContent>
-                             </Select>
-                          </div>
-                        </div>
-                      )}
-
-                      {!config.active && !isShopClosed && (
-                        <div className="flex-1 text-right italic text-xs text-muted-foreground">
-                          Seu dia de descanso ou folga
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </CardContent>
-          <div className="p-6 bg-muted/30 border-t flex justify-end">
-             <Button onClick={handleSave} disabled={isSaving} className="gap-2">
-                {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-                Salvar Alterações
-             </Button>
-          </div>
-        </Card>
+        <div className="sticky bottom-8 flex justify-end">
+          <Button onClick={handleSave} disabled={isSaving || units.length === 0} className="gap-2 shadow-2xl h-14 px-8 text-lg font-bold">
+            {isSaving ? <Loader2 className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5" />}
+            Salvar Todas as Escalas
+          </Button>
+        </div>
       </div>
     </Layout>
   );
