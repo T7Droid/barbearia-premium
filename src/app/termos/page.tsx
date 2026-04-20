@@ -10,9 +10,9 @@ export default function TermosPage() {
           <section className="bg-muted/20 p-6 rounded-xl border border-border/50">
             <h2 className="text-2xl font-serif font-semibold text-foreground mb-4">1. Natureza da Plataforma</h2>
             <p>
-              A <strong>King Barber</strong> é uma plataforma tecnológica que atua como intermediária entre Clientes, Barbeiros Profissionais e Estabelecimentos (Barbearias). 
-              Nossa função é facilitar o agendamento de serviços e o processamento de pagamentos, não sendo a King Barber a prestadora direta dos serviços de barbearia.
-              A plataforma King Barber não possui nenhum vínculo empregatício, societário ou de representação comercial com os Estabelecimentos ou Barbeiros Profissionais cadastrados. Toda a relação de prestação de serviço ocorre estritamente e diretamente entre o Cliente e o Barbeiro/Estabelecimento escolhido.
+              A <strong>KingBarbers</strong> é uma plataforma tecnológica que atua como intermediária entre Clientes, Barbeiros Profissionais e Estabelecimentos (Barbearias). 
+              Nossa função é facilitar o agendamento de serviços e o processamento de pagamentos, não sendo a KingBarbers a prestadora direta dos serviços de barbearia.
+              A plataforma KingBarbers não possui nenhum vínculo empregatício, societário ou de representação comercial com os Estabelecimentos ou Barbeiros Profissionais cadastrados. Toda a relação de prestação de serviço ocorre estritamente e diretamente entre o Cliente e o Barbeiro/Estabelecimento escolhido.
             </p>
           </section>
 
@@ -63,7 +63,7 @@ export default function TermosPage() {
           <section className="bg-destructive/10 p-6 rounded-xl border border-destructive/20 mt-8">
             <h2 className="text-2xl font-serif font-semibold text-destructive mb-4">6. Limitação de Responsabilidade</h2>
             <p className="text-foreground font-medium">
-              A King Barber, por ser apenas a provedora da infraestrutura tecnológica (software), não se responsabiliza por:
+              A KingBarbers, por ser apenas a provedora da infraestrutura tecnológica (software), não se responsabiliza por:
             </p>
             <ul className="list-disc pl-6 space-y-2 mt-4 text-sm">
               <li>Insatisfação estrutural ou técnica com os cortes e serviços prestados.</li>
@@ -83,7 +83,7 @@ export default function TermosPage() {
         </div>
         
         <div className="mt-16 text-center text-xs text-muted-foreground bg-muted/10 py-4 rounded-lg">
-          Última atualização: {new Date().toLocaleDateString('pt-BR')} | King Barbers Marketplace
+          Última atualização: {new Date().toLocaleDateString('pt-BR')} | KingBarbers Marketplace
         </div>
       </div>
     </GlobalLayout>

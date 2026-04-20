@@ -10,7 +10,7 @@ export default function PrivacidadePage() {
           <section className="bg-muted/20 p-6 rounded-xl border border-border/50">
             <h2 className="text-2xl font-serif font-semibold text-foreground mb-4">1. Compromisso com sua Privacidade</h2>
             <p>
-              A <strong>King Barber</strong> valoriza a segurança e a privacidade dos dados de seus usuários (Clientes e Barbeiros). Esta política descreve como coletamos, usamos e protegemos suas informações de acordo com a <strong>Lei Geral de Proteção de Dados (LGPD - Lei 13.709/2018)</strong>.
+              A <strong>KingBarbers</strong> valoriza a segurança e a privacidade dos dados de seus usuários (Clientes e Barbeiros). Esta política descreve como coletamos, usamos e protegemos suas informações de acordo com a <strong>Lei Geral de Proteção de Dados (LGPD - Lei 13.709/2018)</strong>.
             </p>
           </section>
 
@@ -44,7 +44,7 @@ export default function PrivacidadePage() {
               Pela natureza do nosso serviço, seus dados de contato (Nome, E-mail e Telefone) são compartilhados tanto com o <strong>Estabelecimento</strong> quanto diretamente com o <strong>Profissional Barbeiro</strong> escolhido para a realização do serviço.
             </p>
             <div className="text-sm border-l-4 border-primary pl-4 py-2 italic text-foreground">
-              <strong>IMPORTANTE:</strong> Ambos (Estabelecimento e Barbeiro) tornam-se Controladores Independentes após o recebimento dos dados na plataforma. A King Barber não se responsabiliza pelo uso das informações feito pelos parceiros fora do escopo do agendamento técnico e da intermediação pontual na plataforma.
+              <strong>IMPORTANTE:</strong> Ambos (Estabelecimento e Barbeiro) tornam-se Controladores Independentes após o recebimento dos dados na plataforma. A KingBarbers não se responsabiliza pelo uso das informações feito pelos parceiros fora do escopo do agendamento técnico e da intermediação pontual na plataforma.
             </div>
           </section>
 
