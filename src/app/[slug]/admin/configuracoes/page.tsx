@@ -133,6 +133,44 @@ export default function SettingsPage() {
   };
 
   const handleSave = async () => {
+    // Validar Horários
+    const hours = (settings as any).weeklyHours;
+    if (hours) {
+      const dayLabels: any = {
+        monday: "Segunda-feira",
+        tuesday: "Terça-feira",
+        wednesday: "Quarta-feira",
+        thursday: "Quinta-feira",
+        friday: "Sexta-feira",
+        saturday: "Sábado",
+        sunday: "Domingo"
+      };
+
+      for (const [day, config] of Object.entries(hours)) {
+        const dayConfig = config as any;
+        if (dayConfig.active) {
+          if (!dayConfig.start || !dayConfig.end) {
+            toast({
+              title: "Horário Incompleto",
+              description: `Selecione os horários de início e fim para ${dayLabels[day]}.`,
+              variant: "destructive"
+            });
+            return;
+          }
+
+          // Validar se Início < Fim
+          if (dayConfig.start >= dayConfig.end) {
+            toast({
+              title: "Horário Inválido",
+              description: `O horário de início deve ser antes do horário de fim em ${dayLabels[day]}.`,
+              variant: "destructive"
+            });
+            return;
+          }
+        }
+      }
+    }
+
     setSaving(true);
     try {
       const res = await fetch("/api/settings", {
@@ -391,7 +429,16 @@ export default function SettingsPage() {
                             <Select
                               value={dayConfig.start}
                               onValueChange={(val) => {
-                                const newWeekly = { ...((settings as any).weeklyHours || {}), [day]: { ...dayConfig, start: val } };
+                                // Se o novo início for >= ao fim atual, limpamos o fim
+                                const shouldClearEnd = dayConfig.end && val >= dayConfig.end;
+                                const newWeekly = { 
+                                  ...((settings as any).weeklyHours || {}), 
+                                  [day]: { 
+                                    ...dayConfig, 
+                                    start: val,
+                                    end: shouldClearEnd ? "" : dayConfig.end 
+                                  } 
+                                };
                                 setSettings({ ...settings, weeklyHours: newWeekly } as any);
                               }}
                             >
