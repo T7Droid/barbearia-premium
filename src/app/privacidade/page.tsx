@@ -22,6 +22,7 @@ export default function PrivacidadePage() {
               <li><strong>Dados de Transação:</strong> Histórico de agendamentos, serviços contratados e status de pagamentos.</li>
               <li><strong>Dados Técnicos:</strong> Endereço IP, tipo de navegador, identificadores de dispositivo e tokens de notificação (FCM) para envio de alertas.</li>
               <li><strong>Dados de Pagamento:</strong> Processados diretamente pelo Mercado Pago. Não armazenamos números de cartão de crédito em nossa base de dados.</li>
+              <li><strong>Para Barbeiros/Profissionais:</strong> Além dos dados cadastrais, tratamos dados da sua agenda profissional, métricas de desempenho e configurações de disponibilidade para o funcionamento do painel profissional.</li>
             </ul>
           </section>
 
@@ -40,10 +41,10 @@ export default function PrivacidadePage() {
           <section className="bg-primary/5 p-6 rounded-xl border border-primary/20">
             <h2 className="text-2xl font-serif font-semibold text-foreground mb-4">4. Compartilhamento de Dados (Marketplace)</h2>
             <p className="mb-4">
-              Pela natureza do nosso serviço, seus dados de contato (Nome, E-mail e Telefone) são compartilhados com o <strong>Estabelecimento (Barbearia)</strong> onde você realiza um agendamento.
+              Pela natureza do nosso serviço, seus dados de contato (Nome, E-mail e Telefone) são compartilhados tanto com o <strong>Estabelecimento</strong> quanto diretamente com o <strong>Profissional Barbeiro</strong> escolhido para a realização do serviço.
             </p>
             <div className="text-sm border-l-4 border-primary pl-4 py-2 italic text-foreground">
-              <strong>IMPORTANTE:</strong> O Estabelecimento torna-se um Controlador Independente desses dados após o recebimento. A King Barber não se responsabiliza pelo uso das informações feito pelas barbearias fora do escopo do agendamento técnico da plataforma.
+              <strong>IMPORTANTE:</strong> Ambos (Estabelecimento e Barbeiro) tornam-se Controladores Independentes após o recebimento dos dados na plataforma. A King Barber não se responsabiliza pelo uso das informações feito pelos parceiros fora do escopo do agendamento técnico e da intermediação pontual na plataforma.
             </div>
           </section>
 

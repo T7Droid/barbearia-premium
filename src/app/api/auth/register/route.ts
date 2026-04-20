@@ -9,7 +9,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Tenant não identificado" }, { status: 400 });
     }
 
-    const { email, password, name, phone } = await request.json();
+    const { email, password, name, phone, acceptedTerms, acceptedPrivacy } = await request.json();
 
     if (!email || !password || !name) {
       return NextResponse.json({ error: "Dados incompletos" }, { status: 400 });
@@ -57,7 +57,9 @@ export async function POST(request: NextRequest) {
           email: email, // Persistir o e-mail no perfil
           phone: phone || "",
           role: "client",
-          points: initialPoints
+          points: initialPoints,
+          accepted_terms: acceptedTerms === true,
+          accepted_privacy: acceptedPrivacy === true
         });
 
         if (profileError) {

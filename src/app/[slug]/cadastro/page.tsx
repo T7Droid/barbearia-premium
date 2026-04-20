@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { UserPlus, ShieldCheck, ArrowRight, Loader2 } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
 import Link from "next/link";
 import { DemoStore } from "@/lib/persistence/demo-store";
 import { useTenant } from "@/hooks/use-tenant";
@@ -32,7 +33,9 @@ function CadastroContent() {
     email: emailParam,
     phone: phoneParam,
     password: "",
-    confirmPassword: ""
+    confirmPassword: "",
+    acceptedTerms: false,
+    acceptedPrivacy: false
   });
 
   useEffect(() => {
@@ -54,6 +57,15 @@ function CadastroContent() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (!formData.acceptedTerms || !formData.acceptedPrivacy) {
+      toast({
+        title: "Aceite obrigatório",
+        description: "Você precisa aceitar os Termos de Uso e a Política de Privacidade para continuar.",
+        variant: "destructive"
+      });
+      return;
+    }
 
     if (formData.password.length < 6) {
       toast({
@@ -96,7 +108,9 @@ function CadastroContent() {
           email: formData.email,
           password: formData.password,
           name: formData.name,
-          phone: formData.phone
+          phone: formData.phone,
+          acceptedTerms: formData.acceptedTerms,
+          acceptedPrivacy: formData.acceptedPrivacy
         })
       });
 
@@ -194,6 +208,39 @@ function CadastroContent() {
                 required
                 placeholder="••••••••"
               />
+            </div>
+
+            <div className="space-y-4 pt-2 pb-2">
+              <div className="flex items-start space-x-2">
+                <Checkbox 
+                  id="terms" 
+                  checked={formData.acceptedTerms} 
+                  onCheckedChange={(checked) => setFormData({...formData, acceptedTerms: checked === true})} 
+                />
+                <div className="grid gap-1.5 leading-none mt-0.5">
+                  <Label htmlFor="terms" className="text-sm font-medium leading-none cursor-pointer">
+                    Aceito os Termos de Uso
+                  </Label>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Concordo com os <Link href={getLink("/termos")} className="text-primary hover:underline">termos de uso</Link> da plataforma.
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-start space-x-2">
+                <Checkbox 
+                  id="privacy" 
+                  checked={formData.acceptedPrivacy} 
+                  onCheckedChange={(checked) => setFormData({...formData, acceptedPrivacy: checked === true})} 
+                />
+                <div className="grid gap-1.5 leading-none mt-0.5">
+                  <Label htmlFor="privacy" className="text-sm font-medium leading-none cursor-pointer">
+                    Aceito a Política de Privacidade
+                  </Label>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Concordo com a <Link href={getLink("/privacidade")} className="text-primary hover:underline">política de privacidade</Link> e tratamento de dados.
+                  </p>
+                </div>
+              </div>
             </div>
 
             <Button type="submit" className="w-full h-12 text-lg mt-4 group" disabled={isLoading}>
