@@ -10,7 +10,7 @@ export function GlobalLayout({ children }: { children: React.ReactNode }) {
         <div className="container mx-auto px-4 h-16 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2 group">
             <Scissors className="w-6 h-6 text-primary group-hover:text-primary/80 transition-colors" />
-            <span className="font-serif text-xl font-bold tracking-wide uppercase">
+            <span className="font-serif text-xl font-bold tracking-wide uppercase italic">
               <span className="text-yellow-400">King</span>Barbers
               <span className="text-primary font-black">.</span>
             </span>
@@ -27,7 +27,7 @@ export function GlobalLayout({ children }: { children: React.ReactNode }) {
           <div className="flex flex-col items-center gap-4">
             <div className="flex items-center gap-2">
               <Scissors className="w-5 h-5 text-primary" />
-              <span className="font-serif font-bold tracking-widest uppercase text-sm">
+              <span className="font-serif font-bold tracking-widest uppercase text-sm italic">
                 <span className="text-yellow-400">King</span>Barbers
               </span>
             </div>

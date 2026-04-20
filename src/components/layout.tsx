@@ -99,19 +99,29 @@ export function Layout({ children }: { children: React.ReactNode }) {
     return `/${tenant.slug}${path}`;
   };
 
+  const handleLinkClick = (e: React.MouseEvent<HTMLAnchorElement>, targetPath: string) => {
+    if (!tenant && typeof window !== "undefined") {
+      const lastSlug = localStorage.getItem("last_tenant_slug");
+      if (lastSlug) {
+        e.preventDefault();
+        router.push(`/${lastSlug}${targetPath === "/" ? "" : targetPath}`);
+      }
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background flex flex-col font-sans">
       <header className="border-b border-border/40 bg-card/50 backdrop-blur-md sticky top-0 z-50">
         <div className="container mx-auto px-4 h-16 flex items-center justify-between">
-          <Link href={getLink("/")} className="flex items-center gap-2 group">
+          <Link href={getLink("/")} onClick={(e) => handleLinkClick(e, "/")} className="flex items-center gap-2 group">
             <Scissors className="w-6 h-6 text-primary group-hover:text-primary/80 transition-colors" />
-            <span className="font-serif text-xl font-bold tracking-wide uppercase">
-              {isRoot ? (
+            <span className="font-serif text-xl font-bold tracking-wide uppercase italic">
+              {isRoot || !tenant || tenant.name === "King Barber" || tenant.name === "KingBarbers" ? (
                 <>
-                  <span className="text-yellow-400">King</span>Barber
+                  <span className="text-yellow-400">King</span>Barbers
                 </>
               ) : (
-                tenant ? tenant.name : "Barber"
+                tenant.name
               )}
               <span className="text-primary font-black">.</span>
             </span>
@@ -130,19 +140,19 @@ export function Layout({ children }: { children: React.ReactNode }) {
 
           {!isRoot && (
             <nav className="hidden md:flex items-center gap-8">
-              <Link href={getLink("/")} className={`text-sm font-medium transition-colors hover:text-primary ${pathname === getLink("/") ? 'text-primary' : 'text-muted-foreground'}`}>Início</Link>
-              <Link href={getLink("/booking")} className={`text-sm font-medium transition-colors hover:text-primary ${pathname.startsWith(getLink("/booking")) ? 'text-primary' : 'text-muted-foreground'}`}>Agendar</Link>
+              <Link href={getLink("/")} onClick={(e) => handleLinkClick(e, "/")} className={`text-sm font-medium transition-colors hover:text-primary ${pathname === getLink("/") ? 'text-primary' : 'text-muted-foreground'}`}>Início</Link>
+              <Link href={getLink("/booking")} onClick={(e) => handleLinkClick(e, "/booking")} className={`text-sm font-medium transition-colors hover:text-primary ${pathname.startsWith(getLink("/booking")) ? 'text-primary' : 'text-muted-foreground'}`}>Agendar</Link>
 
               {user?.role === 'admin' && (
-                <Link href={getLink("/admin")} className={`text-sm font-medium transition-colors hover:text-primary ${pathname.startsWith(getLink("/admin")) ? 'text-primary' : 'text-muted-foreground'}`}>Administração</Link>
+                <Link href={getLink("/admin")} onClick={(e) => handleLinkClick(e, "/admin")} className={`text-sm font-medium transition-colors hover:text-primary ${pathname.startsWith(getLink("/admin")) ? 'text-primary' : 'text-muted-foreground'}`}>Administração</Link>
               )}
               
               {(user?.role === 'barber' || user?.role === 'admin') && (
-                <Link href={getLink("/barber")} className={`text-sm font-medium transition-colors hover:text-primary ${pathname.startsWith(getLink("/barber")) ? 'text-primary' : 'text-muted-foreground'}`}>Painel Profissional</Link>
+                <Link href={getLink("/barber")} onClick={(e) => handleLinkClick(e, "/barber")} className={`text-sm font-medium transition-colors hover:text-primary ${pathname.startsWith(getLink("/barber")) ? 'text-primary' : 'text-muted-foreground'}`}>Painel Profissional</Link>
               )}
 
               {user && (
-                <Link href={getLink("/meu-perfil/historico")} className={`text-sm font-medium transition-colors hover:text-primary ${pathname.startsWith(getLink("/meu-perfil/historico")) ? 'text-primary' : 'text-muted-foreground'}`}>Meus Agendamentos</Link>
+                <Link href={getLink("/meu-perfil/historico")} onClick={(e) => handleLinkClick(e, "/meu-perfil/historico")} className={`text-sm font-medium transition-colors hover:text-primary ${pathname.startsWith(getLink("/meu-perfil/historico")) ? 'text-primary' : 'text-muted-foreground'}`}>Meus Agendamentos</Link>
               )}
             </nav>
           )}
@@ -183,10 +193,10 @@ export function Layout({ children }: { children: React.ReactNode }) {
                     <>
                       <DropdownMenuLabel className="text-[10px] uppercase text-muted-foreground font-bold tracking-widest pt-3 pb-1">Administração</DropdownMenuLabel>
                       <DropdownMenuItem asChild>
-                        <Link href={getLink("/admin")}><LayoutGrid className="mr-2 h-4 w-4" /> Dashboard</Link>
+                        <Link href={getLink("/admin")} onClick={(e) => handleLinkClick(e, "/admin")}><LayoutGrid className="mr-2 h-4 w-4" /> Dashboard</Link>
                       </DropdownMenuItem>
                       <DropdownMenuItem asChild>
-                        <Link href={getLink("/admin/configuracoes")}><SettingsIcon className="mr-2 h-4 w-4" /> Configurações</Link>
+                        <Link href={getLink("/admin/configuracoes")} onClick={(e) => handleLinkClick(e, "/admin/configuracoes")}><SettingsIcon className="mr-2 h-4 w-4" /> Configurações</Link>
                       </DropdownMenuItem>
                       <DropdownMenuSeparator />
                     </>
@@ -197,10 +207,10 @@ export function Layout({ children }: { children: React.ReactNode }) {
                     <>
                       <DropdownMenuLabel className="text-[10px] uppercase text-muted-foreground font-bold tracking-widest pt-3 pb-1">Profissional</DropdownMenuLabel>
                       <DropdownMenuItem asChild>
-                        <Link href={getLink("/barber")}><LayoutGrid className="mr-2 h-4 w-4" /> Painel Profissional</Link>
+                        <Link href={getLink("/barber")} onClick={(e) => handleLinkClick(e, "/barber")}><LayoutGrid className="mr-2 h-4 w-4" /> Painel Profissional</Link>
                       </DropdownMenuItem>
                       <DropdownMenuItem asChild>
-                        <Link href={getLink("/barber/horarios")}><Clock className="mr-2 h-4 w-4" /> Meus Horários</Link>
+                        <Link href={getLink("/barber/horarios")} onClick={(e) => handleLinkClick(e, "/barber/horarios")}><Clock className="mr-2 h-4 w-4" /> Meus Horários</Link>
                       </DropdownMenuItem>
                       <DropdownMenuSeparator />
                     </>
@@ -209,13 +219,13 @@ export function Layout({ children }: { children: React.ReactNode }) {
                   {/* Itens do Cliente (Acessíveis por ambos) */}
                   <DropdownMenuLabel className="text-[10px] uppercase text-muted-foreground font-bold tracking-widest pt-3 pb-1">Minha Conta</DropdownMenuLabel>
                   <DropdownMenuItem asChild>
-                    <Link href={getLink("/meu-perfil")}><User className="mr-2 h-4 w-4" /> Meu Perfil</Link>
+                    <Link href={getLink("/meu-perfil")} onClick={(e) => handleLinkClick(e, "/meu-perfil")}><User className="mr-2 h-4 w-4" /> Meu Perfil</Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild>
-                    <Link href={getLink("/meu-perfil/historico")}><History className="mr-2 h-4 w-4" /> Meus Agendamentos</Link>
+                    <Link href={getLink("/meu-perfil/historico")} onClick={(e) => handleLinkClick(e, "/meu-perfil/historico")}><History className="mr-2 h-4 w-4" /> Meus Agendamentos</Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild>
-                    <Link href={getLink("/meu-perfil/settings")}><SettingsIcon className="mr-2 h-4 w-4" /> Configurações</Link>
+                    <Link href={getLink("/meu-perfil/settings")} onClick={(e) => handleLinkClick(e, "/meu-perfil/settings")}><SettingsIcon className="mr-2 h-4 w-4" /> Configurações</Link>
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem className="text-destructive focus:text-destructive cursor-pointer" onClick={handleLogout}>
@@ -225,7 +235,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
               </DropdownMenu>
             ) : (
               <Button asChild size="sm" variant="outline" className="border-primary/50 text-primary hover:bg-primary/5 h-9">
-                <Link href={getLink("/login")}>Entrar</Link>
+                <Link href={getLink("/login")} onClick={(e) => handleLinkClick(e, "/login")}>Entrar</Link>
               </Button>
             ))}
           </div>
@@ -241,11 +251,11 @@ export function Layout({ children }: { children: React.ReactNode }) {
           <div className="flex items-center gap-2">
             <Scissors className="w-5 h-5 text-primary" />
             <span className="font-serif text-lg font-bold tracking-wide uppercase italic">
-              {isRoot && <span className="text-yellow-400 NOT-italic">King</span>}Barber<span className="text-primary NOT-italic font-black">.</span>
+              <span className="text-yellow-400">King</span>Barbers<span className="text-primary font-black">.</span>
             </span>
           </div>
           <p className="text-sm text-muted-foreground text-center">
-            © {new Date().getFullYear()} KingBarber. Experiência de Barbearia de Luxo.
+            © {new Date().getFullYear()} KingBarbers. Experiência de Barbearia de Luxo.
           </p>
           <div className="flex items-center gap-4 text-xs text-muted-foreground">
             <Link href={getLink("/privacidade")} className="hover:text-primary transition-colors">Privacidade</Link>
