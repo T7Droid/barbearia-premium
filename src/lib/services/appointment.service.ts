@@ -214,42 +214,44 @@ export class AppointmentService {
 
     if (appError) throw appError;
 
-    // --- LOYALTY POINTS LOGIC ---
-    if (session.userId && isPaid) {
-      // 1. Fetch current settings for THIS tenant
-      const { data: settingsData } = await supabaseAdmin
-        .from("settings")
-        .select("is_points_enabled, points_per_appointment")
-        .eq("tenant_id", sessionDataRaw.tenant_id)
-        .single();
-
-      const settings = settingsData || { is_points_enabled: true, points_per_appointment: 5 };
-
-      if (settings.is_points_enabled) {
-        const pointsToAdd = settings.points_per_appointment || 0;
-
-        // 2. Usar UPSERT para garantir que o perfil exista e atualizar os pontos NO TENANT correte
-        const { data: profile } = await supabaseAdmin
-          .from("profiles")
-          .select("points, full_name")
-          .eq("id", session.userId)
+    if (session.userId) {
+      // --- LOYALTY POINTS LOGIC ---
+      if (isPaid) {
+        // 1. Fetch current settings for THIS tenant
+        const { data: settingsData } = await supabaseAdmin
+          .from("settings")
+          .select("is_points_enabled, points_per_appointment")
           .eq("tenant_id", sessionDataRaw.tenant_id)
           .single();
 
-        const currentPoints = profile?.points || 0;
-        const newPoints = currentPoints + pointsToAdd;
+        const settings = settingsData || { is_points_enabled: true, points_per_appointment: 5 };
 
-        const { error: upsertError } = await supabaseAdmin
-          .from("profiles")
-          .upsert({
-            id: session.userId,
-            tenant_id: sessionDataRaw.tenant_id,
-            points: newPoints,
-            full_name: profile?.full_name || session.customerName
-          });
+        if (settings.is_points_enabled) {
+          const pointsToAdd = settings.points_per_appointment || 0;
 
-        if (upsertError) {
-          console.error(`[LOYALTY] Erro ao atualizar pontos para o usuário ${session.userId} no tenant ${sessionDataRaw.tenant_id}:`, upsertError);
+          // 2. Usar UPSERT para garantir que o perfil exista e atualizar os pontos NO TENANT correte
+          const { data: profile } = await supabaseAdmin
+            .from("profiles")
+            .select("points, full_name")
+            .eq("id", session.userId)
+            .eq("tenant_id", sessionDataRaw.tenant_id)
+            .single();
+
+          const currentPoints = profile?.points || 0;
+          const newPoints = currentPoints + pointsToAdd;
+
+          const { error: upsertError } = await supabaseAdmin
+            .from("profiles")
+            .upsert({
+              id: session.userId,
+              tenant_id: sessionDataRaw.tenant_id,
+              points: newPoints,
+              full_name: profile?.full_name || session.customerName
+            });
+
+          if (upsertError) {
+            console.error(`[LOYALTY] Erro ao atualizar pontos para o usuário ${session.userId} no tenant ${sessionDataRaw.tenant_id}:`, upsertError);
+          }
         }
       }
 
