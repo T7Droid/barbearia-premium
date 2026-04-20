@@ -38,15 +38,21 @@ export default function BarberSchedulePage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [barberId, setBarberId] = useState<number | null>(null);
+  const [shopSettings, setShopSettings] = useState<any>(null);
 
-  const generateTimeOptions = () => {
+  const generateTimeOptions = (minTime?: string, maxTime?: string) => {
     const options = [];
-    const interval = 30; // Poderia vir das configurações do tenant, mas fixamos 30 para o barbeiro
+    const interval = 30;
     const totalMinutesInDay = 24 * 60;
     for (let minutes = 0; minutes < totalMinutesInDay; minutes += interval) {
       const hours = Math.floor(minutes / 60);
       const mins = minutes % 60;
       const time = `${hours.toString().padStart(2, "0")}:${mins.toString().padStart(2, "0")}`;
+      
+      // Filtro por intervalo da barbearia
+      if (minTime && time < minTime) continue;
+      if (maxTime && time > maxTime) continue;
+      
       options.push(time);
     }
     return options;
@@ -84,13 +90,22 @@ export default function BarberSchedulePage() {
 
       const data = await res.json();
       
+      // Sempre buscar configurações da barbearia para sincronização
+      const headers = { "x-tenant-slug": tenant.slug };
+      const settingsRes = await fetch("/api/settings", { headers });
+      const settingsData = await settingsRes.json();
+      setShopSettings(settingsData);
+
       if (data.weekly_hours) {
         setWeeklyHours(data.weekly_hours);
       } else {
-        const headers = { "x-tenant-slug": tenant.slug };
-        const settingsRes = await fetch("/api/settings", { headers });
-        const settings = await settingsRes.json();
-        setWeeklyHours(settings.weekly_hours || {});
+        // Fallback: Se barbeiro não tem horários, inicia todos como desativados por padrão
+        const shopHours = settingsData.weeklyHours || settingsData.weekly_hours || {};
+        const initialHours = Object.keys(shopHours).reduce((acc: any, day: string) => {
+          acc[day] = { ...shopHours[day], active: false };
+          return acc;
+        }, {});
+        setWeeklyHours(initialHours);
       }
       setBarberId(data.id);
     } catch (error) {
@@ -133,6 +148,25 @@ export default function BarberSchedulePage() {
         toast({ title: "Erro", description: "Sua conta profissional não foi identificada. Tente recarregar a página.", variant: "destructive" });
         setIsSaving(false);
         return;
+      }
+
+      // Validação de Integridade: Garantir que o barbeiro não "furou" o horário da barbearia
+      if (shopSettings?.weeklyHours || shopSettings?.weekly_hours) {
+        const shopHours = shopSettings.weeklyHours || shopSettings.weekly_hours;
+        for (const dayId of Object.keys(weeklyHours)) {
+          const config = weeklyHours[dayId];
+          const shopConfig = shopHours[dayId];
+          if (config.active && shopConfig) {
+            if (!shopConfig.active) {
+              toast({ title: "Erro de Sincronização", description: `A barbearia está fechada na ${dayId}. Desative este dia.`, variant: "destructive" });
+              setIsSaving(false); return;
+            }
+            if (config.start < shopConfig.start || config.end > shopConfig.end) {
+              toast({ title: "Horário Inválido", description: `Seus horários em ${dayId} devem estar entre ${shopConfig.start} e ${shopConfig.end}.`, variant: "destructive" });
+              setIsSaving(false); return;
+            }
+          }
+        }
       }
 
       const res = await fetch(`/api/barbers/${barberId}`, {
@@ -182,35 +216,43 @@ export default function BarberSchedulePage() {
             <div className="divide-y divide-border/50">
               {DAYS_OF_WEEK.map((day) => {
                 const config = weeklyHours?.[day.id] || { active: false, start: "09:00", end: "18:00" };
+                const shopHours = shopSettings?.weeklyHours || shopSettings?.weekly_hours;
+                const shopConfig = shopHours?.[day.id] || { active: true, start: "00:00", end: "23:59" };
+                const isShopClosed = !shopConfig.active;
+
                 return (
-                  <div key={day.id} className="p-6 transition-colors hover:bg-muted/5">
+                  <div key={day.id} className={`p-6 transition-colors hover:bg-muted/5 ${isShopClosed ? 'bg-muted/20 opacity-80' : ''}`}>
                     <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
                       <div className="flex flex-col gap-1 min-w-[150px]">
                         <span className="font-bold text-lg text-foreground">{day.label}</span>
                         <div className="flex items-center gap-2">
                           <Switch 
-                            checked={config.active} 
+                            checked={config.active && !isShopClosed} 
+                            disabled={isShopClosed}
                             onCheckedChange={(checked) => handleToggleDay(day.id, checked)} 
                           />
-                          <span className={`text-xs font-bold uppercase tracking-wider ${config.active ? 'text-green-500' : 'text-muted-foreground'}`}>
-                            {config.active ? 'Atendimento Ativo' : 'Não Atendo'}
+                          <span className={`text-xs font-bold uppercase tracking-wider ${isShopClosed ? 'text-destructive' : config.active ? 'text-green-500' : 'text-muted-foreground'}`}>
+                            {isShopClosed ? 'Barbearia Fechada' : config.active ? 'Atendimento Ativo' : 'Não Atendo'}
                           </span>
                         </div>
+                        {isShopClosed && (
+                          <p className="text-[10px] text-muted-foreground italic mt-1">O administrador desativou este dia nas configurações globais.</p>
+                        )}
                       </div>
 
-                      {config.active && (
+                      {config.active && !isShopClosed && (
                         <div className="flex flex-1 items-center gap-4 animate-in fade-in slide-in-from-left-2 duration-300 justify-end">
                           <div className="flex items-center gap-2">
                              <span className="text-[10px] uppercase font-bold text-muted-foreground">Início</span>
                              <Select
-                               value={config.start || "09:00"}
+                               value={config.start || shopConfig.start || "09:00"}
                                onValueChange={(val) => handleTimeChange(day.id, "start", val)}
                              >
                                <SelectTrigger className="w-[110px] h-10 text-sm bg-background border-border/50">
                                  <SelectValue />
                                </SelectTrigger>
                                <SelectContent>
-                                 {generateTimeOptions().map(time => (
+                                 {generateTimeOptions(shopConfig.start, shopConfig.end).map(time => (
                                    <SelectItem key={time} value={time}>{time}</SelectItem>
                                  ))}
                                </SelectContent>
@@ -220,14 +262,14 @@ export default function BarberSchedulePage() {
                           <div className="flex items-center gap-2">
                              <span className="text-[10px] uppercase font-bold text-muted-foreground">Fim</span>
                              <Select
-                               value={config.end || "18:00"}
+                               value={config.end || shopConfig.end || "18:00"}
                                onValueChange={(val) => handleTimeChange(day.id, "end", val)}
                              >
                                <SelectTrigger className="w-[110px] h-10 text-sm bg-background border-border/50">
                                  <SelectValue />
                                </SelectTrigger>
                                <SelectContent>
-                                 {generateTimeOptions()
+                                 {generateTimeOptions(shopConfig.start, shopConfig.end)
                                    .filter(t => t > (config.start || "00:00"))
                                    .map(time => (
                                      <SelectItem key={time} value={time}>{time}</SelectItem>
@@ -238,9 +280,9 @@ export default function BarberSchedulePage() {
                         </div>
                       )}
 
-                      {!config.active && (
+                      {!config.active && !isShopClosed && (
                         <div className="flex-1 text-right italic text-xs text-muted-foreground">
-                          Dia de descanso ou folga
+                          Seu dia de descanso ou folga
                         </div>
                       )}
                     </div>

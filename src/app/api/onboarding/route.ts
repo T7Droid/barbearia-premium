@@ -127,7 +127,16 @@ export async function POST(req: Request) {
           tenant_id: createdTenantId,
           name: barber.name,
           active: true,
-          user_id: createdUserId // O dono também é o primeiro barbeiro no DB
+          user_id: createdUserId, // O dono também é o primeiro barbeiro no DB
+          weekly_hours: {
+            monday: { active: false, start: "09:00", end: "18:00" },
+            tuesday: { active: false, start: "09:00", end: "18:00" },
+            wednesday: { active: false, start: "09:00", end: "18:00" },
+            thursday: { active: false, start: "09:00", end: "18:00" },
+            friday: { active: false, start: "09:00", end: "18:00" },
+            saturday: { active: false, start: "09:00", end: "18:00" },
+            sunday: { active: false, start: "09:00", end: "18:00" }
+          }
         }
       ])
       .select()
