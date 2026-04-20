@@ -9,6 +9,8 @@ export interface Appointment {
   servicesJson?: any[];
   barberId?: number;
   barberName?: string;
+  unitId?: string;
+  unitName?: string;
   appointmentDate: string;
   appointmentTime: string;
   customerName: string;
@@ -51,6 +53,7 @@ export class AppointmentService {
     if (data.userId !== undefined) mapped.user_id = data.userId;
     if (data.tenantId !== undefined) mapped.tenant_id = data.tenantId;
     if (data.unitId !== undefined) mapped.unit_id = data.unitId;
+    if (data.unitName !== undefined) mapped.unit_name = data.unitName;
     if (data.createdAt !== undefined) mapped.created_at = data.createdAt;
     return mapped;
   }
@@ -83,6 +86,7 @@ export class AppointmentService {
       rescheduleId: data.reschedule_id ? Number(data.reschedule_id) : undefined,
       userId: data.user_id,
       unitId: data.unit_id,
+      unitName: data.unit_name,
       unit: data.units ? {
         id: data.units.id,
         name: data.units.name,
@@ -200,6 +204,7 @@ export class AppointmentService {
       isReschedule: !!session.rescheduleId,
       userId: session.userId,
       unitId: session.unitId,
+      unitName: session.unitName,
       tenantId: sessionDataRaw.tenant_id,
       createdAt: new Date().toISOString()
     });

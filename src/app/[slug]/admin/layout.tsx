@@ -11,8 +11,11 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const router = useRouter();
   const pathname = usePathname();
   const tenant = useTenant();
-  const [isAuthorized, setIsAuthorized] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
+  
+  // Sincronização inicial com a store para evitar flash do login form
+  const initialUser = userStore.getState().user;
+  const [isAuthorized, setIsAuthorized] = useState(initialUser?.role === "admin");
+  const [isLoading, setIsLoading] = useState(!isAuthorized);
 
   useEffect(() => {
     const controller = new AbortController();

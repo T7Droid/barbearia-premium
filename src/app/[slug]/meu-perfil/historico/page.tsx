@@ -267,6 +267,7 @@ export default function AppointmentHistory() {
                 <TableRow className="border-border/50 hover:bg-transparent">
                   <TableHead className="text-foreground h-12">Serviço</TableHead>
                   <TableHead className="text-foreground">Barbeiro</TableHead>
+                  <TableHead className="text-foreground">Unidade</TableHead>
                   <TableHead className="text-foreground">Data / Hora</TableHead>
                   <TableHead className="text-foreground">Preço</TableHead>
                   <TableHead className="text-foreground">Pagamento</TableHead>
@@ -277,7 +278,7 @@ export default function AppointmentHistory() {
               <TableBody>
                 {appointments.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={7} className="text-center py-16 text-muted-foreground">
+                    <TableCell colSpan={8} className="text-center py-16 text-muted-foreground">
                       <div className="flex flex-col items-center gap-2">
                         <AlertCircle className="w-8 h-8 opacity-20" />
                         <p>Nenhum agendamento encontrado.</p>
@@ -302,6 +303,9 @@ export default function AppointmentHistory() {
                       </TableCell>
                       <TableCell className="text-foreground">
                         {app.barberName || app.barber_name || "N/D"}
+                      </TableCell>
+                      <TableCell className="text-foreground">
+                        {app.unitName || app.unit_name || "N/D"}
                       </TableCell>
                       <TableCell className="text-foreground">
                         <div className="flex flex-col">

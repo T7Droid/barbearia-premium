@@ -286,7 +286,7 @@ function BookingContent() {
   const dateStr = selectedDate ? format(selectedDate, "yyyy-MM-dd") : "";
   const serviceIdsStr = selectedServices.map(s => s.id).join(",");
 
-  const { data: availability, isLoading: isLoadingAvailability } = useGetAvailability(
+  const { data: availability, isLoading: isLoadingAvailability, isFetching: isFetchingAvailability } = useGetAvailability(
     { 
       date: dateStr, 
       serviceId: selectedServices[0]?.id || 0, // Fallback para compatibilidade se API esperar um ID
@@ -306,12 +306,16 @@ function BookingContent() {
           barberId: selectedBarber?.id as any,
           query: { 
             reschedule: rescheduleId || undefined,
-            serviceIds: serviceIdsStr || undefined
+            serviceIds: serviceIdsStr || undefined,
+            unitId: selectedUnit?.id || undefined
           }
         })
       }
     }
   );
+
+  const isChangingAvailability = isLoadingAvailability || isFetchingAvailability;
+
 
   // Update ref to latest handlePaymentSubmit to avoid stale closures in useEffect
   useEffect(() => {
@@ -478,6 +482,7 @@ function BookingContent() {
           appointmentTime: selectedTime,
           userId: currentUser?.id,
           unitId: selectedUnit?.id,
+          unitName: selectedUnit?.name,
           rescheduleId: rescheduleId ? parseInt(rescheduleId) : undefined
         } as any
       }) as any;
@@ -977,11 +982,13 @@ function BookingContent() {
                   </div>
                 </div>
 
-                <div className="lg:col-span-2" ref={timeSectionRef}>
+                <div className={`lg:col-span-2 ${isChangingAvailability ? 'pointer-events-none' : ''}`} ref={timeSectionRef}>
                   <Label className="mb-4 block text-lg font-medium text-foreground">2. Escolha o horário</Label>
-                  {isLoadingAvailability ? (
-                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                      {[1, 2, 3, 4, 5, 6, 7, 8, 9].map(i => <Skeleton key={i} className="h-12 w-full rounded-md" />)}
+                  {isChangingAvailability ? (
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 animate-pulse">
+                      {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map(i => (
+                        <div key={i} className="h-12 w-full bg-muted rounded-md border border-border/50" />
+                      ))}
                     </div>
                   ) : !selectedDate ? (
                     <div className="text-center p-10 border border-dashed rounded-xl text-muted-foreground bg-accent/5">

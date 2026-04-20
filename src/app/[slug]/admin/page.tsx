@@ -306,6 +306,7 @@ export default function Admin() {
                 <TableRow className="border-border/50 hover:bg-transparent">
                   <TableHead className="text-foreground">Data / Hora</TableHead>
                   <TableHead className="text-foreground">Cliente</TableHead>
+                  <TableHead className="text-foreground">Unidade</TableHead>
                   <TableHead className="text-foreground">Barbeiro</TableHead>
                   <TableHead className="text-foreground">Serviço</TableHead>
                   <TableHead className="text-foreground">Valor</TableHead>
@@ -321,6 +322,7 @@ export default function Admin() {
                       <TableCell><Skeleton className="h-5 w-40" /></TableCell>
                       <TableCell><Skeleton className="h-5 w-32" /></TableCell>
                       <TableCell><Skeleton className="h-5 w-32" /></TableCell>
+                      <TableCell><Skeleton className="h-5 w-32" /></TableCell>
                       <TableCell><Skeleton className="h-5 w-16" /></TableCell>
                       <TableCell><Skeleton className="h-5 w-24" /></TableCell>
                       <TableCell><Skeleton className="h-5 w-20" /></TableCell>
@@ -328,7 +330,7 @@ export default function Admin() {
                   ))
                 ) : sortedAppointments?.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                    <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
                       Nenhum agendamento encontrado.
                     </TableCell>
                   </TableRow>
@@ -341,6 +343,9 @@ export default function Admin() {
                       <TableCell className="text-foreground">
                         <div>{app.customer_name || 'Cliente N/D'}</div>
                         <div className="text-xs text-muted-foreground">{app.customer_phone}</div>
+                      </TableCell>
+                      <TableCell className="text-foreground">
+                        {app.unit_name || 'N/D'}
                       </TableCell>
                       <TableCell className="text-foreground">
                         {app.barber_name || 'N/D'}

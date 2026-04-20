@@ -10,17 +10,20 @@ export default function AdminLoginPage() {
   const router = useRouter();
   const params = useParams();
   const slug = params?.slug as string;
-  const { user, isLoading } = useUserStore();
+  const { user, isLoading: storeLoading } = useUserStore();
   const [isRedirecting, setIsRedirecting] = useState(false);
+  const [isMounted, setIsMounted] = useState(false);
 
   useEffect(() => {
+    setIsMounted(true);
     if (user?.role === "admin") {
       setIsRedirecting(true);
       router.push(`/${slug}/admin`);
     }
   }, [user, router, slug]);
 
-  if (isLoading || isRedirecting || user?.role === "admin") {
+  // Sempre inicia em loading até que o componente esteja montado e a verificação concluída
+  if (!isMounted || storeLoading || isRedirecting || user?.role === "admin") {
     return (
       <div className="flex-1 flex items-center justify-center min-h-[80vh] bg-muted/30">
         <div className="flex flex-col items-center gap-4">
