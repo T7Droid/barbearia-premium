@@ -1,8 +1,8 @@
-import { Layout } from "@/components/layout";
+import { GlobalLayout } from "@/components/global-layout";
 
 export default function PrivacidadePage() {
   return (
-    <Layout>
+    <GlobalLayout>
       <div className="container mx-auto px-4 py-24 max-w-4xl">
         <h1 className="text-4xl font-serif font-bold mb-8 text-center text-foreground">Política de Privacidade</h1>
         
@@ -83,6 +83,6 @@ export default function PrivacidadePage() {
           Última atualização: {new Date().toLocaleDateString('pt-BR')} | Em conformidade com a LGPD Brasileira.
         </div>
       </div>
-    </Layout>
+    </GlobalLayout>
   );
 }

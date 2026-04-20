@@ -1,8 +1,8 @@
-import { Layout } from "@/components/layout";
+import { GlobalLayout } from "@/components/global-layout";
 
 export default function TermosPage() {
   return (
-    <Layout>
+    <GlobalLayout>
       <div className="container mx-auto px-4 py-24 max-w-4xl">
         <h1 className="text-4xl font-serif font-bold mb-8 text-center text-foreground">Termos e Condições de Uso</h1>
         
@@ -86,6 +86,6 @@ export default function TermosPage() {
           Última atualização: {new Date().toLocaleDateString('pt-BR')} | King Barbers Marketplace
         </div>
       </div>
-    </Layout>
+    </GlobalLayout>
   );
 }

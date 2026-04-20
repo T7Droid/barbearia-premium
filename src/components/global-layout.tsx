@@ -34,6 +34,10 @@ export function GlobalLayout({ children }: { children: React.ReactNode }) {
             <p className="text-xs text-muted-foreground">
               © {new Date().getFullYear()} KingBarbers - Sistema de Agendamento Profissional. Todos os direitos reservados.
             </p>
+            <div className="flex items-center gap-4 text-xs text-muted-foreground mt-2">
+              <Link href="/privacidade" className="hover:text-primary transition-colors">Privacidade</Link>
+              <Link href="/termos" className="hover:text-primary transition-colors">Termos</Link>
+            </div>
           </div>
         </div>
       </footer>
