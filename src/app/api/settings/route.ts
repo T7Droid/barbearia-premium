@@ -88,7 +88,6 @@ export async function POST(request: NextRequest) {
     if (input.businessEndTime) updateData.business_end_time = input.businessEndTime;
 
     if (input.slotInterval !== undefined) updateData.slot_interval = parseInt(input.slotInterval);
-    if (input.weeklyHours) updateData.weekly_hours = input.weeklyHours;
 
     updateData.updated_at = new Date().toISOString();
 
@@ -101,59 +100,8 @@ export async function POST(request: NextRequest) {
 
     if (error) throw error;
 
-    // --- SINCRONIZAÇÃO EM CASCATA ---
-    if (input.weeklyHours) {
-      console.log(`[API /api/settings] Cascading hours update for tenant ${tenant.id}`);
-      const { data: barbers } = await supabaseAdmin!
-        .from("barbers")
-        .select("id, weekly_hours")
-        .eq("tenant_id", tenant.id);
-
-      if (barbers && barbers.length > 0) {
-        const shopHours = input.weeklyHours;
-        const barberUpdates = barbers.map(barber => {
-          const bHours = barber.weekly_hours || {};
-          const newBHours = { ...bHours };
-
-          Object.keys(shopHours).forEach(day => {
-            const sDay = shopHours[day] || { active: false, start: "00:00", end: "23:59" };
-            const bDay = newBHours[day] || { active: false, start: "09:00", end: "18:00" };
-
-            // 1. Se shop fecha o dia, barber desativa
-            if (!sDay.active) {
-              bDay.active = false;
-            } else if (bDay.active) {
-              // 2. Clipping: Ajustar se barbeiro ficou com horário fora do permitido
-              if (bDay.start < sDay.start) bDay.start = sDay.start;
-              if (bDay.end > sDay.end) bDay.end = sDay.end;
-
-              // 3. Verificação de sanidade pós-clipping
-              if (bDay.start >= bDay.end) bDay.active = false;
-            }
-
-            newBHours[day] = bDay;
-          });
-
-          return {
-            id: barber.id,
-            weekly_hours: newBHours,
-            updated_at: new Date().toISOString()
-          };
-        });
-
-        // Atualização em lote via upsert (Supabase usa o merge se ID existir)
-        const { error: cascadeError } = await supabaseAdmin!
-          .from("barbers")
-          .upsert(barberUpdates);
-
-        if (cascadeError) {
-          console.error("[API /api/settings] Error in cascading update:", cascadeError);
-        } else {
-          console.log(`[API /api/settings] Successfully synchronized ${barbers.length} barbers.`);
-        }
-      }
-    }
     // --- FIM SINCRONIZAÇÃO EM CASCATA ---
+
 
     return NextResponse.json({
       isPointsEnabled: updated.is_points_enabled,

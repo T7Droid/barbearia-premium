@@ -386,19 +386,7 @@ export default function AdminServices() {
                         </div>
                       </div>
                     </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="imageUrl">URL da Imagem (opcional)</Label>
-                      <div className="relative">
-                        <ImageIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                        <Input
-                          id="imageUrl"
-                          value={formData.imageUrl}
-                          onChange={e => setFormData({...formData, imageUrl: e.target.value})}
-                          className="pl-9"
-                          placeholder="https://images.unsplash.com/..."
-                        />
-                      </div>
-                    </div>
+
                   </TabsContent>
 
                   <TabsContent value="unidades" className="p-6 space-y-4 m-0">

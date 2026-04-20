@@ -24,7 +24,7 @@ export async function GET(request: NextRequest) {
     // 1. Encontrar o registro do barbeiro vinculado a este usuário
     const { data: barber, error: barberError } = await supabaseAdmin
       .from("barbers")
-      .select("id")
+      .select("id, commission_percentage")
       .eq("user_id", auth.user.id)
       .eq("tenant_id", tenant.id)
       .single();
@@ -36,7 +36,8 @@ export async function GET(request: NextRequest) {
         return NextResponse.json({
           hasProfile: false,
           stats: { todayCount: 0, completedCount: 0, pendingCount: 0, efficiency: 100 },
-          todayAppointments: []
+          todayAppointments: [],
+          commissionPercentage: 50 // Default para admin visualizando
         });
       }
       return NextResponse.json({ error: "Barbeiro não vinculado ao sistema" }, { status: 404 });
@@ -82,6 +83,7 @@ export async function GET(request: NextRequest) {
         pendingCount,
         efficiency
       },
+      commissionPercentage: barber.commission_percentage ?? 50,
       todayAppointments: appointments || []
     });
   } catch (error: any) {

@@ -7,8 +7,16 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { useTenant } from "@/hooks/use-tenant";
-import { MapPin, Plus, Trash2, Edit2, ExternalLink, Loader2, LayoutGrid } from "lucide-react";
+import { MapPin, Plus, Trash2, Edit2, ExternalLink, Loader2, LayoutGrid, Clock } from "lucide-react";
 import Link from "next/link";
+import { Switch } from "@/components/ui/switch";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Dialog,
   DialogContent,
@@ -26,6 +34,27 @@ export default function UnidadesPage() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [editingUnit, setEditingUnit] = useState<any>(null);
+
+  const DAYS_OF_WEEK = [
+    { id: "monday", label: "Segunda-feira" },
+    { id: "tuesday", label: "Terça-feira" },
+    { id: "wednesday", label: "Quarta-feira" },
+    { id: "thursday", label: "Quinta-feira" },
+    { id: "friday", label: "Sexta-feira" },
+    { id: "saturday", label: "Sábado" },
+    { id: "sunday", label: "Domingo" },
+  ];
+
+  const DEFAULT_HOURS = {
+    monday: { active: true, start: "09:00", end: "18:00" },
+    tuesday: { active: true, start: "09:00", end: "18:00" },
+    wednesday: { active: true, start: "09:00", end: "18:00" },
+    thursday: { active: true, start: "09:00", end: "18:00" },
+    friday: { active: true, start: "09:00", end: "18:00" },
+    saturday: { active: true, start: "09:00", end: "18:00" },
+    sunday: { active: false, start: "09:00", end: "18:00" },
+  };
+
   const [formData, setFormData] = useState({
     name: "",
     address: "",
@@ -33,8 +62,21 @@ export default function UnidadesPage() {
     city: "",
     state: "",
     postal_code: "",
-    google_maps_link: ""
+    google_maps_link: "",
+    weekly_hours: DEFAULT_HOURS as any
   });
+
+  const generateTimeOptions = (interval = 30) => {
+    const options = [];
+    const totalMinutesInDay = 24 * 60;
+    for (let minutes = 0; minutes < totalMinutesInDay; minutes += interval) {
+      const hours = Math.floor(minutes / 60);
+      const mins = minutes % 60;
+      const time = `${hours.toString().padStart(2, "0")}:${mins.toString().padStart(2, "0")}`;
+      options.push(time);
+    }
+    return options;
+  };
 
   const getLink = (path: string) => `/${tenant?.slug}${path}`;
 
@@ -66,7 +108,8 @@ export default function UnidadesPage() {
         city: unit.city || "",
         state: unit.state || "",
         postal_code: unit.postal_code || "",
-        google_maps_link: unit.google_maps_link || ""
+        google_maps_link: unit.google_maps_link || "",
+        weekly_hours: unit.weekly_hours || DEFAULT_HOURS
       });
     } else {
       setEditingUnit(null);
@@ -77,7 +120,8 @@ export default function UnidadesPage() {
         city: "",
         state: "",
         postal_code: "",
-        google_maps_link: ""
+        google_maps_link: "",
+        weekly_hours: DEFAULT_HOURS
       });
     }
     setIsDialogOpen(true);
@@ -207,72 +251,144 @@ export default function UnidadesPage() {
             </DialogDescription>
           </DialogHeader>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 py-4">
-            <div className="space-y-2 md:col-span-2">
-              <Label htmlFor="name">Nome da Unidade *</Label>
-              <Input 
-                id="name" 
-                placeholder="Ex: Unidade Centro" 
-                value={formData.name}
-                onChange={(e) => setFormData({...formData, name: e.target.value})}
-              />
-            </div>
-            <div className="space-y-2 md:col-span-2">
-              <Label htmlFor="address">Logradouro / Endereço *</Label>
-              <Input 
-                id="address" 
-                placeholder="Rua, Avenida, etc" 
-                value={formData.address}
-                onChange={(e) => setFormData({...formData, address: e.target.value})}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="number">Número</Label>
-              <Input 
-                id="number" 
-                placeholder="123" 
-                value={formData.number}
-                onChange={(e) => setFormData({...formData, number: e.target.value})}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="postal_code">CEP</Label>
-              <Input 
-                id="postal_code" 
-                placeholder="00000-000" 
-                value={formData.postal_code}
-                onChange={(e) => setFormData({...formData, postal_code: e.target.value})}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="city">Cidade</Label>
-              <Input 
-                id="city" 
-                value={formData.city}
-                onChange={(e) => setFormData({...formData, city: e.target.value})}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="state">Estado</Label>
-              <Input 
-                id="state" 
-                placeholder="SP" 
-                value={formData.state}
-                onChange={(e) => setFormData({...formData, state: e.target.value})}
-              />
-            </div>
-            <div className="space-y-2 md:col-span-2">
-              <Label htmlFor="maps">Link Google Maps (Opcional)</Label>
-              <Input 
-                id="maps" 
-                placeholder="https://goo.gl/maps/..." 
-                value={formData.google_maps_link}
-                onChange={(e) => setFormData({...formData, google_maps_link: e.target.value})}
-              />
+          <div className="max-h-[70vh] overflow-y-auto pr-2 py-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2 md:col-span-2">
+                <Label htmlFor="name">Nome da Unidade *</Label>
+                <Input 
+                  id="name" 
+                  placeholder="Ex: Unidade Centro" 
+                  value={formData.name}
+                  onChange={(e) => setFormData({...formData, name: e.target.value})}
+                />
+              </div>
+              <div className="space-y-2 md:col-span-2">
+                <Label htmlFor="address">Logradouro / Endereço *</Label>
+                <Input 
+                  id="address" 
+                  placeholder="Rua, Avenida, etc" 
+                  value={formData.address}
+                  onChange={(e) => setFormData({...formData, address: e.target.value})}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="number">Número</Label>
+                <Input 
+                  id="number" 
+                  placeholder="123" 
+                  value={formData.number}
+                  onChange={(e) => setFormData({...formData, number: e.target.value})}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="postal_code">CEP</Label>
+                <Input 
+                  id="postal_code" 
+                  placeholder="00000-000" 
+                  value={formData.postal_code}
+                  onChange={(e) => setFormData({...formData, postal_code: e.target.value})}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="city">Cidade</Label>
+                <Input 
+                  id="city" 
+                  value={formData.city}
+                  onChange={(e) => setFormData({...formData, city: e.target.value})}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="state">Estado</Label>
+                <Input 
+                  id="state" 
+                  placeholder="SP" 
+                  value={formData.state}
+                  onChange={(e) => setFormData({...formData, state: e.target.value})}
+                />
+              </div>
+              <div className="space-y-2 md:col-span-2">
+                <Label htmlFor="maps">Link Google Maps (Opcional)</Label>
+                <Input 
+                  id="maps" 
+                  placeholder="https://goo.gl/maps/..." 
+                  value={formData.google_maps_link}
+                  onChange={(e) => setFormData({...formData, google_maps_link: e.target.value})}
+                />
+              </div>
+
+              <div className="md:col-span-2 mt-4 space-y-4 pt-4 border-t border-border/50">
+                 <div className="flex items-center gap-2">
+                   <Clock className="w-5 h-5 text-primary" />
+                   <h3 className="font-serif font-bold text-lg">Horário de Funcionamento</h3>
+                 </div>
+                 <p className="text-sm text-muted-foreground">Defina o expediente para esta unidade específica.</p>
+                 
+                 <div className="space-y-3">
+                   {DAYS_OF_WEEK.map((day) => {
+                     const config = formData.weekly_hours?.[day.id] || { active: false, start: "09:00", end: "18:00" };
+                     return (
+                       <div key={day.id} className={`p-3 rounded-md border transition-all ${config.active ? 'bg-primary/5 border-primary/20' : 'bg-muted/30 border-dashed opacity-60'}`}>
+                          <div className="flex items-center justify-between gap-4">
+                            <div className="flex items-center gap-3 w-40">
+                               <Switch 
+                                 checked={config.active}
+                                 onCheckedChange={(val) => {
+                                   const newWeekly = { ...formData.weekly_hours, [day.id]: { ...config, active: val } };
+                                   setFormData({ ...formData, weekly_hours: newWeekly });
+                                 }}
+                               />
+                               <span className="text-sm font-medium">{day.label}</span>
+                            </div>
+
+                            {config.active ? (
+                              <div className="flex items-center gap-2">
+                                 <Select
+                                   value={config.start}
+                                   onValueChange={(val) => {
+                                     const newWeekly = { ...formData.weekly_hours, [day.id]: { ...config, start: val } };
+                                     setFormData({ ...formData, weekly_hours: newWeekly });
+                                   }}
+                                 >
+                                   <SelectTrigger className="w-[100px] h-8 text-xs bg-background">
+                                     <SelectValue />
+                                   </SelectTrigger>
+                                   <SelectContent>
+                                     {generateTimeOptions().map(t => (
+                                       <SelectItem key={t} value={t}>{t}</SelectItem>
+                                     ))}
+                                   </SelectContent>
+                                 </Select>
+                                 <span className="text-xs text-muted-foreground px-1">até</span>
+                                 <Select
+                                   value={config.end}
+                                   onValueChange={(val) => {
+                                     const newWeekly = { ...formData.weekly_hours, [day.id]: { ...config, end: val } };
+                                     setFormData({ ...formData, weekly_hours: newWeekly });
+                                   }}
+                                 >
+                                   <SelectTrigger className="w-[100px] h-8 text-xs bg-background">
+                                     <SelectValue />
+                                   </SelectTrigger>
+                                   <SelectContent>
+                                     {generateTimeOptions().filter(t => t > config.start).map(t => (
+                                       <SelectItem key={t} value={t}>{t}</SelectItem>
+                                     ))}
+                                   </SelectContent>
+                                 </Select>
+                              </div>
+                            ) : (
+                              <span className="text-[10px] uppercase font-bold text-muted-foreground mr-4">Fechado</span>
+                            )}
+                          </div>
+                       </div>
+                     );
+                   })}
+                 </div>
+              </div>
             </div>
           </div>
 
-          <DialogFooter>
+          <DialogFooter className="gap-2 sm:gap-0">
             <Button variant="outline" onClick={() => setIsDialogOpen(false)} disabled={isSaving}>
               Cancelar
             </Button>

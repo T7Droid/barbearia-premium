@@ -55,6 +55,7 @@ export default function BarberDashboard() {
   const [selectedMonth, setSelectedMonth] = useState((now.getMonth() + 1).toString());
   const [selectedYear, setSelectedYear] = useState(now.getFullYear().toString());
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
+  const [commissionPercentage, setCommissionPercentage] = useState(50);
 
   const getServiceNames = (app: any) => {
     const services = app.services_json || app.servicesJson;
@@ -106,6 +107,11 @@ export default function BarberDashboard() {
 
       setHasProfile(data.hasProfile ?? true);
       if (data.stats) setStats(data.stats);
+      
+      // Forçar atualização do estado de comissão com valor real da API
+      const realCommission = data.commissionPercentage !== undefined ? data.commissionPercentage : 50;
+      setCommissionPercentage(realCommission);
+      
       if (data.todayAppointments) setTodayAppointments(data.todayAppointments);
     } catch (error) {
       console.error("BarberDashboard: Erro na requisição", error);
@@ -172,12 +178,13 @@ export default function BarberDashboard() {
       app.customer_name || 'N/D',
       getServiceNames(app),
       getFormattedPriceDetails(app),
+      formatCurrencyFromCents(Math.round(((app.total_price || 0) * commissionPercentage) / 100)),
       app.is_paid ? 'Pago' : 'No Local',
       app.status === 'confirmed' ? 'Confirmado' : app.status === 'pending' ? 'Pendente' : 'Cancelado'
     ]);
 
     autoTable(doc, {
-      head: [['Data/Hora', 'Cliente', 'Serviço', 'Valor', 'Pagamento', 'Status']],
+      head: [['Data/Hora', 'Cliente', 'Serviço', 'Valor', 'Comissão', 'Pagamento', 'Status']],
       body: tableData,
       theme: 'grid',
       headStyles: { fillColor: [142, 68, 173] },
@@ -198,6 +205,7 @@ export default function BarberDashboard() {
       'Telefone': app.customer_phone || 'N/D',
       'Serviço': getServiceNames(app),
       'Valor': getFormattedPriceDetails(app),
+      'Comissão': formatCurrencyFromCents(Math.round(((app.total_price || 0) * commissionPercentage) / 100)),
       'Pagamento': app.is_paid ? 'Pago' : 'No Local',
       'Status': app.status === 'confirmed' ? 'Confirmado' : app.status === 'pending' ? 'Pendente' : 'Cancelado'
     }));
@@ -283,9 +291,15 @@ export default function BarberDashboard() {
           </div>
         ) : (
           <>
-            <div className="mb-8">
-              <h1 className="text-4xl font-serif font-bold tracking-tight">Painel do Barbeiro</h1>
-              <p className="text-muted-foreground mt-2">Olá, {user?.name}. Veja como estão as coisas hoje em {tenant.name}.</p>
+            <div className="mb-8 flex flex-col md:flex-row md:items-end justify-between gap-4">
+              <div>
+                <h1 className="text-4xl font-serif font-bold tracking-tight">Painel do Barbeiro</h1>
+                <p className="text-muted-foreground mt-2">Olá, {user?.name}. Veja como estão as coisas hoje em {tenant.name}.</p>
+              </div>
+              <div className="flex items-center gap-2 bg-primary/10 border border-primary/20 px-4 py-2 rounded-full">
+                <Wallet className="w-4 h-4 text-primary" />
+                <span className="text-sm font-bold text-primary">Sua Comissão: {commissionPercentage}%</span>
+              </div>
             </div>
             <Button asChild className="gap-2 mb-8">
               <Link href={`/${tenant.slug}/barber/horarios`}>
@@ -293,7 +307,32 @@ export default function BarberDashboard() {
               </Link>
             </Button>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6 mb-8">
+              <Card className="border-primary/20 bg-primary/5 backdrop-blur-sm border-2">
+                <CardHeader className="flex flex-row items-center justify-between pb-2">
+                  <CardTitle className="text-sm font-bold text-primary uppercase tracking-wider">
+                    Meus Ganhos
+                  </CardTitle>
+                  <Wallet className="w-4 h-4 text-primary" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold text-foreground">
+                    {formatCurrencyFromCents(
+                      (todayAppointments || [])
+                        .filter(app => app.status === 'completed' && app.is_paid)
+                        .reduce((acc, app) => acc + Math.round(((app.total_price || 0) * commissionPercentage) / 100), 0)
+                    )}
+                  </div>
+                  <p className="text-[10px] font-bold text-muted-foreground mt-1 uppercase">
+                    + {formatCurrencyFromCents(
+                      (todayAppointments || [])
+                        .filter(app => (app.status === 'confirmed' || app.status === 'pending') || (app.status === 'completed' && !app.is_paid))
+                        .reduce((acc, app) => acc + Math.round(((app.total_price || 0) * commissionPercentage) / 100), 0)
+                    )} a receber
+                  </p>
+                </CardContent>
+              </Card>
+
               <Card className="border-border/50 bg-card/50 backdrop-blur-sm">
                 <CardHeader className="flex flex-row items-center justify-between pb-2">
                   <CardTitle className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
@@ -302,8 +341,8 @@ export default function BarberDashboard() {
                   <Calendar className="w-4 h-4 text-primary" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-3xl font-bold">{stats?.todayCount || 0}</div>
-                  <p className="text-xs text-muted-foreground mt-1">Agendamentos para hoje</p>
+                  <div className="text-2xl font-bold">{stats?.todayCount || 0}</div>
+                  <p className="text-xs text-muted-foreground mt-1">Agendamentos</p>
                 </CardContent>
               </Card>
 
@@ -315,8 +354,8 @@ export default function BarberDashboard() {
                   <CheckCircle2 className="w-4 h-4 text-green-500" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-3xl font-bold">{stats?.completedCount || 0}</div>
-                  <p className="text-xs text-muted-foreground mt-1">Atendimentos finalizados</p>
+                  <div className="text-2xl font-bold">{stats?.completedCount || 0}</div>
+                  <p className="text-xs text-muted-foreground mt-1">Finalizados</p>
                 </CardContent>
               </Card>
 
@@ -328,8 +367,8 @@ export default function BarberDashboard() {
                   <Clock className="w-4 h-4 text-amber-500" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-3xl font-bold">{stats?.pendingCount || 0}</div>
-                  <p className="text-xs text-muted-foreground mt-1">Aguardando atendimento</p>
+                  <div className="text-2xl font-bold">{stats?.pendingCount || 0}</div>
+                  <p className="text-xs text-muted-foreground mt-1">Aguardando</p>
                 </CardContent>
               </Card>
 
@@ -341,8 +380,8 @@ export default function BarberDashboard() {
                   <TrendingUp className="w-4 h-4 text-blue-500" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-3xl font-bold">{stats?.efficiency || "100"}%</div>
-                  <p className="text-xs text-muted-foreground mt-1">Taxa de comparecimento</p>
+                  <div className="text-2xl font-bold">{stats?.efficiency || "100"}%</div>
+                  <p className="text-xs text-muted-foreground mt-1">Comparecimento</p>
                 </CardContent>
               </Card>
             </div>
@@ -418,6 +457,7 @@ export default function BarberDashboard() {
                               <TableHead className="text-foreground">Cliente</TableHead>
                               <TableHead className="text-foreground">Serviço</TableHead>
                               <TableHead className="text-foreground">Valor</TableHead>
+                              <TableHead className="text-foreground">Comissão</TableHead>
                               <TableHead className="text-foreground">Status</TableHead>
                             </TableRow>
                           </TableHeader>
@@ -435,6 +475,9 @@ export default function BarberDashboard() {
                                 </TableCell>
                                 <TableCell className="text-foreground">
                                   {getFormattedPriceDetails(app)}
+                                </TableCell>
+                                <TableCell className="text-green-600 font-bold">
+                                  {formatCurrencyFromCents(Math.round(((app.total_price || 0) * commissionPercentage) / 100))}
                                 </TableCell>
                                 <TableCell>
                                   <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider

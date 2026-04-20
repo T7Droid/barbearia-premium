@@ -50,7 +50,8 @@ export async function POST(request: NextRequest) {
       city, 
       state, 
       postal_code, 
-      google_maps_link 
+      google_maps_link,
+      weekly_hours
     } = body;
 
     const { data, error } = await supabaseAdmin
@@ -63,7 +64,8 @@ export async function POST(request: NextRequest) {
         city,
         state,
         postal_code,
-        google_maps_link
+        google_maps_link,
+        weekly_hours
       })
       .select()
       .single();

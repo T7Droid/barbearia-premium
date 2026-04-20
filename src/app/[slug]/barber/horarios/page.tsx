@@ -90,19 +90,45 @@ export default function BarberSchedulePage() {
 
       const data = await res.json();
       
-      // Sempre buscar configurações da barbearia para sincronização
-      const headers = { "x-tenant-slug": tenant.slug };
-      const settingsRes = await fetch("/api/settings", { headers });
-      const settingsData = await settingsRes.json();
-      setShopSettings(settingsData);
+      // data agora contém data.units vindos da API barber/me
+      const barberUnits = data.units || [];
+      
+      // Construir um "shopSettings" virtual baseado nas unidades vinculadas ao barbeiro
+      const virtualShopHours: any = {};
+      const DAYS_OF_WEEK_IDS = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"];
+      
+      DAYS_OF_WEEK_IDS.forEach(dayId => {
+        const activeUnitsOnDay = barberUnits.filter((u: any) => u.weekly_hours?.[dayId]?.active);
+        
+        if (activeUnitsOnDay.length === 0) {
+          // Se nenhuma unidade do barbeiro abre nesse dia, o dia é "fechado" para ele
+          virtualShopHours[dayId] = { active: false, start: "00:00", end: "23:59" };
+        } else {
+          // Intervalo permitido: União (menor início e maior fim de todas as suas unidades)
+          let minStart = "23:59";
+          let maxEnd = "00:00";
+          activeUnitsOnDay.forEach((u: any) => {
+            const h = u.weekly_hours[dayId];
+            if (h.start < minStart) minStart = h.start;
+            if (h.end > maxEnd) maxEnd = h.end;
+          });
+          virtualShopHours[dayId] = { active: true, start: minStart, end: maxEnd };
+        }
+      });
+      
+      setShopSettings({ weeklyHours: virtualShopHours });
 
       if (data.weekly_hours) {
         setWeeklyHours(data.weekly_hours);
       } else {
         // Fallback: Se barbeiro não tem horários, inicia todos como desativados por padrão
-        const shopHours = settingsData.weeklyHours || settingsData.weekly_hours || {};
-        const initialHours = Object.keys(shopHours).reduce((acc: any, day: string) => {
-          acc[day] = { ...shopHours[day], active: false };
+        const initialHours = DAYS_OF_WEEK_IDS.reduce((acc: any, dayId: string) => {
+          const sDay = virtualShopHours[dayId];
+          acc[dayId] = { 
+            active: false, 
+            start: sDay.active ? sDay.start : "09:00", 
+            end: sDay.active ? sDay.end : "18:00" 
+          };
           return acc;
         }, {});
         setWeeklyHours(initialHours);

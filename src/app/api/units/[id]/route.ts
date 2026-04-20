@@ -33,10 +33,11 @@ export async function PUT(
       city, 
       state, 
       postal_code, 
-      google_maps_link 
+      google_maps_link,
+      weekly_hours
     } = body;
 
-    const { data, error } = await supabaseAdmin
+    const { data: unit, error } = await supabaseAdmin
       .from("units")
       .update({
         name,
@@ -45,16 +46,74 @@ export async function PUT(
         city,
         state,
         postal_code,
-        google_maps_link
+        google_maps_link,
+        weekly_hours
       })
       .eq("id", id)
-      .eq("tenant_id", tenant.id) // Segurança extra: garante que a unidade pertence ao tenant
+      .eq("tenant_id", tenant.id)
       .select()
       .single();
 
     if (error) throw error;
 
-    return NextResponse.json(data);
+    // --- SINCRONIZAÇÃO EM CASCATA: Unit -> Barbers ---
+    if (weekly_hours && unit) {
+      console.log(`[API /api/units/${id}] Cascading update for unit: ${unit.name}`);
+      
+      // 1. Buscar IDs dos barbeiros vinculados a esta unidade
+      const { data: links } = await supabaseAdmin
+        .from("barber_units")
+        .select("barber_id")
+        .eq("unit_id", id);
+      
+      if (links && links.length > 0) {
+        const barberIds = links.map(l => l.barber_id);
+        
+        // 2. Buscar registros dos barbeiros
+        const { data: barbers } = await supabaseAdmin
+          .from("barbers")
+          .select("id, weekly_hours")
+          .in("id", barberIds);
+        
+        if (barbers && barbers.length > 0) {
+          const shopHours = weekly_hours;
+          const barberUpdates = barbers.map(barber => {
+            const bHours = barber.weekly_hours || {};
+            const newBHours = { ...bHours };
+
+            Object.keys(shopHours).forEach(day => {
+              const sDay = shopHours[day] || { active: false, start: "00:00", end: "23:59" };
+              const bDay = newBHours[day] || { active: false, start: "09:00", end: "18:00" };
+
+              // Regra 1: Se unidade fecha, barbeiro desativa nesse dia
+              if (!sDay.active) {
+                bDay.active = false;
+              } else if (bDay.active) {
+                // Regra 2: Clipping (Encurtar se barbershop ficou mais restrita)
+                if (bDay.start < sDay.start) bDay.start = sDay.start;
+                if (bDay.end > sDay.end) bDay.end = sDay.end;
+
+                // Regra 3: Sanidade
+                if (bDay.start >= bDay.end) bDay.active = false;
+              }
+              newBHours[day] = bDay;
+            });
+
+            return {
+              id: barber.id,
+              weekly_hours: newBHours,
+              updated_at: new Date().toISOString()
+            };
+          });
+
+          // Atualização em lote
+          await supabaseAdmin.from("barbers").upsert(barberUpdates);
+          console.log(`[API /api/units/${id}] Synchronized ${barbers.length} barbers.`);
+        }
+      }
+    }
+
+    return NextResponse.json(unit);
   } catch (error: any) {
     console.error(`API Error (PUT /api/units/${(await params).id}):`, error);
     return NextResponse.json({ error: error.message }, { status: 500 });

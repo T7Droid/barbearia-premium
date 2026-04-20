@@ -42,7 +42,25 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Barbeiro não encontrado" }, { status: 404 });
     }
 
-    return NextResponse.json(barber);
+    // Buscar as unidades vinculadas a este barbeiro para saber os horários permitidos
+    const { data: units } = await supabaseAdmin
+      .from("barber_units")
+      .select(`
+        unit_id,
+        units (
+          id,
+          name,
+          weekly_hours
+        )
+      `)
+      .eq("barber_id", barber.id);
+
+    const formattedUnits = units?.map((u: any) => u.units) || [];
+
+    return NextResponse.json({
+      ...barber,
+      units: formattedUnits
+    });
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
