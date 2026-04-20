@@ -455,6 +455,7 @@ export default function BarberDashboard() {
                             <TableRow className="border-border/50 hover:bg-transparent">
                               <TableHead className="text-foreground">Data / Hora</TableHead>
                               <TableHead className="text-foreground">Cliente</TableHead>
+                              <TableHead className="text-foreground">Unidade</TableHead>
                               <TableHead className="text-foreground">Serviço</TableHead>
                               <TableHead className="text-foreground">Valor</TableHead>
                               <TableHead className="text-foreground">Comissão</TableHead>
@@ -469,6 +470,9 @@ export default function BarberDashboard() {
                                 </TableCell>
                                 <TableCell className="text-foreground font-bold">
                                   {app.customer_name}
+                                </TableCell>
+                                <TableCell className="text-foreground text-sm">
+                                  {app.unitName || app.unit_name || "N/D"}
                                 </TableCell>
                                 <TableCell className="text-foreground">
                                   {getServiceNames(app)}
