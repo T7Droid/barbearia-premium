@@ -252,9 +252,10 @@ function BookingContent() {
 
       // 1. Barbeiros
       if (cache.barbers[uId]) {
-        setBarbers(cache.barbers[uId]);
-        if (cache.barbers[uId].length === 1 && step === 2) {
-          setSelectedBarber(cache.barbers[uId][0]);
+        const barbersList = cache.barbers[uId];
+        setBarbers(barbersList);
+        if (barbersList.length === 1 && step === 2) {
+          setSelectedBarber(barbersList[0]);
           setStep(3);
         }
       } else {
@@ -262,7 +263,14 @@ function BookingContent() {
         fetch(`/api/barbers?active=true&unitId=${uId}`, { headers: { "x-tenant-slug": tenant.slug } })
           .then(res => res.json())
           .then(data => {
-              const barbersList = Array.isArray(data) ? data : [];
+              const rawList = Array.isArray(data) ? data : [];
+              // Filtrar barbeiros que não trabalham nesta unidade (pelo menos 1 dia ativo)
+              const barbersList = rawList.filter(b => {
+                const hours = b.weeklyHours || b.weekly_hours;
+                if (!hours || !hours[uId]) return false;
+                return Object.values(hours[uId]).some((day: any) => day.active === true);
+              });
+
               setBarbers(barbersList);
               setCache(prev => ({ ...prev, barbers: { ...prev.barbers, [uId]: barbersList } }));
               if (barbersList.length === 1 && step === 2) {
