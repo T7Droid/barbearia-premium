@@ -4,6 +4,7 @@ import { useOnboarding } from "../context";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Key, Mail, User, Phone, Eye, EyeOff, Loader2, ArrowLeft, ShieldCheck } from "lucide-react";
 import { useState } from "react";
 
@@ -26,7 +27,9 @@ export function Step5Account({ onFinish, isSubmitting }: Step5AccountProps) {
     data.account.email.includes("@") &&
     data.account.phone.length >= 8 &&
     isPasswordSecure &&
-    passwordsMatch;
+    passwordsMatch &&
+    data.account.acceptedTerms &&
+    data.account.acceptedPrivacy;
 
   return (
     <div className="space-y-6 max-w-2xl mx-auto">
@@ -134,9 +137,35 @@ export function Step5Account({ onFinish, isSubmitting }: Step5AccountProps) {
         </div>
       </div>
 
-      <div className="p-4 bg-primary/5 border border-primary/10 rounded-xl text-xs leading-relaxed text-muted-foreground flex items-start gap-3">
-        <ShieldCheck className="w-5 h-5 text-primary shrink-0" />
-        <p>Ao clicar abaixo, nós configuraremos toda a infraestrutura da sua barbearia digital automaticamente. Você será redirecionado para o painel de configurações logo em seguida.</p>
+      <div className="p-4 bg-primary/5 border border-primary/10 rounded-xl space-y-4">
+        <div className="flex items-start gap-3">
+          <Checkbox 
+            id="acceptedTerms" 
+            checked={data.account.acceptedTerms} 
+            onCheckedChange={(checked) => updateData({ account: { ...data.account, acceptedTerms: checked === true } })}
+            className="mt-1"
+          />
+          <Label htmlFor="acceptedTerms" className="text-xs leading-relaxed text-muted-foreground cursor-pointer">
+            Eu li e aceito os <strong>Termos de Uso</strong> e as condições de serviço da plataforma.
+          </Label>
+        </div>
+
+        <div className="flex items-start gap-3">
+          <Checkbox 
+            id="acceptedPrivacy" 
+            checked={data.account.acceptedPrivacy} 
+            onCheckedChange={(checked) => updateData({ account: { ...data.account, acceptedPrivacy: checked === true } })}
+            className="mt-1"
+          />
+          <Label htmlFor="acceptedPrivacy" className="text-xs leading-relaxed text-muted-foreground cursor-pointer">
+            Concordo com a <strong>Política de Privacidade</strong> e o processamento dos meus dados pessoais conforme a LGPD.
+          </Label>
+        </div>
+
+        <div className="flex items-start gap-3 pt-2 border-t border-primary/10">
+          <ShieldCheck className="w-5 h-5 text-primary shrink-0" />
+          <p className="text-xs leading-relaxed text-muted-foreground">Ao finalizar, configuraremos sua barbearia e você terá acesso imediato ao painel administrativo.</p>
+        </div>
       </div>
 
       <div className="flex gap-4 pt-4 border-t">

@@ -14,6 +14,7 @@ export function Step3Services() {
     name: "",
     price: "",
     duration: "45",
+    description: ""
   });
 
   const addService = () => {
@@ -24,10 +25,11 @@ export function Step3Services() {
       name: newService.name,
       price: Math.round(parseFloat(newService.price) * 100), // cents
       duration_minutes: parseInt(newService.duration),
+      description: newService.description,
     };
 
     updateData({ services: [...data.services, serviceToAdd] });
-    setNewService({ name: "", price: "", duration: "45" });
+    setNewService({ name: "", price: "", duration: "45", description: "" });
   };
 
   const removeService = (id: string) => {
@@ -82,6 +84,14 @@ export function Step3Services() {
               </div>
             </div>
           </div>
+          <div className="space-y-2 md:col-span-2">
+            <Label>Descrição do Serviço (Opcional)</Label>
+            <Input 
+              value={newService.description}
+              onChange={(e) => setNewService({ ...newService, description: e.target.value })}
+              placeholder="Ex: Corte com degradê e finalização com pomada"
+            />
+          </div>
         </div>
         <Button 
           variant="outline" 
@@ -99,6 +109,7 @@ export function Step3Services() {
               <p className="font-bold">{svc.name}</p>
               <p className="text-xs text-muted-foreground">
                 R$ {(svc.price / 100).toFixed(2)} • {svc.duration_minutes} min
+                {svc.description && ` • ${svc.description}`}
               </p>
             </div>
             <Button variant="ghost" size="icon" onClick={() => removeService(svc.id)}>

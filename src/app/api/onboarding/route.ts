@@ -107,7 +107,8 @@ export async function POST(req: Request) {
       tenant_id: createdTenantId,
       name: s.name,
       price: s.price,
-      duration_minutes: s.duration_minutes
+      duration_minutes: s.duration_minutes,
+      description: s.description
     }));
 
     const { data: createdServices, error: servicesError } = await supabaseAdmin
@@ -126,6 +127,7 @@ export async function POST(req: Request) {
         {
           tenant_id: createdTenantId,
           name: barber.name,
+          description: barber.description,
           active: true,
           user_id: createdUserId, // O dono também é o primeiro barbeiro no DB
           weekly_hours: {
@@ -174,8 +176,8 @@ export async function POST(req: Request) {
           phone: account.phone,
           role: "admin",
           tenant_id: createdTenantId,
-          accepted_terms: true,
-          accepted_privacy: true
+          accepted_terms: account.acceptedTerms,
+          accepted_privacy: account.acceptedPrivacy
         },
         { onConflict: 'id' }
       );

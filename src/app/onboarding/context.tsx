@@ -18,15 +18,19 @@ export interface OnboardingData {
     name: string;
     price: number;
     duration_minutes: number;
+    description: string;
   }>;
   barber: {
     name: string;
+    description: string;
   };
   account: {
     email: string;
     password?: string;
     fullName: string;
     phone: string;
+    acceptedTerms: boolean;
+    acceptedPrivacy: boolean;
   };
 }
 
@@ -42,7 +46,7 @@ const defaultData: OnboardingData = {
   unit: { name: "", address: "", number: "", city: "", state: "" },
   services: [],
   barber: { name: "" },
-  account: { email: "", fullName: "", phone: "" },
+  account: { email: "", fullName: "", phone: "", acceptedTerms: false, acceptedPrivacy: false },
 };
 
 const OnboardingContext = createContext<OnboardingContextProps | undefined>(

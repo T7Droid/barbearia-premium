@@ -4,6 +4,7 @@ import { useOnboarding } from "../context";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { UserPlus, User, ArrowLeft } from "lucide-react";
 
 export function Step4Barber() {
@@ -34,14 +35,25 @@ export function Step4Barber() {
               id="barberName"
               className="h-14 text-lg pl-10"
               value={data.barber.name}
-              onChange={(e) => updateData({ barber: { name: e.target.value } })}
+              onChange={(e) => updateData({ barber: { ...data.barber, name: e.target.value } })}
               placeholder="Ex: Carlos o Barbeiro"
               required
               autoFocus
             />
           </div>
-          <p className="text-sm text-muted-foreground italic">
-            Não se preocupe, você poderá adicionar foto, biografia e horários específicos depois no seu painel.
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="barberBio" className="text-base text-foreground font-semibold">Biografia / Descrição (Opcional)</Label>
+          <Textarea 
+            id="barberBio"
+            className="min-h-[100px] resize-none"
+            value={data.barber.description || ""}
+            onChange={(e) => updateData({ barber: { ...data.barber, description: e.target.value } })}
+            placeholder="Ex: Especialista em cortes clássicos e barboterapia com 10 anos de experiência."
+          />
+          <p className="text-xs text-muted-foreground italic">
+            Dica: Uma boa descrição ajuda a transmitir confiança aos seus clientes.
           </p>
         </div>
 
