@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Save, ShieldCheck, CalendarClock, CreditCard, Clock, Settings, ExternalLink, Ticket, Wallet, AlertCircle, LayoutGrid } from "lucide-react";
+import { Loader2, Save, ShieldCheck, CalendarClock, CreditCard, Clock, Settings, ExternalLink, Ticket, Wallet, AlertCircle, LayoutGrid, QrCode, Copy, Check, Instagram, Facebook, MessageCircle, Send, Share2 } from "lucide-react";
 import Link from "next/link";
 import { DemoStore } from "@/lib/persistence/demo-store";
 import { useTenant } from "@/hooks/use-tenant";
@@ -56,6 +56,7 @@ export default function SettingsPage() {
     mpPublicKey: "",
     mpConnectionError: null as string | null
   });
+  const [copied, setCopied] = useState(false);
 
   const getLink = (path: string) => `/${tenant?.slug}${path}`;
 
@@ -158,6 +159,63 @@ export default function SettingsPage() {
       toast({ title: "Aviso", description: "Salvo no navegador (Erro de conexão)." });
     } finally {
       setSaving(false);
+    }
+  };
+
+  const bookingUrl = typeof window !== "undefined" 
+    ? `${window.location.origin}/${tenant.slug}/booking` 
+    : "";
+
+  const handleCopyLink = () => {
+    navigator.clipboard.writeText(bookingUrl);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+    toast({ title: "Link Copiado!", description: "O link de agendamento está pronto para ser compartilhado." });
+  };
+
+  const handleSocialShare = (platform: string) => {
+    const text = `Agende seu horário na barbearia ${tenant.name} pelo nosso portal online!`;
+    let url = "";
+
+    switch (platform) {
+      case 'whatsapp':
+        url = `https://api.whatsapp.com/send?text=${encodeURIComponent(text + " " + bookingUrl)}`;
+        break;
+      case 'facebook':
+        url = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(bookingUrl)}`;
+        break;
+      case 'telegram':
+        url = `https://t.me/share/url?url=${encodeURIComponent(bookingUrl)}&text=${encodeURIComponent(text)}`;
+        break;
+      case 'instagram':
+        handleCopyLink();
+        toast({ title: "Dica de Instagram", description: "O link foi copiado! Agora cole-o na Bio do seu perfil." });
+        return;
+    }
+
+    if (url) window.open(url, '_blank');
+  };
+
+  const handleNativeShare = async () => {
+    const text = `Agende seu horário na barbearia ${tenant.name} pelo nosso portal online!`;
+    
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: `Agendamento - ${tenant.name}`,
+          text: text,
+          url: bookingUrl,
+        });
+      } catch (err) {
+        // Usuário cancelou ou erro silencioso
+      }
+    } else {
+      handleCopyLink();
+      toast({ 
+        title: "Link Copiado", 
+        description: "Seu navegador não suporta o menu de compartilhamento, por isso copiamos o link para você.",
+        variant: "default"
+      });
     }
   };
 
@@ -396,6 +454,90 @@ export default function SettingsPage() {
                 ? "Ativado: O cliente só reserva após o checkout."
                 : "Desativado: O cliente terá a opção de pagar no local."}
             </p>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-card border-border/50 shadow-lg overflow-hidden border-t-4 border-t-primary">
+          <CardHeader className="flex flex-row items-center gap-4 pb-2">
+            <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+              <QrCode className="w-5 h-5 text-primary" />
+            </div>
+            <div className="flex-1">
+              <CardTitle>Divulgação</CardTitle>
+              <CardDescription>Compartilhe o link ou QR Code nas redes sociais.</CardDescription>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-6 flex flex-col items-center py-6">
+            <div className="p-4 bg-white rounded-2xl shadow-inner border border-muted/30">
+              <img 
+                src={`https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(bookingUrl)}&bgcolor=ffffff&color=000000&margin=10`} 
+                alt="QR Code Agendamento"
+                className="w-[180px] h-[180px]"
+              />
+            </div>
+
+            <div className="flex gap-4 w-full justify-center">
+              <Button 
+                variant="outline" 
+                size="icon" 
+                className="h-12 w-12 rounded-full border-green-500/30 text-green-600 hover:bg-green-50"
+                onClick={() => handleSocialShare('whatsapp')}
+              >
+                <MessageCircle className="w-5 h-5" />
+              </Button>
+              <Button 
+                variant="outline" 
+                size="icon" 
+                className="h-12 w-12 rounded-full border-blue-600/30 text-blue-600 hover:bg-blue-50"
+                onClick={() => handleSocialShare('facebook')}
+              >
+                <Facebook className="w-5 h-5" />
+              </Button>
+              <Button 
+                variant="outline" 
+                size="icon" 
+                className="h-12 w-12 rounded-full border-pink-600/30 text-pink-600 hover:bg-pink-50"
+                onClick={() => handleSocialShare('instagram')}
+              >
+                <Instagram className="w-5 h-5" />
+              </Button>
+              <Button 
+                variant="outline" 
+                size="icon" 
+                className="h-12 w-12 rounded-full border-sky-500/30 text-sky-500 hover:bg-sky-50"
+                onClick={() => handleSocialShare('telegram')}
+              >
+                <Send className="w-5 h-5" />
+              </Button>
+              <Button 
+                variant="outline" 
+                size="icon" 
+                className="h-12 w-12 rounded-full border-primary/30 text-primary hover:bg-primary/5"
+                onClick={handleNativeShare}
+              >
+                <Share2 className="w-5 h-5" />
+              </Button>
+            </div>
+            
+            <div className="w-full space-y-2">
+              <Label className="text-xs text-muted-foreground uppercase font-bold tracking-wider">Link da sua Barbearia Online</Label>
+              <div className="flex gap-2">
+                <div className="flex-1 p-3 bg-muted/50 border rounded-lg text-sm font-medium truncate text-muted-foreground select-all">
+                  {bookingUrl}
+                </div>
+                <Button 
+                  size="icon" 
+                  variant={copied ? "ghost" : "outline"}
+                  onClick={handleCopyLink}
+                  className={`shrink-0 transition-all ${copied ? 'text-green-500' : 'hover:border-primary hover:text-primary'}`}
+                >
+                  {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                </Button>
+              </div>
+              <p className="text-[10px] text-muted-foreground italic text-center">
+                Dica: Imprima este QR Code e coloque no seu balcão ou vitrine.
+              </p>
+            </div>
           </CardContent>
         </Card>
 

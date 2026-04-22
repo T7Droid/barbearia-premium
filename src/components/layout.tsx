@@ -196,7 +196,9 @@ export function Layout({ children }: { children: React.ReactNode }) {
                         <Link href={getLink("/admin")} onClick={(e) => handleLinkClick(e, "/admin")}><LayoutGrid className="mr-2 h-4 w-4" /> Dashboard</Link>
                       </DropdownMenuItem>
                       <DropdownMenuItem asChild>
-                        <Link href={getLink("/admin/configuracoes")} onClick={(e) => handleLinkClick(e, "/admin/configuracoes")}><SettingsIcon className="mr-2 h-4 w-4" /> Configurações</Link>
+                        <Link href={getLink("/admin/configuracoes")} onClick={(e) => handleLinkClick(e, "/admin/configuracoes")}>
+                          <SettingsIcon className="mr-2 h-4 w-4" /> Configurações
+                        </Link>
                       </DropdownMenuItem>
                       <DropdownMenuSeparator />
                     </>
