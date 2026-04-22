@@ -329,14 +329,12 @@ function BookingContent() {
   const { data: availability, isLoading: isLoadingAvailability, isFetching: isFetchingAvailability } = useGetAvailability(
     { 
       date: dateStr, 
-      serviceId: selectedServices[0]?.id || 0, // Fallback para compatibilidade se API esperar um ID
+      serviceId: selectedServices[0]?.id || 0,
       barberId: selectedBarber?.id as any,
-      query: { 
-        reschedule: rescheduleId || undefined,
-        serviceIds: serviceIdsStr || undefined,
-        unitId: selectedUnit?.id || undefined
-      }
-    },
+      unitId: selectedUnit?.id || undefined,
+      serviceIds: serviceIdsStr || undefined,
+      reschedule: rescheduleId || undefined
+    } as any,
     {
       query: {
         enabled: !!selectedDate && selectedServices.length > 0 && !!selectedBarber?.id,
@@ -344,12 +342,10 @@ function BookingContent() {
           date: dateStr, 
           serviceId: selectedServices[0]?.id || 0, 
           barberId: selectedBarber?.id as any,
-          query: { 
-            reschedule: rescheduleId || undefined,
-            serviceIds: serviceIdsStr || undefined,
-            unitId: selectedUnit?.id || undefined
-          }
-        })
+          unitId: selectedUnit?.id || undefined,
+          serviceIds: serviceIdsStr || undefined,
+          reschedule: rescheduleId || undefined
+        } as any)
       }
     }
   );
