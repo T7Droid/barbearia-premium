@@ -197,17 +197,39 @@ export default function SettingsPage() {
   };
 
   const handleNativeShare = async () => {
-    const text = `Agende seu horário na barbearia ${tenant.name} pelo nosso portal online!`;
+    const text = `Agende seu horário na barbearia ${tenant.name} pelo nosso portal online! \n\nLink: ${bookingUrl}`;
+    const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=1000x1000&data=${encodeURIComponent(bookingUrl)}&bgcolor=ffffff&color=000000&margin=20`;
     
     if (navigator.share) {
       try {
-        await navigator.share({
+        // Tentar baixar a imagem para compartilhar como arquivo
+        const response = await fetch(qrCodeUrl);
+        const blob = await response.blob();
+        const file = new File([blob], `agendamento-${tenant.slug}.png`, { type: 'image/png' });
+
+        const shareData: ShareData = {
           title: `Agendamento - ${tenant.name}`,
           text: text,
           url: bookingUrl,
-        });
+        };
+
+        // Verificar se o navegador suporta compartilhar arquivos
+        if (navigator.canShare && navigator.canShare({ files: [file] })) {
+          shareData.files = [file];
+        }
+
+        await navigator.share(shareData);
       } catch (err) {
-        // Usuário cancelou ou erro silencioso
+        // Fallback se o fetch ou a inclusão do arquivo falhar
+        try {
+          await navigator.share({
+            title: `Agendamento - ${tenant.name}`,
+            text: text,
+            url: bookingUrl,
+          });
+        } catch (e) {
+          // Usuário cancelou
+        }
       }
     } else {
       handleCopyLink();
