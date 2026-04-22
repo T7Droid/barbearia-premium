@@ -67,12 +67,12 @@ export async function POST(req: Request) {
           points_per_appointment: 2,
           initial_points: 10,
           weekly_hours: {
-            monday: { active: true, start: "09:00", end: "18:00" },
-            tuesday: { active: true, start: "09:00", end: "18:00" },
-            wednesday: { active: true, start: "09:00", end: "18:00" },
-            thursday: { active: true, start: "09:00", end: "18:00" },
-            friday: { active: true, start: "09:00", end: "18:00" },
-            saturday: { active: true, start: "09:00", end: "18:00" },
+            monday: { active: false, start: "09:00", end: "18:00" },
+            tuesday: { active: false, start: "09:00", end: "18:00" },
+            wednesday: { active: false, start: "09:00", end: "18:00" },
+            thursday: { active: false, start: "09:00", end: "18:00" },
+            friday: { active: false, start: "09:00", end: "18:00" },
+            saturday: { active: false, start: "09:00", end: "18:00" },
             sunday: { active: false, start: "09:00", end: "18:00" },
           }
         }
@@ -131,12 +131,12 @@ export async function POST(req: Request) {
           active: true,
           user_id: createdUserId, // O dono também é o primeiro barbeiro no DB
           weekly_hours: {
-            monday: { active: true, start: "09:00", end: "18:00" },
-            tuesday: { active: true, start: "09:00", end: "18:00" },
-            wednesday: { active: true, start: "09:00", end: "18:00" },
-            thursday: { active: true, start: "09:00", end: "18:00" },
-            friday: { active: true, start: "09:00", end: "18:00" },
-            saturday: { active: true, start: "09:00", end: "18:00" },
+            monday: { active: false, start: "09:00", end: "18:00" },
+            tuesday: { active: false, start: "09:00", end: "18:00" },
+            wednesday: { active: false, start: "09:00", end: "18:00" },
+            thursday: { active: false, start: "09:00", end: "18:00" },
+            friday: { active: false, start: "09:00", end: "18:00" },
+            saturday: { active: false, start: "09:00", end: "18:00" },
             sunday: { active: false, start: "09:00", end: "18:00" }
           }
         }

@@ -126,19 +126,13 @@ function BookingContent() {
   const [isGloballyClosed, setIsGloballyClosed] = useState(false);
   const [closureReason, setClosureReason] = useState<"settings" | "barbers" | null>(null);
 
-  const checkAvailability = (sData: any, bData: any[]) => {
-    // 1. Verificar settings (Horários da barbearia)
-    const hours = sData?.weeklyHours || sData?.weekly_hours;
-    let hasOpenDay = false;
-    if (hours) {
-      hasOpenDay = Object.values(hours).some((h: any) => h.active === true);
-    } else {
-      hasOpenDay = true; // Fallback se não houver configurações
-    }
+  const checkAvailability = (sData: any, bData: any[], uData: any[]) => {
+    // 1. Verificar Unidades (Pelo menos uma unidade com horário ativo)
+    const hasOpenUnit = uData && uData.length > 0;
 
-    if (!hasOpenDay) {
+    if (!hasOpenUnit) {
       setIsGloballyClosed(true);
-      setClosureReason("settings");
+      setClosureReason("settings"); // Mantemos o motivo como "settings" para reaproveitar a mensagem de "Barbearia Fechada"
       return;
     }
 
@@ -223,7 +217,7 @@ function BookingContent() {
       setIsLoadingBarbers(false);
 
       setSettings(settingsData);
-      checkAvailability(settingsData, finalBarbers);
+      checkAvailability(settingsData, finalBarbers, activeUnits);
       DemoStore.saveSettings(settingsData);
       setMpPublicKey(settingsData.mpPublicKey || "");
 
