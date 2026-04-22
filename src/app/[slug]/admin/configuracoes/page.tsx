@@ -56,7 +56,7 @@ export default function SettingsPage() {
     mpPublicKey: "",
     mpConnectionError: null as string | null
   });
-  
+
   const getLink = (path: string) => `/${tenant?.slug}${path}`;
 
   const fetchSettings = async () => {
@@ -79,7 +79,7 @@ export default function SettingsPage() {
     if (tenant?.slug) {
       fetchSettings();
     }
-    
+
     // Verificar se voltou do redirecionamento do Mercado Pago
     const params = new URLSearchParams(window.location.search);
     if (params.get("mp_success") === "true") {
@@ -114,7 +114,7 @@ export default function SettingsPage() {
 
   const handleDisconnectMP = async () => {
     if (!confirm("Tem certeza que deseja desconectar sua conta do Mercado Pago? Você não poderá receber pagamentos online até conectar novamente.")) return;
-    
+
     setSaving(true);
     try {
       const res = await fetch("/api/auth/mercadopago/disconnect", {
@@ -137,7 +137,7 @@ export default function SettingsPage() {
     try {
       const res = await fetch("/api/settings", {
         method: "POST",
-        headers: { 
+        headers: {
           "Content-Type": "application/json",
           "x-tenant-slug": tenant.slug
         },
@@ -314,41 +314,6 @@ export default function SettingsPage() {
           </CardContent>
         </Card>
 
-        <Card className="bg-card border-border/50 shadow-lg">
-          <CardHeader className="flex flex-row items-center gap-4 pb-2">
-            <div className="w-10 h-10 rounded-full bg-purple-500/10 flex items-center justify-center">
-              <CalendarClock className="w-5 h-5 text-purple-500" />
-            </div>
-            <div className="flex-1">
-              <CardTitle>Intervalo de Agendamento</CardTitle>
-              <CardDescription>Defina o tempo de duração padrão entre cada horário.</CardDescription>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="max-w-xs">
-              <Select
-                value={settings.slotInterval?.toString()}
-                onValueChange={(val) => {
-                  const newInterval = parseInt(val);
-                  setSettings({ ...settings, slotInterval: newInterval });
-
-                }}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione o intervalo" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="30">30 Minutos</SelectItem>
-                  <SelectItem value="45">45 Minutos</SelectItem>
-                  <SelectItem value="60">60 Minutos</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </CardContent>
-        </Card>
-
-
-
         <Card className={`bg-card border-border/50 shadow-lg border-l-4 ${settings.mpConnected ? 'border-l-green-500' : 'border-l-blue-500'}`}>
           <CardHeader className="flex flex-row items-center gap-4 pb-2">
             <div className={`w-10 h-10 rounded-full flex items-center justify-center ${settings.mpConnected ? 'bg-green-500/10' : 'bg-blue-500/10'}`}>
@@ -381,7 +346,7 @@ export default function SettingsPage() {
                     <p>É necessário conectar sua conta do Mercado Pago para poder receber dos clientes no momento do agendamento online.</p>
                   </div>
                 )}
-                <Button 
+                <Button
                   className="w-full gap-2 bg-[#009EE3] hover:bg-[#007EB5] text-white border-none shadow-md"
                   onClick={handleConnectMP}
                   disabled={connectingMP}
@@ -394,13 +359,13 @@ export default function SettingsPage() {
               <div className="space-y-4">
                 <div className="bg-green-500/5 border border-green-500/20 rounded-lg p-3 text-sm text-green-700">
                   <p className="flex items-center gap-2 font-medium">
-                    <ShieldCheck className="w-5 h-5 shrink-0" /> 
+                    <ShieldCheck className="w-5 h-5 shrink-0" />
                     Sua barbearia já está conectada com o Mercado Pago e você já pode receber pagamentos dos clientes online!
                   </p>
                   <p className="mt-1 opacity-80 text-xs pl-7">Tudo pronto! Seus recebimentos cairão diretamente na sua conta digital vinculada.</p>
                 </div>
-                <Button 
-                  variant="outline" 
+                <Button
+                  variant="outline"
                   className="w-full gap-2 border-destructive/20 text-destructive hover:bg-destructive/5"
                   onClick={handleDisconnectMP}
                 >
