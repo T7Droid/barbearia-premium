@@ -64,7 +64,6 @@ export async function POST(req: Request) {
           is_points_enabled: false,
           cancellation_window_days: 2,
           is_prepayment_required: false,
-          slot_interval: 30,
           points_per_appointment: 2,
           initial_points: 10,
           weekly_hours: {
@@ -169,12 +168,12 @@ export async function POST(req: Request) {
           active: true,
           user_id: barberUserId,
           weekly_hours: {
-            monday: { active: true, start: "09:00", end: "18:00" },
-            tuesday: { active: true, start: "09:00", end: "18:00" },
-            wednesday: { active: true, start: "09:00", end: "18:00" },
-            thursday: { active: true, start: "09:00", end: "18:00" },
-            friday: { active: true, start: "09:00", end: "18:00" },
-            saturday: { active: true, start: "09:00", end: "18:00" },
+            monday: { active: false, start: "09:00", end: "18:00" },
+            tuesday: { active: false, start: "09:00", end: "18:00" },
+            wednesday: { active: false, start: "09:00", end: "18:00" },
+            thursday: { active: false, start: "09:00", end: "18:00" },
+            friday: { active: false, start: "09:00", end: "18:00" },
+            saturday: { active: false, start: "09:00", end: "18:00" },
             sunday: { active: false, start: "09:00", end: "18:00" }
           }
         }

@@ -970,7 +970,7 @@ function BookingContent() {
                   </div>
 
                   {selectedServices.length > 0 && (
-                    <div className="flex flex-col sm:flex-row items-center justify-between gap-4 py-6 mt-4 animate-in fade-in zoom-in-95">
+                    <div className="flex flex-col sm:flex-row items-center justify-between gap-4 py-6 mt-4 animate-in fade-in zoom-in duration-500">
                       <div>
                         <p className="text-sm font-medium">{selectedServices.length} serviço(s) selecionado(s)</p>
                         <p className="text-lg font-bold text-primary">
