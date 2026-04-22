@@ -38,12 +38,17 @@ import { useToast } from "@/hooks/use-toast";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useTenant } from "@/hooks/use-tenant";
+import { supabase } from "@/lib/supabase";
+import { Mail, AlertCircle } from "lucide-react";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
 
 interface Barber {
   id: number;
   name: string;
   description: string;
   imageUrl?: string;
+  email?: string;
   active: boolean;
   commissionPercentage?: number;
 }
@@ -58,6 +63,7 @@ export default function AdminBarbers() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showEmail, setShowEmail] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [isResettingPassword, setIsResettingPassword] = useState(false);
 
   const [formData, setFormData] = useState({
     name: "",
@@ -213,6 +219,35 @@ export default function AdminBarbers() {
       }
     } catch (error) {
       toast({ title: "Erro", description: "Erro de conexão.", variant: "destructive" });
+    }
+  };
+
+  const handleResetPassword = async () => {
+    if (!editingBarber?.email) {
+      toast({ title: "Erro", description: "E-mail do barbeiro não encontrado.", variant: "destructive" });
+      return;
+    }
+
+    setIsResettingPassword(true);
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(editingBarber.email, {
+        redirectTo: `${window.location.origin}/reset-password`,
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "E-mail enviado!",
+        description: `Um link de recuperação foi enviado para ${editingBarber.email}.`
+      });
+    } catch (error: any) {
+      toast({
+        title: "Erro ao enviar e-mail",
+        description: error.message || "Tente novamente mais tarde.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsResettingPassword(false);
     }
   };
 
@@ -373,7 +408,8 @@ export default function AdminBarbers() {
                         className={`min-h-[100px] ${formData.description.trim() === "" ? "border-destructive/50" : ""}`}
                       />
                     </div>
-                    <div className="space-y-2">
+                    {/* Campo de Foto Oculto Temporariamente */}
+                    {/* <div className="space-y-2">
                       <Label htmlFor="imageUrl">URL da Foto (opcional)</Label>
                       <div className="relative">
                         <ImageIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -385,7 +421,7 @@ export default function AdminBarbers() {
                           placeholder="https://images.unsplash.com/..."
                         />
                       </div>
-                    </div>
+                    </div> */}
                     <div className="space-y-2">
                       <Label htmlFor="commissionPercentage">Comissão (%)</Label>
                       <Input
@@ -490,10 +526,44 @@ export default function AdminBarbers() {
                       </Label>
                       
                       {editingBarber ? (
-                         <div className="p-4 bg-muted/30 border border-border/50 rounded-lg text-muted-foreground text-xs italic flex items-center gap-2">
-                           <Key className="w-4 h-4" />
-                           As credenciais de acesso não podem ser editadas. Para alterar o e-mail ou senha, exclua o profissional e cadastre-o novamente.
-                         </div>
+                        <div className="space-y-6">
+                          <div className="p-4 bg-muted/30 border border-border/50 rounded-lg space-y-4">
+                            <div className="space-y-1.5">
+                              <Label className="text-xs text-muted-foreground uppercase font-bold tracking-wider">E-mail de Acesso</Label>
+                              <div className="flex items-center gap-2 p-3 bg-background border rounded-md text-foreground font-medium">
+                                <Mail className="w-4 h-4 text-muted-foreground" />
+                                {editingBarber.email || "E-mail não disponível"}
+                              </div>
+                            </div>
+                            
+                            <div className="pt-2">
+                              <Button 
+                                type="button" 
+                                variant="outline" 
+                                className="w-full gap-2 border-primary/30 text-primary hover:bg-primary/5 h-11"
+                                onClick={handleResetPassword}
+                                disabled={isResettingPassword || !editingBarber.email}
+                              >
+                                {isResettingPassword ? (
+                                  <Loader2 className="w-4 h-4 animate-spin" />
+                                ) : (
+                                  <Key className="w-4 h-4" />
+                                )}
+                                Enviar E-mail de Recuperação
+                              </Button>
+                              <p className="text-[10px] text-center text-muted-foreground mt-3 italic">
+                                Um link para criar uma nova senha será enviado para o e-mail acima.
+                              </p>
+                            </div>
+                          </div>
+
+                          <div className="p-4 bg-amber-500/5 border border-amber-500/10 rounded-lg flex items-start gap-3">
+                            <AlertCircle className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
+                            <p className="text-xs text-amber-600 leading-relaxed">
+                              Por segurança, as credenciais não podem ser editadas diretamente. Caso o barbeiro precise de um novo e-mail, exclua o perfil e cadastre novamente.
+                            </p>
+                          </div>
+                        </div>
                       ) : (
                         <div className="space-y-4 animate-in fade-in slide-in-from-top-1 duration-300">
                           <div className="space-y-2">

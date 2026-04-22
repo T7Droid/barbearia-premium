@@ -35,6 +35,21 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
+  // Buscar e-mails separadamente para evitar erros de Join
+  const userIds = (data || []).map((b: any) => b.user_id).filter(Boolean);
+  let profilesMap: Record<string, string> = {};
+  
+  if (userIds.length > 0) {
+    const { data: profilesData } = await supabaseAdmin
+      .from("profiles")
+      .select("id, email")
+      .in("id", userIds);
+    
+    if (profilesData) {
+      profilesMap = profilesData.reduce((acc: any, p: any) => ({ ...acc, [p.id]: p.email }), {});
+    }
+  }
+
   // Mapear para camelCase e incluir associações
   let mapped = (data || []).map((b: any) => ({
     id: b.id,
@@ -43,6 +58,7 @@ export async function GET(request: NextRequest) {
     imageUrl: b.image_url,
     active: b.active,
     userId: b.user_id,
+    email: b.user_id ? profilesMap[b.user_id] : null,
     weeklyHours: b.weekly_hours,
     commissionPercentage: b.commission_percentage !== null && b.commission_percentage !== undefined ? b.commission_percentage : 50,
     units: (b.barber_units || []).map((bu: any) => ({ id: bu.unit_id })),
