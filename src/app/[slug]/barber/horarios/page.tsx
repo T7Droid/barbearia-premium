@@ -20,6 +20,8 @@ import { useToast } from "@/hooks/use-toast";
 import { useTenant } from "@/hooks/use-tenant";
 import { Label } from "@/components/ui/label";
 
+import { Input } from "@/components/ui/input";
+
 const DAYS_OF_WEEK = [
   { id: "monday", label: "Segunda-feira" },
   { id: "tuesday", label: "Terça-feira" },
@@ -76,28 +78,39 @@ export default function BarberSchedulePage() {
 
       barberUnits.forEach((unit: any) => {
         const uId = String(unit.id);
-        // Tenta pegar do mapa por unidade, senão tenta o formato plano antigo, senão cria vazio (desativado)
-        let unitSpecificHours = dbHours[uId];
+        let unitData = dbHours[uId];
         
-        if (!unitSpecificHours) {
-          // Se não tem no mapa, verifica se os dados no DB são o formato plano antigo e migra pra este unit
+        // Se não houver dados específicos para esta unidade, tentamos migrar se houver dados legados
+        if (!unitData) {
           const isLegacyFlat = dbHours.monday || dbHours.tuesday;
           if (isLegacyFlat) {
-            unitSpecificHours = { ...dbHours };
+            // Migra preservando apenas os horários úteis (opcional) ou limpando
+            unitData = JSON.parse(JSON.stringify(dbHours)); 
           } else {
-            // Novo unit ou sem dados: Tudo desativado por padrão conforme solicitado
-            unitSpecificHours = DAYS_OF_WEEK.reduce((acc: any, day) => {
-              const uDay = unit.weekly_hours?.[day.id];
-              acc[day.id] = { 
-                active: false, 
-                start: uDay?.start || "09:00", 
-                end: uDay?.end || "18:00" 
-              };
-              return acc;
-            }, {});
+            // Inicializa vazio (tudo fechado) conforme o fluxo dinâmico exige
+            unitData = {
+              config: { useBreakTime: false, breakTimeMinutes: "0" }
+            };
+            DAYS_OF_WEEK.forEach(day => {
+              unitData[day.id] = { active: false, start: "09:00", end: "18:00" };
+            });
           }
         }
-        newWeeklyHours[uId] = unitSpecificHours;
+        
+        // Garantir que a config de respiro existe no objeto com nomes corretos
+        if (!unitData.config) {
+          unitData.config = { useBreakTime: false, breakTimeMinutes: "0" };
+        } else {
+          // Normalizar nomes se vierem do legado
+          if (unitData.config.isBreakEnabled !== undefined) {
+             unitData.config.useBreakTime = unitData.config.isBreakEnabled;
+          }
+          if (unitData.config.breakTime !== undefined) {
+             unitData.config.breakTimeMinutes = String(unitData.config.breakTime);
+          }
+        }
+
+        newWeeklyHours[uId] = unitData;
       });
 
       setWeeklyHours(newWeeklyHours);
@@ -133,22 +146,75 @@ export default function BarberSchedulePage() {
     }));
   };
 
+  const handleToggleBreakTime = (unitId: string, enabled: boolean) => {
+    setWeeklyHours((prev) => {
+      const unitConfig = prev[unitId] || {};
+      const currentConfig = unitConfig.config || { useBreakTime: false, breakTimeMinutes: "0" };
+      return {
+        ...prev,
+        [unitId]: {
+          ...unitConfig,
+          config: { ...currentConfig, useBreakTime: enabled }
+        }
+      };
+    });
+  };
+
+  const handleBreakTimeMinutesChange = (unitId: string, minutes: string) => {
+    setWeeklyHours((prev) => {
+      const unitConfig = prev[unitId] || {};
+      const currentConfig = unitConfig.config || { useBreakTime: false, breakTimeMinutes: "0" };
+      return {
+        ...prev,
+        [unitId]: {
+          ...unitConfig,
+          config: { ...currentConfig, breakTimeMinutes: minutes }
+        }
+      };
+    });
+  };
+
   const handleSave = async () => {
     setIsSaving(true);
     try {
+      // Saneamento final: se a unidade está fechada em um dia, o barbeiro deve estar inativo nesse dia
+      const sanitizedHours = JSON.parse(JSON.stringify(weeklyHours));
+      
+      units.forEach((unit) => {
+        const uId = String(unit.id);
+        if (sanitizedHours[uId]) {
+          DAYS_OF_WEEK.forEach((day) => {
+            const unitDayConfig = unit.weekly_hours?.[day.id];
+            const isUnitClosed = !unitDayConfig?.active;
+            
+            if (isUnitClosed && sanitizedHours[uId][day.id]) {
+              sanitizedHours[uId][day.id].active = false;
+            }
+          });
+        }
+      });
+
+      console.log("[SALVAR] Enviando horários saneados:", sanitizedHours);
+      
       const res = await fetch(`/api/barbers/${barberId}`, {
         method: "PUT",
         headers: { 
           "Content-Type": "application/json",
           "x-tenant-slug": tenant.slug 
         },
-        body: JSON.stringify({ weeklyHours })
+        body: JSON.stringify({ weeklyHours: sanitizedHours }) 
       });
 
-      if (!res.ok) throw new Error("Erro ao salvar");
-      toast({ title: "Sucesso!", description: "Seus horários foram atualizados em todas as unidades." });
-    } catch (error) {
-      toast({ title: "Erro", description: "Falha ao atualizar horários", variant: "destructive" });
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.error || "Erro ao salvar");
+      }
+
+      toast({ title: "Sucesso!", description: "Escalas salvas e saneadas com sucesso." });
+      // Atualizar o estado local com os dados limpos
+      setWeeklyHours(sanitizedHours);
+    } catch (error: any) {
+      toast({ title: "Erro ao Salvar", description: error.message, variant: "destructive" });
     } finally {
       setIsSaving(false);
     }
@@ -182,11 +248,40 @@ export default function BarberSchedulePage() {
           units.map((unit) => (
             <Card key={unit.id} className="border-border/50 shadow-xl overflow-hidden">
               <CardHeader className="bg-primary/5 border-b">
-                <CardTitle className="text-lg flex items-center gap-2">
-                  <MapPin className="w-4 h-4 text-primary" />
-                  Expediente semanal na unidade: <span className="text-primary">{unit.name}</span>
-                </CardTitle>
-                <CardDescription>Defina sua jornada nesta unidade específica.</CardDescription>
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                  <div>
+                    <CardTitle className="text-lg flex items-center gap-2">
+                      <MapPin className="w-4 h-4 text-primary" />
+                      Unidade: <span className="text-primary">{unit.name}</span>
+                    </CardTitle>
+                    <CardDescription>Defina sua jornada nesta unidade específica.</CardDescription>
+                  </div>
+                  
+                  <div className="bg-background/40 border border-primary/20 rounded-xl p-4 flex items-center gap-6 shadow-sm">
+                    <div className="flex flex-col gap-1">
+                      <Label className="text-xs font-bold uppercase tracking-widest text-primary/80">Tempo de Respiro</Label>
+                      <div className="flex items-center gap-2">
+                        <Switch 
+                          checked={weeklyHours[String(unit.id)]?.config?.useBreakTime || false}
+                          onCheckedChange={(val) => handleToggleBreakTime(String(unit.id), val)}
+                        />
+                        <span className="text-xs font-medium text-foreground">Intervalo entre serviços?</span>
+                      </div>
+                    </div>
+                    
+                    {weeklyHours[String(unit.id)]?.config?.useBreakTime && (
+                      <div className="flex flex-col gap-1 animate-in zoom-in-95 duration-200">
+                        <Label className="text-[10px] font-bold uppercase text-muted-foreground">Minutos</Label>
+                        <Input 
+                          type="number"
+                          className="w-20 h-9 bg-background/50"
+                          value={weeklyHours[String(unit.id)]?.config?.breakTimeMinutes || "0"}
+                          onChange={(e) => handleBreakTimeMinutesChange(String(unit.id), e.target.value)}
+                        />
+                      </div>
+                    )}
+                  </div>
+                </div>
               </CardHeader>
               <CardContent className="p-0">
                 <div className="divide-y divide-border/50">
@@ -208,7 +303,7 @@ export default function BarberSchedulePage() {
                                 onCheckedChange={(checked) => handleToggleDay(uId, day.id, checked)} 
                               />
                               <span className={`text-xs font-bold uppercase tracking-wider ${isUnitClosed ? 'text-destructive' : config.active ? 'text-green-500' : 'text-muted-foreground'}`}>
-                                {isUnitClosed ? 'Unidade Fechada' : config.active ? 'Atendimento Ativo' : 'Não Atendo'}
+                                {isUnitClosed ? 'Fechado' : config.active ? 'Atendimento' : 'Folga'}
                               </span>
                             </div>
                           </div>
@@ -218,10 +313,10 @@ export default function BarberSchedulePage() {
                               <div className="flex items-center gap-2">
                                  <span className="text-[10px] uppercase font-bold text-muted-foreground">Início</span>
                                  <Select
-                                   value={config.start || unitConfig.start || "09:00"}
+                                   value={config.start || "09:00"}
                                    onValueChange={(val) => handleTimeChange(uId, day.id, "start", val)}
                                  >
-                                   <SelectTrigger className="w-[110px] h-10 text-sm bg-background border-border/50 shadow-sm">
+                                   <SelectTrigger className="w-[110px] h-10 bg-background border-border/50 shadow-sm">
                                      <SelectValue />
                                    </SelectTrigger>
                                    <SelectContent>
@@ -235,10 +330,10 @@ export default function BarberSchedulePage() {
                               <div className="flex items-center gap-2">
                                  <span className="text-[10px] uppercase font-bold text-muted-foreground">Fim</span>
                                  <Select
-                                   value={config.end || unitConfig.end || "18:00"}
+                                   value={config.end || "18:00"}
                                    onValueChange={(val) => handleTimeChange(uId, day.id, "end", val)}
                                  >
-                                   <SelectTrigger className="w-[110px] h-10 text-sm bg-background border-border/50 shadow-sm">
+                                   <SelectTrigger className="w-[110px] h-10 bg-background border-border/50 shadow-sm">
                                      <SelectValue />
                                    </SelectTrigger>
                                    <SelectContent>
@@ -250,12 +345,6 @@ export default function BarberSchedulePage() {
                                    </SelectContent>
                                  </Select>
                               </div>
-                            </div>
-                          )}
-
-                          {!config.active && !isUnitClosed && (
-                            <div className="flex-1 text-right italic text-xs text-muted-foreground">
-                              Dia indisponível para esta unidade
                             </div>
                           )}
                         </div>
@@ -271,7 +360,7 @@ export default function BarberSchedulePage() {
         <div className="sticky bottom-8 flex justify-end">
           <Button onClick={handleSave} disabled={isSaving || units.length === 0} className="gap-2 shadow-2xl h-14 px-8 text-lg font-bold">
             {isSaving ? <Loader2 className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5" />}
-            Salvar Todas as Escalas
+            Salvar Minhas Escalas
           </Button>
         </div>
       </div>

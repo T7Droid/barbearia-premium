@@ -16,9 +16,26 @@ export async function PUT(
 ) {
   const { id: idStr } = await params;
   const tenant = await TenantContext.getTenant(request);
+  const auth = await AuthService.verifySession(request, tenant?.id);
 
-  if (!tenant || !(await checkAdmin(request, tenant.id))) {
-    return NextResponse.json({ error: "Propriedade não autorizada para este tenant" }, { status: 403 });
+  if (!tenant || !auth.authenticated) {
+    return NextResponse.json({ error: "Sessão inválida ou expirada" }, { status: 401 });
+  }
+
+  const id = parseInt(idStr);
+
+  // Buscar o barbeiro para verificar o proprietário
+  const { data: barberRecord } = await supabaseAdmin
+    .from("barbers")
+    .select("user_id")
+    .eq("id", id)
+    .single();
+
+  const isOwner = barberRecord?.user_id === auth.user.id;
+  const isAdmin = auth.user.role === "admin";
+
+  if (!isAdmin && !isOwner) {
+    return NextResponse.json({ error: "Não autorizado a editar este perfil" }, { status: 403 });
   }
 
   try {
@@ -55,9 +72,11 @@ export async function PUT(
       name,
       description,
       image_url: imageUrl,
-      active,
-      commission_percentage: commissionPercentage !== undefined ? commissionPercentage : 50
+      active
     };
+    if (commissionPercentage !== undefined) {
+      updateFields.commission_percentage = commissionPercentage;
+    }
     if (userId) updateFields.user_id = userId;
     if (weeklyHours) updateFields.weekly_hours = weeklyHours;
 

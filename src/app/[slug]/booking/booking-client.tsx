@@ -184,12 +184,18 @@ function BookingContent() {
       fetch("/api/barbers?active=true&bookable=true", { headers }).then(res => res.json())
     ]).then(([settingsData, authData, unitsData, barbersData]) => {
       
-      // 1. Unidades
+      // 1. Unidades (Filtrar apenas unidades que possuem pelo menos um dia aberto)
       if (Array.isArray(unitsData)) {
-        setUnits(unitsData);
-        if (unitsData.length === 1) {
-          setSelectedUnit(unitsData[0]);
-          setStep(s => s === 1 ? 2 : s); // Só pula para Barbeiros se estiver no passo 1
+        const activeUnits = unitsData.filter(unit => {
+          const hours = unit.weekly_hours || {};
+          // Verifica se existe algum dia (segunda, terça, etc.) com active: true
+          return Object.values(hours).some((day: any) => day.active === true);
+        });
+
+        setUnits(activeUnits);
+        if (activeUnits.length === 1) {
+          setSelectedUnit(activeUnits[0]);
+          setStep(s => s === 1 ? 2 : s);
         }
       }
       setIsLoadingUnits(false);
@@ -271,17 +277,26 @@ function BookingContent() {
   }, [selectedUnit, allServices, tenant]);
 
   useEffect(() => {
-    // Buscar dias ocupados/fechados para os próximos 2 meses
-    const start = format(new Date(), "yyyy-MM-dd");
-    const end = format(new Date(Date.now() + 60 * 24 * 60 * 60 * 1000), "yyyy-MM-dd");
+    // Buscar dias ocupados/fechados para os próximos 6 meses (180 dias)
+    const fetchBusyDates = async () => {
+      const start = format(new Date(), "yyyy-MM-dd");
+      const end = format(new Date(Date.now() + 180 * 24 * 60 * 60 * 1000), "yyyy-MM-dd");
 
-    fetch(`/api/availability/busy-dates?start=${start}&end=${end}`)
-      .then(res => res.json())
-      .then(data => {
+      let url = `/api/availability/busy-dates?start=${start}&end=${end}`;
+      if (selectedBarber?.id) url += `&barberId=${selectedBarber.id}`;
+      if (selectedUnit?.id) url += `&unitId=${selectedUnit.id}`;
+
+      try {
+        const res = await fetch(url, { headers: { "x-tenant-slug": tenant?.slug || "" } });
+        const data = await res.json();
         if (Array.isArray(data)) setBusyDates(data);
-      })
-      .catch(err => console.error("Error fetching busy dates:", err));
-  }, []);
+      } catch (err) {
+        console.error("Error fetching busy dates:", err);
+      }
+    };
+
+    fetchBusyDates();
+  }, [selectedBarber?.id, selectedUnit?.id, tenant?.slug]);
 
   const dateStr = selectedDate ? format(selectedDate, "yyyy-MM-dd") : "";
   const serviceIdsStr = selectedServices.map(s => s.id).join(",");
@@ -653,6 +668,20 @@ function BookingContent() {
       // Traduzir mensagens técnicas do Mercado Pago
       let errorMessage = error.response?.data?.error || error.message || "Não foi possível confirmar o agendamento.";
       
+      const isSlotOccupied = errorMessage.includes("SLOT_OCCUPIED") || 
+                             (error.response?.data?.error?.includes("SLOT_OCCUPIED"));
+
+      if (isSlotOccupied) {
+        toast({
+          title: "Horário Ocupado",
+          description: "Desculpe, este horário acabou de ser preenchido por outro cliente. Por favor, escolha um novo horário.",
+          variant: "destructive"
+        });
+        setStep(4); // Volta para a seleção de horários
+        setSelectedTime(null);
+        return;
+      }
+
       if (errorMessage.includes("pending_waiting_transfer")) {
         errorMessage = "Aguardando confirmação do banco. Fique na tela, estamos verificando automaticamente o seu pagamento a cada 10 segundos.";
       } else if (errorMessage.includes("Pagamento não aprovado") || errorMessage.includes("não aprovado")) {
@@ -663,12 +692,10 @@ function BookingContent() {
         toast({
           title: "Aguardando Pagamento",
           description: errorMessage,
-          variant: "default" // Alterado para não exibir vermelho/destrutivo
+          variant: "default" 
         });
       }
       
-      // Não lançamos mais o erro aqui para evitar 'unhandledRejection' no console do navegador,
-      // a menos que seja um erro crítico que precise travar o Card Brick.
       if (paymentMethod === "card") throw error;
     }
   };
@@ -964,15 +991,40 @@ function BookingContent() {
                         if (date < today) return true;
                         if (busyDates.includes(dateStr)) return true;
                         
-                        // Verificar se o barbeiro (ou a barbearia) trabalha neste dia da semana
+                        // Identificar o dia da semana (Meio-dia para evitar fuso)
                         const daysOfWeek = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
-                        const dayName = daysOfWeek[date.getDay()];
+                        const tempDate = new Date(date);
+                        tempDate.setHours(12, 0, 0, 0);
+                        const dayName = daysOfWeek[tempDate.getDay()];
                         
-                        // Prioridade: Horário do Barbeiro > Horário Geral da Barbearia
-                        const schedule = selectedBarber?.weekly_hours || settings?.weekly_hours;
+                        // 1. Tentar pegar a escala do barbeiro (Prioridade Máxima)
+                        const barberSchedule = selectedBarber?.weeklyHours || selectedBarber?.weekly_hours;
+                        const uId = selectedUnit?.id ? String(selectedUnit.id) : null;
                         
-                        if (schedule && schedule[dayName]) {
-                          return !schedule[dayName].active;
+                        let dayConfig = null;
+
+                        if (barberSchedule) {
+                          // Tenta primeiro o mapa por unidade
+                          if (uId && barberSchedule[uId] && barberSchedule[uId][dayName]) {
+                            dayConfig = barberSchedule[uId][dayName];
+                          } 
+                          // Fallback para o horário "raiz" do barbeiro
+                          else if (barberSchedule[dayName]) {
+                            dayConfig = barberSchedule[dayName];
+                          }
+                          // Se o barbeiro está selecionado mas não tem config para este dia/unidade,
+                          // bloqueamos por segurança (não usamos o horário geral da barbearia aqui)
+                          else {
+                            return true;
+                          }
+                        } 
+                        // 2. Se não houver barbeiro selecionado, usa o horário geral da barbearia (Settings)
+                        else if (settings?.weekly_hours?.[dayName]) {
+                          dayConfig = settings.weekly_hours[dayName];
+                        }
+
+                        if (dayConfig) {
+                          return !dayConfig.active;
                         }
 
                         return false;

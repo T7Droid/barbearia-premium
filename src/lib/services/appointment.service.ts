@@ -179,6 +179,22 @@ export class AppointmentService {
     if (sessionError || !sessionDataRaw) throw new Error("Session not found");
     const session = sessionDataRaw.data;
 
+    // --- NOVA TRAVA: VALIDAR DISPONIBILIDADE FINAL NO CHECKOUT ---
+    const totalDuration = session.servicesJson?.reduce((acc: number, s: any) => acc + (s.durationMinutes || 0), 0) || 0;
+    const isAvailable = await this.isSlotAvailable(
+      session.appointmentDate,
+      session.appointmentTime,
+      totalDuration,
+      session.barberId,
+      sessionDataRaw.tenant_id,
+      session.unitId
+    );
+
+    if (!isAvailable) {
+      throw new Error("SLOT_OCCUPIED");
+    }
+    // -------------------------------------------------------------
+
     if (session.rescheduleId) {
       await supabaseAdmin!.from("appointments").delete().eq("id", session.rescheduleId);
     }
@@ -393,23 +409,23 @@ export class AppointmentService {
     };
   }
 
-  static async getBookedSlots(date: string, barberId?: number, tenantId?: string, excludeId?: number): Promise<string[]> {
+  static async getBookedSlots(date: string, barberId?: number, tenantId?: string, excludeId?: number): Promise<{time: string, duration: number}[]> {
     if (!config.supabase.isConfigured || !supabaseAdmin) {
       throw new Error("Supabase Admin is required for availability checks.");
     }
 
     let query = supabaseAdmin
       .from("appointments")
-      .select("appointment_time")
+      .select("appointment_time, total_duration")
       .eq("appointment_date", date)
       .not("status", "eq", "cancelled");
 
-    if (tenantId) {
-      query = query.eq("tenant_id", tenantId);
-    }
-
     if (barberId) {
       query = query.eq("barber_id", barberId);
+    }
+    
+    if (tenantId) {
+      query = query.eq("tenant_id", tenantId);
     }
 
     if (excludeId) {
@@ -419,7 +435,110 @@ export class AppointmentService {
     const { data, error } = await query;
 
     if (error) throw error;
-    return (data || []).map(a => a.appointment_time);
+    
+    return (data || []).map(a => ({
+      time: a.appointment_time,
+      duration: Number(a.total_duration || 30) 
+    }));
+  }
+
+  static async isSlotAvailable(
+    date: string, 
+    time: string, 
+    duration: number, 
+    barberId: number | undefined, 
+    tenantId: string,
+    unitId?: string,
+    excludeId?: number
+  ): Promise<boolean> {
+    const booked = await this.getBookedSlots(date, barberId, tenantId, excludeId);
+    
+    const [h, m] = time.split(":").map(Number);
+    const newStart = h * 60 + m;
+    const newEnd = newStart + duration;
+
+    // 1. Checar Expediente (Fechamento)
+    const closingTime = await this.getBarberClosingTime(barberId, unitId, date, tenantId);
+    if (newEnd > closingTime) {
+      return false;
+    }
+
+    // 2. Checar Conflitos com outros agendamentos
+    const hasConflict = booked.some(b => {
+      const [bh, bm] = b.time.split(":").map(Number);
+      const bStart = bh * 60 + bm;
+      const bEnd = bStart + b.duration;
+
+      // Colisão se o novo intervalo intersecta o existente
+      return (newStart < bEnd && newEnd > bStart);
+    });
+
+    return !hasConflict;
+  }
+
+  static async getBarberClosingTime(
+    barberId: number | undefined, 
+    unitId: string | undefined, 
+    date: string,
+    tenantId: string
+  ): Promise<number> {
+    if (!supabaseAdmin) return 1080; // 18:00 default fallback
+
+    const targetDate = new Date(date + "T12:00:00"); 
+    const daysMap = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"];
+    const dayName = daysMap[targetDate.getDay()];
+
+    let closingMinutes = 1080; // 18:00 default
+
+    // 1. Tentar pegar a config do Barbeiro (específica da unidade ou global)
+    if (barberId) {
+      const { data: barber } = await supabaseAdmin
+        .from("barbers")
+        .select("weekly_hours")
+        .eq("id", barberId)
+        .single();
+      
+      if (barber?.weekly_hours) {
+        const h = barber.weekly_hours;
+        let dayConfig = null;
+        
+        // Normalizar unitId para busca insensível a maiúsculas
+        const uId = unitId ? String(unitId).toLowerCase() : null;
+        let unitBlock = null;
+        if (uId) {
+          const matchingKey = Object.keys(h).find(k => k.toLowerCase() === uId);
+          if (matchingKey) unitBlock = h[matchingKey];
+        }
+
+        if (unitBlock && unitBlock[dayName]) {
+          dayConfig = unitBlock[dayName];
+        } else if (h[dayName]) {
+          dayConfig = h[dayName];
+        }
+
+        if (dayConfig?.active && dayConfig.end) {
+          const [hh, mm] = dayConfig.end.split(":").map(Number);
+          return hh * 60 + mm;
+        }
+      }
+    }
+
+    // 2. Se não achou no barbeiro, tenta na Unidade
+    if (unitId) {
+      const { data: unit } = await supabaseAdmin
+        .from("units")
+        .select("weekly_hours")
+        .eq("id", unitId)
+        .single();
+      
+      const dayConfig = unit?.weekly_hours?.[dayName];
+      if (dayConfig?.active && dayConfig.end) {
+        const [hh, mm] = dayConfig.end.split(":").map(Number);
+        closingMinutes = hh * 60 + mm;
+      }
+    }
+
+    return closingMinutes;
   }
 
   static async getBookedSlotsInRange(startDate: string, endDate: string, tenantId: string) {

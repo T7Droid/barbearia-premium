@@ -24,12 +24,15 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    // Determinar o dia da semana
-    const targetDate = new Date(date + "T00:00:00");
+    // Determinar o dia da semana (Usar Meio-dia para evitar shifts de fuso horário)
+    const targetDate = new Date(date + "T12:00:00");
     const daysMap = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"];
     const dayName = daysMap[targetDate.getDay()];
 
-    let dayConfig = { active: false, start: "09:00", end: "18:00" };
+    console.log(`[AVAILABILITY] Consultando ${date} -> Identificado como ${dayName}. Unidade: ${unitId}`);
+    // Sincronização de escala concluída
+
+    let dayConfig: any = { active: false, start: "09:00", end: "18:00" };
     let interval = 45;
 
     // 1. Buscar configurações da Unidade (OBRIGATÓRIO para limites)
@@ -38,12 +41,12 @@ export async function GET(request: NextRequest) {
       const { data: unit } = await supabaseAdmin
         .from("units")
         .select("weekly_hours")
-        .eq("id", parseInt(unitId))
+        .eq("id", unitId) // Removido parseInt pois o ID é UUID (string)
         .single();
       unitHours = unit?.weekly_hours;
     }
 
-    // 2. Buscar configurações do barbeiro
+    // 2. Tentar pegar a configuração de horário de hoje
     if (barberId) {
       const { data: barber } = await supabaseAdmin
         .from("barbers")
@@ -51,102 +54,103 @@ export async function GET(request: NextRequest) {
         .eq("id", parseInt(barberId))
         .single();
       
-      if (barber?.weekly_hours) {
-        // Verificar se é mapa (por unidade) ou plano (antigo)
-        const isMap = !!barber.weekly_hours[unitId || ""] || !barber.weekly_hours[dayName];
+      const schedule = barber?.weekly_hours;
+      if (schedule) {
+        // Normalizar unitId para busca
+        const uId = unitId ? String(unitId).toLowerCase() : null;
         
-        if (isMap && unitId && barber.weekly_hours[unitId]) {
-          dayConfig = barber.weekly_hours[unitId][dayName] || { active: false };
-        } else if (!isMap) {
-          // Fallback para estrutura plana antiga
-          dayConfig = barber.weekly_hours[dayName] || { active: false };
+        // Tenta encontrar o bloco da unidade (case-insensitive keys)
+        let unitBlock = null;
+        if (uId) {
+          const matchingKey = Object.keys(schedule).find(k => k.toLowerCase() === uId);
+          if (matchingKey) unitBlock = schedule[matchingKey];
+        }
+
+        if (unitBlock && unitBlock[dayName]) {
+          dayConfig = unitBlock[dayName];
+          console.log(`[AVAILABILITY] Encontrado horário por unidade (${unitId}) para ${dayName}:`, dayConfig);
+        } else if (schedule[dayName]) {
+          dayConfig = schedule[dayName];
+          console.log(`[AVAILABILITY] Usando horário global (sem unidade) para ${dayName}:`, dayConfig);
         }
       }
     }
 
-    // 3. Buscar configurações do tenant para o intervalo (slot_interval)
+    // 3. Buscar configurações do tenant para o intervalo base (step)
     const { data: settings } = await supabaseAdmin
       .from("settings")
       .select("slot_interval, weekly_hours")
       .eq("tenant_id", tenant.id)
       .single();
 
-    if (settings) {
-      interval = settings.slot_interval || 45;
-      
-      // Se o barbeiro NÃO estiver ativo hoje, ou se estivermos sem config do barbeiro,
-      // verificamos se o dia está aberto na UNIDADE (ou no global como fallback extremo)
-      if (!dayConfig.active) {
-         const fallbackHours = unitHours || settings.weekly_hours;
-         dayConfig = fallbackHours?.[dayName] || { active: false };
-      }
-    }
+    const step = settings?.slot_interval || 30;
+    
+    // 4. Determinar horário de fechamento final (Hard Lock)
+    const dayEndMinutes = await AppointmentService.getBarberClosingTime(
+      barberId ? parseInt(barberId) : undefined,
+      unitId || undefined,
+      date,
+      tenant.id
+    );
 
-    // Se o dia estiver fechado (tanto no barbeiro quanto no global)
-    if (!dayConfig.active || !(dayConfig as any).start || !(dayConfig as any).end) {
+    // Se o dia não foi encontrado ou está inativo
+    if (!dayConfig || !dayConfig.active || !dayConfig.start) {
+      console.log(`[AVAILABILITY] Dia ${date} (${dayName}) bloqueado para o barbeiro ${barberId}. DayConfig:`, dayConfig);
       return NextResponse.json([]);
     }
 
-    const startConfig = (dayConfig as any).start;
-    const endConfig = (dayConfig as any).end;
-
-    // 3. Gerar slots teóricos baseados no intervalo
-    const slots: { time: string, available: boolean }[] = [];
-    
     const [startH, startM] = dayConfig.start.split(":").map(Number);
-    const [endH, endM] = dayConfig.end.split(":").map(Number);
-    
     let currentMinutes = startH * 60 + startM;
-    const endMinutes = endH * 60 + endM;
 
+    // 5. Calcular duração total dos serviços selecionados
     const rescheduleId = searchParams.get("reschedule");
     const serviceIdsRaw = searchParams.get("serviceIds") || serviceId;
     const serviceIds = serviceIdsRaw?.split(",").map(id => parseInt(id)) || [];
 
-    // 4. Buscar agendamentos já feitos para este dia e tenant
-    const bookedTimes = await AppointmentService.getBookedSlots(
+    const { ServiceService } = require("@/lib/services/service.service");
+    const servicesData = await Promise.all(serviceIds.map(id => ServiceService.getById(id)));
+    const totalRequiredDuration = servicesData.reduce((sum, s) => sum + (s?.durationMinutes || 0), 0);
+
+    // 6. Buscar agendamentos existentes (agora retornando {time, duration})
+    const bookedSlots = await AppointmentService.getBookedSlots(
       date, 
       barberId ? parseInt(barberId) : undefined,
       tenant.id,
       rescheduleId ? parseInt(rescheduleId) : undefined
     );
 
-    // 5. Calcular duração total necessária
-    const { ServiceService } = require("@/lib/services/service.service");
-    const services = await Promise.all(serviceIds.map(id => ServiceService.getById(id)));
-    const totalDuration = services.reduce((sum, s) => sum + (s?.durationMinutes || 0), 0);
-    const slotsNeeded = Math.ceil(totalDuration / interval);
+    // Pegar breakTime da config do barbeiro/unidade (default 0)
+    let breakTime = 0;
+    const configObj = (dayConfig as any).config || {};
+    if (configObj.useBreakTime) {
+      breakTime = parseInt(configObj.breakTimeMinutes || "0");
+    }
 
-    while (currentMinutes + interval <= endMinutes) {
+    // 7. Algoritmo de Grade Móvel (Shifting Grid)
+    const slots: { time: string, available: boolean }[] = [];
+
+    while (currentMinutes + totalRequiredDuration <= dayEndMinutes) {
       const h = Math.floor(currentMinutes / 60);
       const m = currentMinutes % 60;
       const timeStr = `${h.toString().padStart(2, "0")}:${m.toString().padStart(2, "0")}`;
-      
-      // Verificar se este slot e os subsequentes necessários estão livres
-      let isAvailable = true;
-      for (let i = 0; i < slotsNeeded; i++) {
-        const checkMinutes = currentMinutes + (i * interval);
-        if (checkMinutes + interval > endMinutes) {
-          isAvailable = false;
-          break;
-        }
-        
-        const ch = Math.floor(checkMinutes / 60);
-        const cm = checkMinutes % 60;
-        const checkTimeStr = `${ch.toString().padStart(2, "0")}:${cm.toString().padStart(2, "0")}`;
-        
-        if (bookedTimes.includes(checkTimeStr)) {
-          isAvailable = false;
-          break;
-        }
-      }
-      
-      slots.push({
-        time: timeStr,
-        available: isAvailable
+
+      // Verificar colisão com agendamentos existentes
+      const overlapping = bookedSlots.find(b => {
+        const [bh, bm] = b.time.split(":").map(Number);
+        const bStart = bh * 60 + bm;
+        const bEnd = bStart + b.duration;
+        return (currentMinutes < bEnd && (currentMinutes + totalRequiredDuration) > bStart);
       });
-      
-      currentMinutes += interval;
+
+      if (overlapping) {
+        // Se colidir, pula para o final do agendamento + tempo de respiro
+        const [bh, bm] = overlapping.time.split(":").map(Number);
+        currentMinutes = bh * 60 + bm + overlapping.duration + breakTime;
+      } else {
+        // Se livre, adiciona o slot e avança pelo intervalo padrão (step)
+        slots.push({ time: timeStr, available: true });
+        currentMinutes += step;
+      }
     }
 
     return NextResponse.json(slots);
