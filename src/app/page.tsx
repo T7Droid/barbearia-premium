@@ -84,7 +84,7 @@ export default function RootPage() {
           <div className="mt-12 flex flex-col items-center text-center gap-4 py-4 max-w-2xl mx-auto">
              <div>
                <h4 className="text-xl font-bold">Transforme em negócio profissional</h4>
-               <p className="text-muted-foreground mt-2 text-sm md:text-base">Tenha organização, automação e libere o seu tempo para focar no que realmente importa: <strong>atender bem seus clientes e crescer.</strong></p>
+               <p className="text-muted-foreground mt-2 text-sm md:text-base">Tenha organização, automação e tempo livre para focar no que realmente importa: <strong>atender bem seus clientes e crescer.</strong></p>
              </div>
           </div>
         </div>

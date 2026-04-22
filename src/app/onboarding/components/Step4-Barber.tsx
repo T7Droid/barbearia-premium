@@ -10,6 +10,7 @@ import { UserPlus, User, ArrowLeft, Mail } from "lucide-react";
 export function Step4Barber() {
   const { data, updateData, setStep } = useOnboarding();
 
+  const handleNext = (e: React.FormEvent) => {
     e.preventDefault();
     if (!data.barber.name.trim() || !data.barber.email.trim()) return;
     setStep(5);
@@ -33,6 +34,11 @@ export function Step4Barber() {
             <Input 
               id="barberName"
               className="h-14 text-lg pl-10"
+              value={data.barber.name}
+              onChange={(e) => updateData({ barber: { ...data.barber, name: e.target.value } })}
+              placeholder="Ex: Carlos o Barbeiro"
+              required
+              autoFocus
             />
           </div>
         </div>
