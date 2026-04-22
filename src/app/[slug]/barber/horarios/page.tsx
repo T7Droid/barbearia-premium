@@ -287,9 +287,9 @@ export default function BarberSchedulePage() {
                 <div className="divide-y divide-border/50">
                   {DAYS_OF_WEEK.map((day) => {
                     const uId = String(unit.id);
-                    const config = weeklyHours[uId]?.[day.id] || { active: false, start: "09:00", end: "18:00" };
-                    const unitConfig = unit.weekly_hours?.[day.id] || { active: false };
-                    const isUnitClosed = !unitConfig.active;
+                    const unitDay = unit.weekly_hours?.[day.id] || { active: false, start: "09:00", end: "18:00" };
+                    const config = weeklyHours[uId]?.[day.id] || { active: false, start: unitDay.start, end: unitDay.end };
+                    const isUnitClosed = !unitDay.active;
 
                     return (
                       <div key={day.id} className={`p-6 transition-colors hover:bg-muted/5 ${isUnitClosed ? 'bg-muted/20 opacity-80' : ''}`}>
@@ -312,38 +312,38 @@ export default function BarberSchedulePage() {
                             <div className="flex flex-1 items-center gap-4 animate-in fade-in slide-in-from-left-2 duration-300 justify-end">
                               <div className="flex items-center gap-2">
                                  <span className="text-[10px] uppercase font-bold text-muted-foreground">Início</span>
-                                 <Select
-                                   value={config.start || "09:00"}
-                                   onValueChange={(val) => handleTimeChange(uId, day.id, "start", val)}
-                                 >
-                                   <SelectTrigger className="w-[110px] h-10 bg-background border-border/50 shadow-sm">
-                                     <SelectValue />
-                                   </SelectTrigger>
-                                   <SelectContent>
-                                     {generateTimeOptions(unitConfig.start, unitConfig.end).map(time => (
-                                       <SelectItem key={time} value={time}>{time}</SelectItem>
-                                     ))}
-                                   </SelectContent>
-                                 </Select>
+                                  <Select
+                                    value={config.start || unitDay.start || "09:00"}
+                                    onValueChange={(val) => handleTimeChange(uId, day.id, "start", val)}
+                                  >
+                                    <SelectTrigger className="w-[110px] h-10 bg-background border-border/50 shadow-sm">
+                                      <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      {generateTimeOptions(unitDay.start, unitDay.end).map(time => (
+                                        <SelectItem key={time} value={time}>{time}</SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
                               </div>
                               
                               <div className="flex items-center gap-2">
                                  <span className="text-[10px] uppercase font-bold text-muted-foreground">Fim</span>
-                                 <Select
-                                   value={config.end || "18:00"}
-                                   onValueChange={(val) => handleTimeChange(uId, day.id, "end", val)}
-                                 >
-                                   <SelectTrigger className="w-[110px] h-10 bg-background border-border/50 shadow-sm">
-                                     <SelectValue />
-                                   </SelectTrigger>
-                                   <SelectContent>
-                                     {generateTimeOptions(unitConfig.start, unitConfig.end)
-                                       .filter(t => t > (config.start || "00:00"))
-                                       .map(time => (
-                                         <SelectItem key={time} value={time}>{time}</SelectItem>
-                                       ))}
-                                   </SelectContent>
-                                 </Select>
+                                  <Select
+                                    value={config.end || unitDay.end || "18:00"}
+                                    onValueChange={(val) => handleTimeChange(uId, day.id, "end", val)}
+                                  >
+                                    <SelectTrigger className="w-[110px] h-10 bg-background border-border/50 shadow-sm">
+                                      <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      {generateTimeOptions(unitDay.start, unitDay.end)
+                                        .filter(t => t > (config.start || "00:00"))
+                                        .map(time => (
+                                          <SelectItem key={time} value={time}>{time}</SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                  </Select>
                               </div>
                             </div>
                           )}

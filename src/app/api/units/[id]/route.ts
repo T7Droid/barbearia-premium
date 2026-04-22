@@ -76,40 +76,80 @@ export async function PUT(
           .in("id", barberIds);
         
         if (barbers && barbers.length > 0) {
-          const shopHours = weekly_hours;
+          // 3. Processar cada barbeiro
+          console.log(`[API /api/units/${id}] Preparando atualizações para ${barbers.length} barbeiros`);
+          
           const barberUpdates = barbers.map(barber => {
             const bHours = barber.weekly_hours || {};
             const newBHours = { ...bHours };
+            const uIdStr = String(id);
 
-            Object.keys(shopHours).forEach(day => {
-              const sDay = shopHours[day] || { active: false, start: "00:00", end: "23:59" };
-              const bDay = newBHours[day] || { active: false, start: "09:00", end: "18:00" };
+            // Obtém as horas do barbeiro para esta unidade especificamente
+            const unitHours = newBHours[uIdStr] || {};
+            const newUnitHours = { ...unitHours };
+            
+            const VALID_DAYS = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+            const shopHours = weekly_hours;
 
-              // Regra 1: Se unidade fecha, barbeiro desativa nesse dia
+            VALID_DAYS.forEach(day => {
+              const sDay = shopHours[day];
+              if (!sDay) return;
+
+              const bDay = newUnitHours[day] ? { ...newUnitHours[day] } : { active: false, start: sDay.start, end: sDay.end };
+
               if (!sDay.active) {
                 bDay.active = false;
-              } else if (bDay.active) {
-                // Regra 2: Clipping (Encurtar se barbershop ficou mais restrita)
+                bDay.start = sDay.start;
+                bDay.end = sDay.end;
+              } else {
                 if (bDay.start < sDay.start) bDay.start = sDay.start;
                 if (bDay.end > sDay.end) bDay.end = sDay.end;
 
-                // Regra 3: Sanidade
                 if (bDay.start >= bDay.end) bDay.active = false;
+                
+                if (!bDay.active) {
+                  bDay.start = sDay.start;
+                  bDay.end = sDay.end;
+                }
               }
-              newBHours[day] = bDay;
+              newUnitHours[day] = bDay;
             });
+
+            console.log(`[API /api/units/${id}] Processando barbeiro ${barber.id}`);
+            console.log(`[API /api/units/${id}] Horários originais:`, JSON.stringify(bHours));
+
+            newBHours[uIdStr] = newUnitHours;
+            console.log(`[API /api/units/${id}] Novos horários calculados:`, JSON.stringify(newBHours));
 
             return {
               id: barber.id,
-              weekly_hours: newBHours,
-              updated_at: new Date().toISOString()
+              weekly_hours: newBHours
             };
           });
 
-          // Atualização em lote
-          await supabaseAdmin.from("barbers").upsert(barberUpdates);
-          console.log(`[API /api/units/${id}] Synchronized ${barbers.length} barbers.`);
+          // 4. Executar atualizações individuais (V2 - Sem Upsert)
+          console.log(`[API /api/units/${id}] SINCRONIZANDO V2: Iniciando atualizações para ${barberUpdates.length} barbeiros`);
+          
+          for (const update of barberUpdates) {
+            const { error: updateError } = await supabaseAdmin
+              .from("barbers")
+              .update({ 
+                weekly_hours: update.weekly_hours
+              })
+              .eq("id", update.id);
+            
+            if (updateError) {
+              console.error(`[API /api/units/${id}] Erro ao atualizar barbeiro ${update.id}:`, updateError);
+            } else {
+              console.log(`[API /api/units/${id}] Barbeiro ${update.id} sincronizado com sucesso.`);
+            }
+          }
+          console.log(`[API /api/units/${id}] Processo de sincronização finalizado.`);
+        } else {
+          console.log(`[API /api/units/${id}] Nenhum barbeiro encontrado para os links fornecidos.`);
         }
+      } else {
+        console.log(`[API /api/units/${id}] Nenhum barbeiro vinculado a esta unidade.`);
       }
     }
 
