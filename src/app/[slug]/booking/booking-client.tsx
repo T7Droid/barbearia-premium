@@ -1247,7 +1247,7 @@ function BookingContent() {
                     <CardContent className="pt-6">
                       {(() => {
                         const canPayLocal = !settings?.isPrepaymentRequired && currentUser?.canPayAtShop !== false;
-                        const isPixAvailable = !!(customerInfo.cpf && isValidCpf(customerInfo.cpf));
+                        const isPixAvailable = !!(customerInfo.cpf && isValidCpf(customerInfo.cpf)) && !!tenant.mpConnected;
                         const defaultPaymentMethod = canPayLocal ? "local" : "card";
                         
                         let tabCount = 1; // Cartão sempre existe
@@ -1261,7 +1261,7 @@ function BookingContent() {
                           <TabsTrigger value="card" className="gap-2">
                             <CreditCard className="w-4 h-4" /> Cartão
                           </TabsTrigger>
-                          {(customerInfo.cpf && isValidCpf(customerInfo.cpf)) && (
+                          {isPixAvailable && (
                             <TabsTrigger value="pix" className="gap-2" onClick={handleGeneratePix}>
                               <QrCode className="w-4 h-4" /> Pix
                             </TabsTrigger>

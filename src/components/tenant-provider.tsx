@@ -7,6 +7,8 @@ export interface TenantContextType {
   id: string;
   name: string;
   slug: string;
+  mpConnected?: boolean;
+  mpAccessToken?: string | null;
 }
 
 const TenantContext = createContext<TenantContextType | undefined>(undefined);

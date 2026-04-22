@@ -5,6 +5,11 @@ export interface Tenant {
   name: string;
   slug: string;
   owner_id?: string;
+  mp_connected?: boolean;
+  mp_access_token?: string | null;
+  mp_public_key?: string | null;
+  mpConnected?: boolean;
+  mpAccessToken?: string | null;
 }
 
 export class TenantService {
