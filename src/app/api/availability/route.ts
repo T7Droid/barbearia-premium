@@ -126,8 +126,11 @@ export async function GET(request: NextRequest) {
       breakTime = parseInt(configObj.breakTimeMinutes || "0");
     }
 
-    // 7. Algoritmo de Grade Móvel (Shifting Grid)
+    // 7. Algoritmo de Grade Dinâmica (Duração Total como Step)
     const slots: { time: string, available: boolean }[] = [];
+    
+    // O intervalo (step) agora é a duração total dos serviços, como solicitado pelo usuário
+    const dynamicStep = totalRequiredDuration > 0 ? totalRequiredDuration : step;
 
     while (currentMinutes + totalRequiredDuration <= dayEndMinutes) {
       const h = Math.floor(currentMinutes / 60);
@@ -139,6 +142,8 @@ export async function GET(request: NextRequest) {
         const [bh, bm] = b.time.split(":").map(Number);
         const bStart = bh * 60 + bm;
         const bEnd = bStart + b.duration;
+        
+        // Colisão se o novo intervalo intersecta o agendamento existente
         return (currentMinutes < bEnd && (currentMinutes + totalRequiredDuration) > bStart);
       });
 
@@ -147,9 +152,9 @@ export async function GET(request: NextRequest) {
         const [bh, bm] = overlapping.time.split(":").map(Number);
         currentMinutes = bh * 60 + bm + overlapping.duration + breakTime;
       } else {
-        // Se livre, adiciona o slot e avança pelo intervalo padrão (step)
+        // Se livre, adiciona o slot e avança pela duração total do serviço
         slots.push({ time: timeStr, available: true });
-        currentMinutes += step;
+        currentMinutes += dynamicStep;
       }
     }
 

@@ -32,25 +32,37 @@ export async function GET(request: NextRequest) {
       .single();
 
     const daysMap = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"];
-    const interval = settings?.slot_interval || 45;
+    const unitId = searchParams.get("unitId");
+    const totalDuration = parseInt(searchParams.get("totalDuration") || "0");
 
     // 2. Buscar agendamentos no intervalo
     const appointments = await AppointmentService.getBookedSlotsInRange(start, end, tenant.id);
 
-    // Filtrar por barbeiro se fornecido
-    const filteredAppointments = barberId 
-      ? appointments.filter(a => String((a as any).barber_id) === String(barberId))
-      : appointments;
-
-    // Agrupar agendamentos por data
-    const bookedCountByDate: Record<string, number> = {};
-    filteredAppointments.forEach(a => {
-      if (a.appointment_date) {
-        bookedCountByDate[a.appointment_date] = (bookedCountByDate[a.appointment_date] || 0) + 1;
-      }
+    // Agrupar agendamentos por data e barbeiro
+    const bookedByDate: Record<string, {time: string, duration: number}[]> = {};
+    appointments.forEach((a: any) => {
+      const dateStr = a.appointment_date;
+      if (barberId && String(a.barber_id) !== String(barberId)) return;
+      
+      if (!bookedByDate[dateStr]) bookedByDate[dateStr] = [];
+      bookedByDate[dateStr].push({
+        time: a.appointment_time,
+        duration: Number(a.total_duration || 30)
+      });
     });
 
-    // 3. Iterar por cada dia no intervalo
+    // 3. Buscar escala do barbeiro se fornecido
+    let barberSchedule: any = null;
+    if (barberId) {
+      const { data: barber } = await supabaseAdmin
+        .from("barbers")
+        .select("weekly_hours")
+        .eq("id", parseInt(barberId))
+        .single();
+      barberSchedule = barber?.weekly_hours;
+    }
+
+    // 4. Iterar por cada dia no intervalo
     const dates = eachDayOfInterval({
       start: parseISO(start),
       end: parseISO(end)
@@ -58,32 +70,59 @@ export async function GET(request: NextRequest) {
 
     const busyDates: string[] = [];
 
-    dates.forEach(date => {
+    for (const date of dates) {
       const dateStr = format(date, "yyyy-MM-dd");
       const dayName = daysMap[date.getDay()];
       
-      const dayConfig = settings?.weekly_hours?.[dayName] || { active: false };
-      
-      // Se a unidade global está fechada, verificamos se o barbeiro tem exceção.
-      // No momento, deixamos o front-end decidir o bloqueio por escala de barbeiro.
-      // O busy-dates aqui só marca como "busy" se estiver REALMENTE lotado de agendamentos.
-      
-      if (!dayConfig.active || !dayConfig.start || !dayConfig.end) {
-        return;
+      // Determinar a configuração do dia para este barbeiro/unidade
+      let dayConfig = null;
+      if (barberSchedule) {
+        const uId = unitId ? String(unitId).toLowerCase() : null;
+        let unitBlock = null;
+        if (uId) {
+          const matchingKey = Object.keys(barberSchedule).find(k => k.toLowerCase() === uId);
+          if (matchingKey) unitBlock = barberSchedule[matchingKey];
+        }
+        dayConfig = unitBlock ? unitBlock[dayName] : barberSchedule[dayName];
       }
 
-      // Cálculo de lotação simplificado
+      // Se não houver configuração ou o barbeiro estiver inativo no dia
+      if (!dayConfig || !dayConfig.active || !dayConfig.start || !dayConfig.end) {
+        busyDates.push(dateStr);
+        continue;
+      }
+
+      // Simulação de disponibilidade simplificada para este dia
       const [startH, startM] = dayConfig.start.split(":").map(Number);
       const [endH, endM] = dayConfig.end.split(":").map(Number);
-      const totalMinutes = (endH * 60 + endM) - (startH * 60 + startM);
-      const maxSlots = Math.floor(totalMinutes / interval);
+      const dayEndMinutes = endH * 60 + endM;
+      let currentMinutes = startH * 60 + startM;
+      const dayAppointments = bookedByDate[dateStr] || [];
+      
+      let hasAnySlot = false;
+      const required = totalDuration > 0 ? totalDuration : 30;
 
-      const currentBookings = bookedCountByDate[dateStr] || 0;
-      // Marcamos como lotado se tiver o dobro de agendamentos que um único barbeiro suporta (fator de segurança)
-      if (maxSlots > 0 && currentBookings >= (maxSlots * 2)) {
+      while (currentMinutes + required <= dayEndMinutes) {
+        const overlapping = dayAppointments.find(b => {
+          const [bh, bm] = b.time.split(":").map(Number);
+          const bStart = bh * 60 + bm;
+          const bEnd = bStart + b.duration;
+          return (currentMinutes < bEnd && (currentMinutes + required) > bStart);
+        });
+
+        if (overlapping) {
+          const [bh, bm] = overlapping.time.split(":").map(Number);
+          currentMinutes = bh * 60 + bm + overlapping.duration;
+        } else {
+          hasAnySlot = true;
+          break;
+        }
+      }
+
+      if (!hasAnySlot) {
         busyDates.push(dateStr);
       }
-    });
+    }
 
     return NextResponse.json(busyDates);
   } catch (error) {

@@ -114,6 +114,13 @@ function BookingContent() {
   const [isPollingPix, setIsPollingPix] = useState(false);
   const [pixCountdown, setPixCountdown] = useState(0);
 
+  // Cache de dados para economia de chamadas
+  const [cache, setCache] = useState<Record<string, any>>({
+    units: [],
+    barbers: {}, // unitId -> barbers[]
+    services: {}, // unitId -> services[]
+  });
+
   // Estados de Disponibilidade
   const [isGloballyClosed, setIsGloballyClosed] = useState(false);
   const [closureReason, setClosureReason] = useState<"settings" | "barbers" | null>(null);
@@ -177,6 +184,12 @@ function BookingContent() {
   useEffect(() => {
     const headers = { "x-tenant-slug": tenant.slug };
     
+    // Tenta carregar do cache primeiro
+    if (cache.units.length > 0) {
+      setIsLoadingUnits(false);
+      return;
+    }
+
     Promise.all([
       fetch(`/api/settings?t=${Date.now()}`, { headers }).then(res => res.json()),
       fetch("/api/auth/me", { headers }).then(res => res.json()),
@@ -184,15 +197,16 @@ function BookingContent() {
       fetch("/api/barbers?active=true&bookable=true", { headers }).then(res => res.json())
     ]).then(([settingsData, authData, unitsData, barbersData]) => {
       
-      // 1. Unidades (Filtrar apenas unidades que possuem pelo menos um dia aberto)
+      let activeUnits = [] as any[];
       if (Array.isArray(unitsData)) {
-        const activeUnits = unitsData.filter(unit => {
+        activeUnits = unitsData.filter(unit => {
           const hours = unit.weekly_hours || {};
-          // Verifica se existe algum dia (segunda, terça, etc.) com active: true
           return Object.values(hours).some((day: any) => day.active === true);
         });
 
         setUnits(activeUnits);
+        setCache(prev => ({ ...prev, units: activeUnits }));
+
         if (activeUnits.length === 1) {
           setSelectedUnit(activeUnits[0]);
           setStep(s => s === 1 ? 2 : s);
@@ -200,7 +214,6 @@ function BookingContent() {
       }
       setIsLoadingUnits(false);
 
-      // 2. Barbeiros (Global por enquanto, filtraremos no clique)
       let finalBarbers = [] as any[];
       if (Array.isArray(barbersData)) {
         finalBarbers = barbersData;
@@ -208,12 +221,8 @@ function BookingContent() {
       }
       setIsLoadingBarbers(false);
 
-      // 3. Sincronizar configurações
       setSettings(settingsData);
-      
-      // EXECUTAR VERIFICAÇÃO DE DISPONIBILIDADE GLOBAL
       checkAvailability(settingsData, finalBarbers);
-
       DemoStore.saveSettings(settingsData);
       setMpPublicKey(settingsData.mpPublicKey || "");
 
@@ -221,7 +230,6 @@ function BookingContent() {
         setPaymentMethod("local");
       }
 
-      // 4. Sincronizar autenticação
       if (authData.authenticated) {
         setStoreUser(authData.user);
         setCustomerInfo(prev => ({
@@ -242,42 +250,58 @@ function BookingContent() {
     }
   }, [preSelectedServiceId, services, selectedServices.length]);
 
-  // Filtrar barbeiros e serviços quando a unidade é selecionada
+  // Filtrar barbeiros e serviços quando a unidade é selecionada (Com Cache)
   useEffect(() => {
     if (selectedUnit && Array.isArray(allServices)) {
-      // Aqui precisaríamos de um endpoint que retorna associações ou 
-      // carregar as associações no fetch inicial. 
-      // Para simplificar agora, vamos assumir que se houver associações, filtramos.
-      // Em uma implementação real, o GET /api/barbers?unitId=... faria isso.
-      setIsLoadingBarbers(true);
-      fetch(`/api/barbers?active=true&unitId=${selectedUnit.id}`, { headers: { "x-tenant-slug": tenant.slug } })
-        .then(res => res.json())
-        .then(data => {
-            const barbersList = Array.isArray(data) ? data : [];
-            setBarbers(barbersList);
-            setStep((currentStep) => {
-              // Só auto-avança se houver apenas 1 barbeiro e o usuário ainda estiver na tela de seleção de barbeiros
-              if (barbersList.length === 1 && currentStep === 2) {
+      const uId = selectedUnit.id;
+
+      // 1. Barbeiros
+      if (cache.barbers[uId]) {
+        setBarbers(cache.barbers[uId]);
+        if (cache.barbers[uId].length === 1 && step === 2) {
+          setSelectedBarber(cache.barbers[uId][0]);
+          setStep(3);
+        }
+      } else {
+        setIsLoadingBarbers(true);
+        fetch(`/api/barbers?active=true&unitId=${uId}`, { headers: { "x-tenant-slug": tenant.slug } })
+          .then(res => res.json())
+          .then(data => {
+              const barbersList = Array.isArray(data) ? data : [];
+              setBarbers(barbersList);
+              setCache(prev => ({ ...prev, barbers: { ...prev.barbers, [uId]: barbersList } }));
+              if (barbersList.length === 1 && step === 2) {
                   setSelectedBarber(barbersList[0]);
-                  return 3;
+                  setStep(3);
               }
-              return currentStep;
-            });
-        })
-        .catch(() => setBarbers([]))
-        .finally(() => setIsLoadingBarbers(false));
+          })
+          .catch(() => setBarbers([]))
+          .finally(() => setIsLoadingBarbers(false));
+      }
         
-      fetch(`/api/services?unitId=${selectedUnit.id}`, { headers: { "x-tenant-slug": tenant.slug } })
-        .then(res => res.json())
-        .then(data => setServices(Array.isArray(data) ? data : []))
-        .catch(() => setServices([]));
+      // 2. Serviços
+      if (cache.services[uId]) {
+        setServices(cache.services[uId]);
+      } else {
+        fetch(`/api/services?unitId=${uId}`, { headers: { "x-tenant-slug": tenant.slug } })
+          .then(res => res.json())
+          .then(data => {
+            const servicesList = Array.isArray(data) ? data : [];
+            setServices(servicesList);
+            setCache(prev => ({ ...prev, services: { ...prev.services, [uId]: servicesList } }));
+          })
+          .catch(() => setServices([]));
+      }
     } else if (Array.isArray(allServices)) {
       setServices(allServices);
     }
   }, [selectedUnit, allServices, tenant]);
 
+  const totalDuration = selectedServices.reduce((sum, s) => sum + (s.durationMinutes || 0), 0);
+
   useEffect(() => {
-    // Buscar dias ocupados/fechados para os próximos 6 meses (180 dias)
+    if (step < 4) return; // Só busca se já selecionou serviços
+    
     const fetchBusyDates = async () => {
       const start = format(new Date(), "yyyy-MM-dd");
       const end = format(new Date(Date.now() + 180 * 24 * 60 * 60 * 1000), "yyyy-MM-dd");
@@ -285,6 +309,7 @@ function BookingContent() {
       let url = `/api/availability/busy-dates?start=${start}&end=${end}`;
       if (selectedBarber?.id) url += `&barberId=${selectedBarber.id}`;
       if (selectedUnit?.id) url += `&unitId=${selectedUnit.id}`;
+      if (totalDuration > 0) url += `&totalDuration=${totalDuration}`;
 
       try {
         const res = await fetch(url, { headers: { "x-tenant-slug": tenant?.slug || "" } });
@@ -296,7 +321,7 @@ function BookingContent() {
     };
 
     fetchBusyDates();
-  }, [selectedBarber?.id, selectedUnit?.id, tenant?.slug]);
+  }, [selectedBarber?.id, selectedUnit?.id, tenant?.slug, totalDuration, step]);
 
   const dateStr = selectedDate ? format(selectedDate, "yyyy-MM-dd") : "";
   const serviceIdsStr = selectedServices.map(s => s.id).join(",");
@@ -983,50 +1008,23 @@ function BookingContent() {
                       mode="single"
                       selected={selectedDate}
                       onSelect={handleDateSelect}
+                      onMonthChange={() => {
+                        setSelectedDate(undefined);
+                        setSelectedTime(null);
+                      }}
                       locale={ptBR}
+                      fromDate={new Date()}
                       disabled={(date) => {
                         const today = new Date();
                         today.setHours(0, 0, 0, 0);
                         const dateStr = format(date, "yyyy-MM-dd");
+                        
+                        // Bloquear se for data passada (redundante com fromDate mas seguro)
                         if (date < today) return true;
+                        
+                        // Bloquear se o backend marcou como ocupado/fechado
                         if (busyDates.includes(dateStr)) return true;
                         
-                        // Identificar o dia da semana (Meio-dia para evitar fuso)
-                        const daysOfWeek = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
-                        const tempDate = new Date(date);
-                        tempDate.setHours(12, 0, 0, 0);
-                        const dayName = daysOfWeek[tempDate.getDay()];
-                        
-                        // 1. Tentar pegar a escala do barbeiro (Prioridade Máxima)
-                        const barberSchedule = selectedBarber?.weeklyHours || selectedBarber?.weekly_hours;
-                        const uId = selectedUnit?.id ? String(selectedUnit.id) : null;
-                        
-                        let dayConfig = null;
-
-                        if (barberSchedule) {
-                          // Tenta primeiro o mapa por unidade
-                          if (uId && barberSchedule[uId] && barberSchedule[uId][dayName]) {
-                            dayConfig = barberSchedule[uId][dayName];
-                          } 
-                          // Fallback para o horário "raiz" do barbeiro
-                          else if (barberSchedule[dayName]) {
-                            dayConfig = barberSchedule[dayName];
-                          }
-                          // Se o barbeiro está selecionado mas não tem config para este dia/unidade,
-                          // bloqueamos por segurança (não usamos o horário geral da barbearia aqui)
-                          else {
-                            return true;
-                          }
-                        } 
-                        // 2. Se não houver barbeiro selecionado, usa o horário geral da barbearia (Settings)
-                        else if (settings?.weekly_hours?.[dayName]) {
-                          dayConfig = settings.weekly_hours[dayName];
-                        }
-
-                        if (dayConfig) {
-                          return !dayConfig.active;
-                        }
-
                         return false;
                       }}
                       className="w-full"
