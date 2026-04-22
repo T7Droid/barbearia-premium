@@ -10,6 +10,7 @@ export async function POST(req: Request) {
   const { tenant, unit, services, barber, account } = body;
 
   let createdUserId: string | null = null;
+  let createdBarberUserId: string | null = null;
   let createdTenantId: string | null = null;
 
   try {
@@ -120,7 +121,44 @@ export async function POST(req: Request) {
       throw new Error(`Erro ao criar serviços: ${servicesError?.message}`);
     }
 
-    // 6. Criar Barbeiro
+    // 6. Criar Barbeiro e sua Conta (se necessário)
+    let barberUserId = createdUserId; // Assume o Admin por padrão
+    const isBarberDifferent = barber.email.toLowerCase() !== account.email.toLowerCase();
+
+    if (isBarberDifferent) {
+      // Criar conta para o Barbeiro colaborador
+      const tempPassword = Math.random().toString(36).slice(-10) + "B1!";
+      const { data: bAuthData, error: bAuthError } = await supabaseAdmin.auth.admin.createUser({
+        email: barber.email,
+        password: tempPassword,
+        email_confirm: true,
+        user_metadata: { full_name: barber.name }
+      });
+
+      if (bAuthError || !bAuthData.user) {
+        // Se o erro for de usuário já existente, tentamos apenas recuperar o ID se for útil, 
+        // mas no onboarding idealmente são novos cadastros.
+        throw new Error(`Erro ao criar conta do barbeiro: ${bAuthError?.message}`);
+      }
+      barberUserId = bAuthData.user.id;
+      createdBarberUserId = bAuthData.user.id;
+
+      // Criar perfil de Barbeiro
+      const { error: bProfileError } = await supabaseAdmin.from("profiles").upsert({
+        id: barberUserId,
+        full_name: barber.name,
+        email: barber.email,
+        role: "barber",
+        tenant_id: createdTenantId,
+        accepted_terms: true,
+        accepted_privacy: true
+      }, { onConflict: 'id' });
+
+      if (bProfileError) {
+        throw new Error(`Erro ao criar perfil do barbeiro: ${bProfileError.message}`);
+      }
+    }
+
     const { data: barberData, error: barberError } = await supabaseAdmin
       .from("barbers")
       .insert([
@@ -129,14 +167,14 @@ export async function POST(req: Request) {
           name: barber.name,
           description: barber.description,
           active: true,
-          user_id: createdUserId, // O dono também é o primeiro barbeiro no DB
+          user_id: barberUserId,
           weekly_hours: {
-            monday: { active: false, start: "09:00", end: "18:00" },
-            tuesday: { active: false, start: "09:00", end: "18:00" },
-            wednesday: { active: false, start: "09:00", end: "18:00" },
-            thursday: { active: false, start: "09:00", end: "18:00" },
-            friday: { active: false, start: "09:00", end: "18:00" },
-            saturday: { active: false, start: "09:00", end: "18:00" },
+            monday: { active: true, start: "09:00", end: "18:00" },
+            tuesday: { active: true, start: "09:00", end: "18:00" },
+            wednesday: { active: true, start: "09:00", end: "18:00" },
+            thursday: { active: true, start: "09:00", end: "18:00" },
+            friday: { active: true, start: "09:00", end: "18:00" },
+            saturday: { active: true, start: "09:00", end: "18:00" },
             sunday: { active: false, start: "09:00", end: "18:00" }
           }
         }
@@ -210,6 +248,9 @@ export async function POST(req: Request) {
     }
     if (createdUserId) {
       await supabaseAdmin.auth.admin.deleteUser(createdUserId);
+    }
+    if (createdBarberUserId) {
+      await supabaseAdmin.auth.admin.deleteUser(createdBarberUserId);
     }
 
     return NextResponse.json({ error: error.message }, { status: 400 });

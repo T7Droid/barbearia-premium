@@ -5,14 +5,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { UserPlus, User, ArrowLeft } from "lucide-react";
+import { UserPlus, User, ArrowLeft, Mail } from "lucide-react";
 
 export function Step4Barber() {
   const { data, updateData, setStep } = useOnboarding();
 
-  const handleNext = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!data.barber.name.trim()) return;
+    if (!data.barber.name.trim() || !data.barber.email.trim()) return;
     setStep(5);
   };
 
@@ -34,13 +33,27 @@ export function Step4Barber() {
             <Input 
               id="barberName"
               className="h-14 text-lg pl-10"
-              value={data.barber.name}
-              onChange={(e) => updateData({ barber: { ...data.barber, name: e.target.value } })}
-              placeholder="Ex: Carlos o Barbeiro"
-              required
-              autoFocus
             />
           </div>
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="barberEmail" className="text-base text-foreground font-semibold">E-mail do Profissional</Label>
+          <div className="relative">
+            <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+            <Input 
+              id="barberEmail"
+              type="email"
+              className="h-14 text-lg pl-10"
+              value={data.barber.email}
+              onChange={(e) => updateData({ barber: { ...data.barber, email: e.target.value } })}
+              placeholder="Ex: profissional@gmail.com"
+              required
+            />
+          </div>
+          <p className="text-xs text-muted-foreground italic">
+            Se você for o próprio barbeiro, use o mesmo e-mail que usará para acessar sua conta.
+          </p>
         </div>
 
         <div className="space-y-2">
@@ -64,7 +77,7 @@ export function Step4Barber() {
           <Button 
             type="submit" 
             className="flex-1 h-14 text-lg font-bold"
-            disabled={!data.barber.name.trim()}
+            disabled={!data.barber.name.trim() || !data.barber.email.trim() || !data.barber.email.includes("@")}
           >
             Prosseguir para Finalizar
           </Button>

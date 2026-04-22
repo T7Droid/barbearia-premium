@@ -23,6 +23,7 @@ export interface OnboardingData {
   barber: {
     name: string;
     description: string;
+    email: string;
   };
   account: {
     email: string;
@@ -45,7 +46,7 @@ const defaultData: OnboardingData = {
   tenant: { name: "" },
   unit: { name: "", address: "", number: "", city: "", state: "" },
   services: [],
-  barber: { name: "" },
+  barber: { name: "", description: "", email: "" },
   account: { email: "", fullName: "", phone: "", acceptedTerms: false, acceptedPrivacy: false },
 };
 
