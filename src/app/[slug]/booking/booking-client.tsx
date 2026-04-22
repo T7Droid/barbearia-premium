@@ -91,6 +91,7 @@ function BookingContent() {
   const [selectedTime, setSelectedTime] = useState<string | null>(null);
   const [busyDates, setBusyDates] = useState<string[]>([]);
   const [isLoadingBarbers, setIsLoadingBarbers] = useState(true);
+  const [isLoadingBusyDates, setIsLoadingBusyDates] = useState(false);
   
   const [customerInfo, setCustomerInfo] = useState({
     name: "",
@@ -303,6 +304,7 @@ function BookingContent() {
     if (step < 4) return; // Só busca se já selecionou serviços
     
     const fetchBusyDates = async () => {
+      setIsLoadingBusyDates(true);
       const start = format(new Date(), "yyyy-MM-dd");
       const end = format(new Date(Date.now() + 180 * 24 * 60 * 60 * 1000), "yyyy-MM-dd");
 
@@ -317,6 +319,8 @@ function BookingContent() {
         if (Array.isArray(data)) setBusyDates(data);
       } catch (err) {
         console.error("Error fetching busy dates:", err);
+      } finally {
+        setIsLoadingBusyDates(false);
       }
     };
 
@@ -999,32 +1003,49 @@ function BookingContent() {
               <div className="grid grid-cols-1 lg:grid-cols-5 gap-10">
                 <div className="lg:col-span-3">
                   <Label className="mb-4 block text-lg font-medium text-foreground">1. Selecione a data</Label>
-                  <div className="border border-border/50 rounded-xl p-4 w-full bg-background shadow-sm">
-                    <Calendar
-                      mode="single"
-                      selected={selectedDate}
-                      onSelect={handleDateSelect}
-                      onMonthChange={() => {
-                        setSelectedDate(undefined);
-                        setSelectedTime(null);
-                      }}
-                      locale={ptBR}
-                      fromDate={new Date()}
-                      disabled={(date) => {
-                        const today = new Date();
-                        today.setHours(0, 0, 0, 0);
-                        const dateStr = format(date, "yyyy-MM-dd");
-                        
-                        // Bloquear se for data passada (redundante com fromDate mas seguro)
-                        if (date < today) return true;
-                        
-                        // Bloquear se o backend marcou como ocupado/fechado
-                        if (busyDates.includes(dateStr)) return true;
-                        
-                        return false;
-                      }}
-                      className="w-full"
-                    />
+                  <div className="border border-border/50 rounded-xl p-4 w-full bg-background shadow-sm min-h-[350px] flex items-center justify-center">
+                    {isLoadingBusyDates ? (
+                      <div className="w-full space-y-4">
+                        <div className="flex justify-between items-center px-2">
+                           <Skeleton className="h-8 w-32" />
+                           <div className="flex gap-2">
+                             <Skeleton className="h-8 w-8 rounded-full" />
+                             <Skeleton className="h-8 w-8 rounded-full" />
+                           </div>
+                        </div>
+                        <div className="grid grid-cols-7 gap-2">
+                           {Array.from({ length: 35 }).map((_, i) => (
+                             <Skeleton key={i} className="h-10 w-full rounded-md" />
+                           ))}
+                        </div>
+                      </div>
+                    ) : (
+                      <Calendar
+                        mode="single"
+                        selected={selectedDate}
+                        onSelect={handleDateSelect}
+                        onMonthChange={() => {
+                          setSelectedDate(undefined);
+                          setSelectedTime(null);
+                        }}
+                        locale={ptBR}
+                        fromDate={new Date()}
+                        disabled={(date) => {
+                          const today = new Date();
+                          today.setHours(0, 0, 0, 0);
+                          const dateStr = format(date, "yyyy-MM-dd");
+                          
+                          // Bloquear se for data passada (redundante com fromDate mas seguro)
+                          if (date < today) return true;
+                          
+                          // Bloquear se o backend marcou como ocupado/fechado
+                          if (busyDates.includes(dateStr)) return true;
+                          
+                          return false;
+                        }}
+                        className="w-full"
+                      />
+                    )}
                   </div>
                 </div>
 
