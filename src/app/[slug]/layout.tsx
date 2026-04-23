@@ -28,8 +28,7 @@ export default async function TenantLayout(props: {
       id: tenant.id, 
       name: tenant.name, 
       slug: tenant.slug,
-      mpConnected: tenant.mp_connected,
-      mpAccessToken: tenant.mp_access_token
+      mpConnected: tenant.mp_connected
     }}>
       {children}
     </TenantProvider>
