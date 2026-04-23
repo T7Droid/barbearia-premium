@@ -20,13 +20,11 @@ export function TenantProvider({
   value: TenantContextType 
 }) {
   useEffect(() => {
-    // Configura o slug globalmente para todas as chamadas da biblioteca de API
     setTenantSlug(value.slug);
     if (typeof window !== "undefined") {
       localStorage.setItem("last_tenant_slug", value.slug);
     }
     
-    // Limpar ao desmontar (opcional, mas bom para evitar vazamento de contexto)
     return () => setTenantSlug(null);
   }, [value.slug]);
 
