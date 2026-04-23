@@ -36,6 +36,7 @@ export interface Barber {
   imageUrl?: string;
   active: boolean;
   services?: { id: number }[];
+  units?: { id: number | string }[];
   weekly_hours?: any;
 }
 import Link from "next/link";
@@ -436,7 +437,7 @@ function BookingContent() {
             callbacks: {
               onReady: () => console.log("Card Brick Ready"),
               onSubmit: (formData: any) => {
-                return new Promise(async (resolve, reject) => {
+                return new Promise<void>(async (resolve, reject) => {
                   try {
                     console.log("Card Brick Submit", formData);
                     setMpPaymentData(formData);
@@ -637,7 +638,7 @@ function BookingContent() {
       timer = setInterval(() => {
         setPixCountdown((prev) => {
           if (prev <= 1) {
-            handlePaymentSubmit(undefined, sessionId, pixData);
+            handlePaymentSubmit(undefined, sessionId ?? undefined, pixData);
             return 10;
           }
           return prev - 1;
@@ -649,7 +650,7 @@ function BookingContent() {
   }, [isPollingPix, step, paymentMethod, sessionId, pixData]);
 
   const handleStartPixVerification = () => {
-    handlePaymentSubmit(undefined, sessionId, pixData);
+    handlePaymentSubmit(undefined, sessionId ?? undefined, pixData);
     setIsPollingPix(true);
     setPixCountdown(10);
   };
@@ -705,9 +706,9 @@ function BookingContent() {
       console.log("DEBUG: Agendamento retornado pela API:", appointment);
       
       // Captura robusta do ID (tenta vários formatos de resposta da API)
-      const rawId = appointment?.id || 
-                    appointment?.data?.id || 
-                    appointment?.appointment?.id || 
+      const rawId = (appointment as any)?.id || 
+                    (appointment as any)?.data?.id || 
+                    (appointment as any)?.appointment?.id || 
                     (appointment as any)?.appointmentId;
 
       if (rawId) {

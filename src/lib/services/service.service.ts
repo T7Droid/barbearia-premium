@@ -8,6 +8,8 @@ export interface BarberService {
   price: number;
   durationMinutes: number;
   imageUrl?: string;
+  unitIds?: string[];
+  units?: { id: number | string }[];
 }
 
 export class ServiceService {
@@ -79,7 +81,7 @@ export class ServiceService {
 
     // Sincronizar Unidades
     if (Array.isArray(data.unitIds) && data.unitIds.length > 0) {
-      const associations = data.unitIds.map(uId => ({
+      const associations = (data.unitIds as string[]).map(uId => ({
         service_id: newService.id,
         unit_id: uId
       }));
@@ -107,7 +109,7 @@ export class ServiceService {
     if (Array.isArray(data.unitIds)) {
       await supabaseAdmin.from("service_units").delete().eq("service_id", id);
       if (data.unitIds.length > 0) {
-        const associations = data.unitIds.map(uId => ({
+        const associations = (data.unitIds as string[]).map(uId => ({
           service_id: id,
           unit_id: uId
         }));

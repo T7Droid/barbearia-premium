@@ -23,6 +23,10 @@ export interface Appointment {
   paidAt?: string | null;
   isReschedule?: boolean;
   rescheduleId?: number;
+  serviceId?: number;
+  serviceName?: string;
+  servicePrice?: number;
+  userId?: string;
   tenantId: string;
   unit?: {
     id: string;
@@ -103,6 +107,7 @@ export class AppointmentService {
         city: data.units.city,
         state: data.units.state
       } : undefined,
+      tenantId: data.tenant_id,
       createdAt: data.created_at,
     };
   }
@@ -381,7 +386,7 @@ export class AppointmentService {
   }
 
   static async list(): Promise<Appointment[]> {
-    const { data, error } = await supabaseAdmin
+    const { data, error } = await supabaseAdmin!
       .from("appointments")
       .select("id, appointment_date, appointment_time, customer_name, customer_email, customer_phone, status, is_paid, payment_status, payment_method, paid_at, is_reschedule, reschedule_id, user_id, created_at, barber_id, barber_name, tenant_id, unit_id, total_price, total_duration, services_json")
       .order("created_at", { ascending: false });

@@ -5,7 +5,7 @@ export class AuthService {
   static async getCurrentUser(token: string, tenantId?: string) {
     if (!token) return null;
 
-    const { data: { user }, error } = await supabase.auth.getUser(token);
+    const { data: { user }, error } = await supabase!.auth.getUser(token);
     if (error || !user) return null;
 
     // Primeiro buscamos o perfil sem o filtro restrito de tenant para entender o papel do usuário
@@ -81,7 +81,7 @@ export class AuthService {
   }
 
   static async logout() {
-    await supabase.auth.signOut();
+    await supabase!.auth.signOut();
   }
 
   static async updateProfile(request: any, updates: any) {

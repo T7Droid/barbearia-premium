@@ -23,7 +23,7 @@ export async function POST(request: NextRequest) {
     const { description, imageUrl } = await request.json();
 
     // 1. Verificar se já existe um perfil de barbeiro para este usuário
-    const { data: existing } = await supabaseAdmin
+    const { data: existing } = await supabaseAdmin!
       .from("barbers")
       .select("id")
       .eq("user_id", auth.user.id)
@@ -35,7 +35,7 @@ export async function POST(request: NextRequest) {
     }
 
     // 2. Buscar horários padrão do tenant
-    const { data: settings } = await supabaseAdmin
+    const { data: settings } = await supabaseAdmin!
       .from("settings")
       .select("weekly_hours")
       .eq("tenant_id", tenant.id)
@@ -54,11 +54,11 @@ export async function POST(request: NextRequest) {
     const initialWeeklyHours = settings?.weekly_hours || systemDefaultHours;
 
     // 3. Criar o registro de barbeiro
-    const { data: barber, error: barberError } = await supabaseAdmin
+    const { data: barber, error: barberError } = await supabaseAdmin!
       .from("barbers")
       .insert({
         name: auth.user.name,
-        description: description || "Administrador e Profissional da " + tenant.name,
+        description: description || "Administrador e Profissional da " + (tenant as any).name,
         image_url: imageUrl || "",
         active: true,
         tenant_id: tenant.id,
@@ -71,21 +71,21 @@ export async function POST(request: NextRequest) {
     if (barberError) throw barberError;
 
     // 4. Associar à primeira unidade encontrada do tenant
-    const { data: units } = await supabaseAdmin
+    const { data: units } = await supabaseAdmin!
       .from("units")
       .select("id")
       .eq("tenant_id", tenant.id)
       .limit(1);
 
     if (units && units.length > 0) {
-      await supabaseAdmin.from("barber_units").insert({
+      await supabaseAdmin!.from("barber_units").insert({
         barber_id: barber.id,
         unit_id: units[0].id
       });
     }
 
     // 5. Associar a todos os serviços ativos (opcional, mas bom para o admin começar)
-    const { data: services } = await supabaseAdmin
+    const { data: services } = await supabaseAdmin!
       .from("services")
       .select("id")
       .eq("tenant_id", tenant.id)
@@ -96,7 +96,7 @@ export async function POST(request: NextRequest) {
         barber_id: barber.id,
         service_id: s.id
       }));
-      await supabaseAdmin.from("barber_services").insert(svcAssociations);
+      await supabaseAdmin!.from("barber_services").insert(svcAssociations);
     }
 
     // 6. Atualizar o profile para garantir que a role é consistente (pode já ser admin)

@@ -7,7 +7,7 @@ interface User {
   id: string;
   name: string;
   email: string;
-  role: 'admin' | 'client';
+  role: 'admin' | 'client' | 'barber';
   points: number;
   tenantId?: string;
   phone?: string;
@@ -31,7 +31,7 @@ const listeners = new Set<Listener>();
 
 export const userStore = {
   getState: () => globalState,
-  
+
   setUser: (user: User | null) => {
     globalState = { ...globalState, user, isLoading: false };
     listeners.forEach((l) => l());

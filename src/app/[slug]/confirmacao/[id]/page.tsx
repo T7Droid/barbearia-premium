@@ -26,8 +26,9 @@ export default function ConfirmationPage(props: { params: Promise<{ slug: string
 
   const { data: apiAppointment, isLoading } = useGetAppointment(id, {
     query: {
-      enabled: !!id && id > 0
-    }
+      enabled: !!id && id > 0,
+      queryKey: ["appointment", id]
+    } as any
   });
 
   const [fallbackAppointment, setFallbackAppointment] = useState<any>(null);

@@ -129,10 +129,11 @@ export default function AdminBarbers() {
         description: barber.description || "",
         imageUrl: barber.imageUrl || barber.image_url || "",
         active: barber.active,
-        unitIds: (barber.units || []).map((u: any) => String(u.id)),
-        serviceIds: (barber.services || []).map((s: any) => String(s.id)),
+        unitIds: (barber.units || []).map((u: { id: number | string }) => String(u.id)),
+        serviceIds: (barber.services || []).map((s: { id: number | string }) => String(s.id)),
         loginEmail: "",
         loginPassword: "",
+        createLogin: false,
         commissionPercentage: barber.commissionPercentage || 50
       });
     } else {
@@ -230,6 +231,7 @@ export default function AdminBarbers() {
 
     setIsResettingPassword(true);
     try {
+      if (!supabase) throw new Error("Supabase não configurado.");
       const { error } = await supabase.auth.resetPasswordForEmail(editingBarber.email, {
         redirectTo: `${window.location.origin}/reset-password`,
       });

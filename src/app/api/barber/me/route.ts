@@ -16,13 +16,13 @@ export async function GET(request: NextRequest) {
   // Verificar se o usuário é um barbeiro ou administrador
   console.log(`[API /api/barber/me] Checking session for tenant: ${tenant.id}`);
   const auth = await AuthService.verifySession(request, tenant.id);
-  
+
   if (!auth.authenticated) {
     console.log(`[API /api/barber/me] Authentication failed`);
     return NextResponse.json({ error: "Sessão inválida ou expirada" }, { status: 401 });
   }
 
-  console.log(`[API /api/barber/me] Authenticated: ${auth.user.email}, Role: ${auth.user.role}`);
+  console.log(`[API /api/barber/me] Authenticated: ${auth.user!.email}, Role: ${auth.user!.role}`);
 
   if (auth.user?.role !== "barber" && auth.user?.role !== "admin") {
     console.log(`[API /api/barber/me] Role check failed: ${auth.user?.role}`);
@@ -31,7 +31,7 @@ export async function GET(request: NextRequest) {
 
   try {
     // Buscar o barbeiro vinculado ao usuário logado
-    const { data: barber, error } = await supabaseAdmin
+    const { data: barber, error } = await supabaseAdmin!
       .from("barbers")
       .select("*")
       .eq("user_id", auth.user.id)
@@ -43,7 +43,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Buscar as unidades vinculadas a este barbeiro para saber os horários permitidos
-    const { data: units } = await supabaseAdmin
+    const { data: units } = await supabaseAdmin!
       .from("barber_units")
       .select(`
         unit_id,

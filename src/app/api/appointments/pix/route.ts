@@ -12,7 +12,7 @@ export async function POST(request: NextRequest) {
     }
 
     // 1. Buscar a sessão para obter o valor real
-    const { data: sessionRecord } = await supabaseAdmin
+    const { data: sessionRecord } = await supabaseAdmin!
       .from("checkout_sessions")
       .select("data, tenant_id")
       .eq("id", sessionId)

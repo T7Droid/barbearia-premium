@@ -212,9 +212,9 @@ export default function AdminCustomers() {
                         onCheckedChange={() => handleTogglePermission(customer.id, customer.can_pay_at_shop !== false)}
                       />
                       {customer.can_pay_at_shop !== false ? (
-                        <Store className="w-4 h-4 text-amber-500" title="Pagar no Local" />
+                        <Store className="w-4 h-4 text-amber-500" />
                       ) : (
-                        <CreditCard className="w-4 h-4 text-green-500" title="Precisa Pagar Antes" />
+                        <CreditCard className="w-4 h-4 text-green-500" />
                       )}
                     </div>
                   </TableCell>

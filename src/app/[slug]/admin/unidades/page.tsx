@@ -129,7 +129,7 @@ export default function UnidadesPage() {
 
   const handleSave = async () => {
     if (!formData.name || !formData.address) {
-      toast({ title: "Atenção", description: "Nome e Endereço são obrigatórios", variant: "warning" });
+      toast({ title: "Atenção", description: "Nome e Endereço são obrigatórios", variant: "destructive" });
       return;
     }
 

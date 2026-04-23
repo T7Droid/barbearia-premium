@@ -25,14 +25,14 @@ export async function PUT(
   const id = parseInt(idStr);
 
   // Buscar o barbeiro para verificar o proprietário
-  const { data: barberRecord } = await supabaseAdmin
+  const { data: barberRecord } = await supabaseAdmin!
     .from("barbers")
     .select("user_id")
     .eq("id", id)
     .single();
 
-  const isOwner = barberRecord?.user_id === auth.user.id;
-  const isAdmin = auth.user.role === "admin";
+  const isOwner = barberRecord?.user_id === auth.user!.id;
+  const isAdmin = auth.user!.role === "admin";
 
   if (!isAdmin && !isOwner) {
     return NextResponse.json({ error: "Não autorizado a editar este perfil" }, { status: 403 });
@@ -49,7 +49,7 @@ export async function PUT(
 
     // 1. Criar login se não tiver e for solicitado
     if (loginData?.email && loginData?.password) {
-      const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
+      const { data: authData, error: authError } = await supabaseAdmin!.auth.admin.createUser({
         email: loginData.email,
         password: loginData.password,
         email_confirm: true,
@@ -58,7 +58,7 @@ export async function PUT(
 
       if (!authError) {
         userId = authData.user.id;
-        await supabaseAdmin.from("profiles").upsert({
+        await supabaseAdmin!.from("profiles").upsert({
           id: userId,
           full_name: name,
           email: loginData.email,
@@ -80,7 +80,7 @@ export async function PUT(
     if (userId) updateFields.user_id = userId;
     if (weeklyHours) updateFields.weekly_hours = weeklyHours;
 
-    const { data: updatedBarber, error } = await supabaseAdmin
+    const { data: updatedBarber, error } = await supabaseAdmin!
       .from("barbers")
       .update(updateFields)
       .eq("id", id)
@@ -92,19 +92,19 @@ export async function PUT(
 
     // 2. Sincronizar Unidades
     if (Array.isArray(unitIds)) {
-      await supabaseAdmin.from("barber_units").delete().eq("barber_id", id);
+      await supabaseAdmin!.from("barber_units").delete().eq("barber_id", id);
       if (unitIds.length > 0) {
         const associations = unitIds.map(uId => ({ barber_id: id, unit_id: uId }));
-        await supabaseAdmin.from("barber_units").insert(associations);
+        await supabaseAdmin!.from("barber_units").insert(associations);
       }
     }
 
     // 3. Sincronizar Serviços
     if (Array.isArray(serviceIds)) {
-      await supabaseAdmin.from("barber_services").delete().eq("barber_id", id);
+      await supabaseAdmin!.from("barber_services").delete().eq("barber_id", id);
       if (serviceIds.length > 0) {
         const svcAssociations = serviceIds.map(sId => ({ barber_id: id, service_id: Number(sId) }));
-        await supabaseAdmin.from("barber_services").insert(svcAssociations);
+        await supabaseAdmin!.from("barber_services").insert(svcAssociations);
       }
     }
 
@@ -133,7 +133,7 @@ export async function DELETE(
     const id = parseInt(idStr);
     
     // Garantir que o barbeiro pertence ao tenant antes de deletar
-    const { error } = await supabaseAdmin
+    const { error } = await supabaseAdmin!
       .from("barbers")
       .delete()
       .eq("id", id)
