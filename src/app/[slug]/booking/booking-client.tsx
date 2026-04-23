@@ -12,6 +12,7 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Checkbox } from "@/components/ui/checkbox";
 import { DemoStore } from "@/lib/persistence/demo-store";
 import { useToast } from "@/hooks/use-toast";
 import { useTenant } from "@/hooks/use-tenant";
@@ -101,6 +102,8 @@ function BookingContent() {
   });
 
   const [paymentMethod, setPaymentMethod] = useState<string>("card");
+  const [isBookingForOthers, setIsBookingForOthers] = useState(false);
+  const [otherPersonName, setOtherPersonName] = useState("");
   
   // Sincronizar método de pagamento quando chegar no checkout
   useEffect(() => {
@@ -527,10 +530,15 @@ function BookingContent() {
     e.preventDefault();
     if (selectedServices.length === 0 || !selectedDate || !selectedTime || !customerInfo.name || !customerInfo.email) return;
 
+    // Lógica de agendamento para terceiros
+    const finalCustomerName = isBookingForOthers && otherPersonName.trim()
+      ? `${otherPersonName.trim()} (Agendado por ${customerInfo.name})`
+      : customerInfo.name;
+
     try {
       const result = await createCheckout.mutateAsync({
         data: {
-          customerName: customerInfo.name,
+          customerName: finalCustomerName,
           customerEmail: customerInfo.email,
           customerPhone: customerInfo.phone,
           customerCpf: customerInfo.cpf,
@@ -1142,7 +1150,8 @@ function BookingContent() {
                       value={customerInfo.name}
                       onChange={(e) => setCustomerInfo(prev => ({ ...prev, name: e.target.value }))}
                       required
-                      className="bg-background/50 border-border h-11"
+                      disabled={isLogged && !!customerInfo.name}
+                      className={`bg-background/50 border-border h-11 ${isLogged && !!customerInfo.name ? 'opacity-70 cursor-not-allowed select-none' : ''}`}
                     />
                   </div>
                   <div className="space-y-2">
@@ -1154,7 +1163,8 @@ function BookingContent() {
                       value={customerInfo.email}
                       onChange={(e) => setCustomerInfo(prev => ({ ...prev, email: e.target.value }))}
                       required
-                      className="bg-background/50 border-border h-11"
+                      disabled={isLogged && !!customerInfo.email}
+                      className={`bg-background/50 border-border h-11 ${isLogged && !!customerInfo.email ? 'opacity-70 cursor-not-allowed select-none' : ''}`}
                     />
                   </div>
                   <div className="space-y-2">
@@ -1165,7 +1175,8 @@ function BookingContent() {
                       value={customerInfo.phone}
                       onChange={(e) => setCustomerInfo(prev => ({ ...prev, phone: formatPhone(e.target.value) }))}
                       required
-                      className="bg-background/50 border-border h-11"
+                      disabled={isLogged && !!customerInfo.phone}
+                      className={`bg-background/50 border-border h-11 ${isLogged && !!customerInfo.phone ? 'opacity-70 cursor-not-allowed select-none' : ''}`}
                     />
                   </div>
                   <div className="space-y-2">
@@ -1182,6 +1193,36 @@ function BookingContent() {
                       <p className="text-xs text-destructive mt-1 font-medium">CPF inválido. Por favor, revise os números.</p>
                     )}
                   </div>
+                </div>
+
+                <div className="pt-4 border-t border-border/40 mt-4 space-y-4">
+                  <div className="flex items-center space-x-2">
+                    <Checkbox 
+                      id="forOthers" 
+                      checked={isBookingForOthers}
+                      onCheckedChange={(val) => setIsBookingForOthers(!!val)}
+                    />
+                    <label
+                      htmlFor="forOthers"
+                      className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                    >
+                      Agendar para outra pessoa
+                    </label>
+                  </div>
+
+                  {isBookingForOthers && (
+                    <div className="space-y-2 animate-in fade-in slide-in-from-top-1">
+                      <Label htmlFor="otherName">Nome da pessoa para quem está agendando</Label>
+                      <Input
+                        id="otherName"
+                        placeholder="Ex: João da Silva"
+                        value={otherPersonName}
+                        onChange={(e) => setOtherPersonName(e.target.value)}
+                        required={isBookingForOthers}
+                        className="bg-background/50 border-border h-11"
+                      />
+                    </div>
+                  )}
                 </div>
 
                 <Button

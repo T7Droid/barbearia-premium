@@ -46,7 +46,7 @@ export default function ClientSettingsPage() {
           // Tentar recuperar do DemoStore se a API falhar (Mock resetado)
           const savedUser = DemoStore.getUser();
           if (savedUser) return savedUser;
-          
+
           router.push(`/${tenant.slug}/login`);
           return;
         }
@@ -85,10 +85,10 @@ export default function ClientSettingsPage() {
     try {
       // Remover máscara antes de salvar no banco
       const rawPhone = profile.phone.replace(/\D/g, "");
-      const updatedProfile = { 
-        ...user, 
-        ...profile, 
-        phone: rawPhone 
+      const updatedProfile = {
+        ...user,
+        ...profile,
+        phone: rawPhone
       };
 
       const res = await fetch("/api/user/profile", {
@@ -105,19 +105,19 @@ export default function ClientSettingsPage() {
         // Atualizar no Store Reativo e DemoStore
         setUser(updatedProfile as any);
         DemoStore.saveUser(updatedProfile);
-        
+
         toast({ title: "Sucesso", description: "Configurações salvas!" });
       } else {
         const errorData = await res.json();
-        toast({ 
-          title: "Erro ao salvar", 
+        toast({
+          title: "Erro ao salvar",
           description: errorData.error || "Não foi possível salvar as configurações no servidor.",
           variant: "destructive"
         });
       }
     } catch (error) {
-      toast({ 
-        title: "Erro de Conexão", 
+      toast({
+        title: "Erro de Conexão",
         description: "Não foi possível conectar ao servidor. Verifique sua internet.",
         variant: "destructive"
       });
@@ -247,7 +247,7 @@ export default function ClientSettingsPage() {
             <div className="space-y-1">
               <p className="font-bold">Privacidade & Segurança</p>
               <p className="text-muted-foreground leading-relaxed italic">
-                Seus dados são protegidos e utilizados apenas para a gestão de seus agendamentos na unidade King Barber.
+                Seus dados são protegidos e utilizados apenas para a gestão de seus agendamentos na unidade {tenant?.name}.
               </p>
             </div>
           </div>
