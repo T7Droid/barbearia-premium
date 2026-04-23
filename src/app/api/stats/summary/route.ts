@@ -22,7 +22,7 @@ export async function GET(request: NextRequest) {
     // Buscando agendamentos do tenant
     const { data: appointments, error: appointmentsError } = await supabaseAdmin!
       .from("appointments")
-      .select("id, appointment_date, status, is_paid, total_price, services_json")
+      .select("id, appointment_date, status, is_paid, payment_status, payment_method, paid_at, total_price, services_json")
       .eq("tenant_id", tenant.id);
 
     if (appointmentsError) throw appointmentsError;

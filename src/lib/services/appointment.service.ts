@@ -18,10 +18,12 @@ export interface Appointment {
   customerPhone: string;
   status: "pending" | "confirmed" | "cancelled";
   isPaid: boolean;
+  paymentStatus?: "pending" | "paid" | "refunded";
+  paymentMethod?: "cash" | "pix" | "card" | "online" | null;
+  paidAt?: string | null;
   isReschedule?: boolean;
   rescheduleId?: number;
   tenantId: string;
-  unitId?: string;
   unit?: {
     id: string;
     name: string;
@@ -48,6 +50,9 @@ export class AppointmentService {
     if (data.customerPhone !== undefined) mapped.customer_phone = data.customerPhone;
     if (data.status !== undefined) mapped.status = data.status;
     if (data.isPaid !== undefined) mapped.is_paid = data.isPaid;
+    if (data.paymentStatus !== undefined) mapped.payment_status = data.paymentStatus;
+    if (data.paymentMethod !== undefined) mapped.payment_method = data.paymentMethod;
+    if (data.paidAt !== undefined) mapped.paid_at = data.paidAt;
     if (data.isReschedule !== undefined) mapped.is_reschedule = data.isReschedule;
     if (data.rescheduleId !== undefined) mapped.reschedule_id = data.rescheduleId;
     if (data.userId !== undefined) mapped.user_id = data.userId;
@@ -82,6 +87,9 @@ export class AppointmentService {
       customerPhone: data.customer_phone,
       status: data.status,
       isPaid: data.is_paid,
+      paymentStatus: data.payment_status ?? (data.is_paid ? "paid" : "pending"),
+      paymentMethod: data.payment_method ?? null,
+      paidAt: data.paid_at ?? null,
       isReschedule: data.is_reschedule,
       rescheduleId: data.reschedule_id ? Number(data.reschedule_id) : undefined,
       userId: data.user_id,
@@ -199,11 +207,15 @@ export class AppointmentService {
       await supabaseAdmin!.from("appointments").delete().eq("id", session.rescheduleId);
     }
 
-    const isPaid = session.isPaid || (
-      (paymentData.paymentMethodId === "mercado_pago" || paymentData.paymentMethodId === "pix") &&
-      paymentData.paymentResult.status === "approved"
-    );
+    const isOnlinePayment = paymentData.paymentMethodId === "mercado_pago" || paymentData.paymentMethodId === "pix";
+    const hasSuccessfulResult = paymentData.paymentResult && paymentData.paymentResult.status === "approved" && (paymentData.paymentResult.id || paymentData.paymentResult.payment_id);
 
+    // Forçar isPaid como false se for pagamento no local, independente de qualquer outro dado
+    const isPaid = (paymentData.paymentMethodId === "offline_local") ? false : (session.isPaid || (isOnlinePayment && hasSuccessfulResult));
+    
+    console.log(`[SERVER DEBUG] Confirmando agendamento: Método=${paymentData.paymentMethodId}, Pago=${isPaid}`);
+
+    const now = new Date().toISOString();
     const appointmentData = this.mapToSupabase({
       totalPrice: session.amount,
       totalDuration: session.servicesJson?.reduce((acc: number, s: any) => acc + (s.durationMinutes || 0), 0) || 0,
@@ -217,12 +229,15 @@ export class AppointmentService {
       customerPhone: session.customerPhone,
       status: "confirmed",
       isPaid: isPaid,
+      paymentStatus: isPaid ? "paid" : "pending",
+      paymentMethod: isPaid ? paymentData.paymentMethodId : null,
+      paidAt: isPaid ? now : null,
       isReschedule: !!session.rescheduleId,
       userId: session.userId,
       unitId: session.unitId,
       unitName: session.unitName,
       tenantId: sessionDataRaw.tenant_id,
-      createdAt: new Date().toISOString()
+      createdAt: now
     });
 
     const { data: appointment, error: appError } = await supabaseAdmin!
@@ -368,7 +383,7 @@ export class AppointmentService {
   static async list(): Promise<Appointment[]> {
     const { data, error } = await supabaseAdmin
       .from("appointments")
-      .select("id, appointment_date, appointment_time, customer_name, customer_email, customer_phone, status, is_paid, is_reschedule, reschedule_id, user_id, created_at, barber_id, barber_name, tenant_id, unit_id, total_price, total_duration, services_json")
+      .select("id, appointment_date, appointment_time, customer_name, customer_email, customer_phone, status, is_paid, payment_status, payment_method, paid_at, is_reschedule, reschedule_id, user_id, created_at, barber_id, barber_name, tenant_id, unit_id, total_price, total_duration, services_json")
       .order("created_at", { ascending: false });
 
     if (error) throw error;

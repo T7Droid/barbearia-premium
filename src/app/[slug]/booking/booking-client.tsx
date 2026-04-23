@@ -101,6 +101,23 @@ function BookingContent() {
   });
 
   const [paymentMethod, setPaymentMethod] = useState<string>("card");
+  
+  // Sincronizar método de pagamento quando chegar no checkout
+  useEffect(() => {
+    if (step === 6 && tenant) {
+      const canPayLocal = !settings?.isPrepaymentRequired && currentUser?.canPayAtShop !== false;
+      const isPixAvailable = !!(customerInfo.cpf && isValidCpf(customerInfo.cpf)) && !!tenant.mpConnected;
+      const isCardAvailable = !!tenant.mpConnected;
+      
+      const defaultMethod = isCardAvailable ? "card" : (isPixAvailable ? "pix" : "local");
+      
+      // Se o método atual não estiver disponível, muda para o padrão
+      if (paymentMethod === "card" && !isCardAvailable) setPaymentMethod(defaultMethod);
+      else if (paymentMethod === "pix" && !isPixAvailable) setPaymentMethod(defaultMethod);
+      else if (paymentMethod === "local" && !canPayLocal) setPaymentMethod(defaultMethod);
+    }
+  }, [step, tenant?.mpConnected, settings?.isPrepaymentRequired, customerInfo.cpf, currentUser?.canPayAtShop]);
+
   const [isPrePaid, setIsPrePaid] = useState(false);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [isGeneratingPix, setIsGeneratingPix] = useState(false);
@@ -1249,16 +1266,21 @@ function BookingContent() {
                         const canPayLocal = !settings?.isPrepaymentRequired && currentUser?.canPayAtShop !== false;
                         const isPixAvailable = !!(customerInfo.cpf && isValidCpf(customerInfo.cpf)) && !!tenant.mpConnected;
                         const isCardAvailable = !!tenant.mpConnected;
-                        const defaultPaymentMethod = isCardAvailable ? "card" : "local";
                         
-                        let tabCount = 1; // Cartão sempre existe
-                        if (canPayLocal) tabCount++;
+                        // Determinar o método padrão com base na disponibilidade
+                        const defaultPaymentMethod = isCardAvailable ? "card" : (isPixAvailable ? "pix" : "local");
+                        
+                        let tabCount = 0;
+                        if (isCardAvailable) tabCount++;
                         if (isPixAvailable) tabCount++;
+                        if (canPayLocal) tabCount++;
+                        
                         const gridColsClass = tabCount === 3 ? "grid-cols-3" : (tabCount === 2 ? "grid-cols-2" : "grid-cols-1");
                         
                         return (
-                          <Tabs defaultValue={defaultPaymentMethod} onValueChange={(v) => setPaymentMethod(v as any)}>
-                            <TabsList className={`grid w-full mb-6 ${gridColsClass}`}>
+                          <Tabs defaultValue={defaultPaymentMethod} onValueChange={(v) => setPaymentMethod(v as any)} className="w-full">
+                            {tabCount > 1 && (
+                              <TabsList className={`grid w-full mb-6 ${gridColsClass}`}>
                           {isCardAvailable && (
                             <TabsTrigger value="card" className="gap-2">
                               <CreditCard className="w-4 h-4" /> Cartão
@@ -1275,6 +1297,7 @@ function BookingContent() {
                             </TabsTrigger>
                           )}
                         </TabsList>
+                      )}
 
                         <TabsContent value="card" className="space-y-4">
                           {mpPublicKey ? (

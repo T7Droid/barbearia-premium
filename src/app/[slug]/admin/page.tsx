@@ -11,11 +11,17 @@ import {
   SelectTrigger, 
   SelectValue 
 } from "@/components/ui/select";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { useListAppointments, useGetStatsSummary } from "@workspace/api-client-react";
-import { Calendar, DollarSign, Scissors, Users, Settings, CreditCard, Wallet, CheckCircle2, AlertCircle, MapPin } from "lucide-react";
+import { Calendar, DollarSign, Scissors, Users, Settings, CreditCard, Wallet, CheckCircle2, AlertCircle, MapPin, Banknote, Smartphone, ChevronDown } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useUserStore } from "@/lib/store/user-store";
 import { Button } from "@/components/ui/button";
 import { formatCurrencyFromCents } from "@/lib/format";
@@ -23,7 +29,7 @@ import { useTenant } from "@/components/tenant-provider";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import * as XLSX from "xlsx";
-import { FileText, FileSpreadsheet, Download } from "lucide-react";
+import { FileText, FileSpreadsheet } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useToast } from "@/hooks/use-toast";
@@ -36,9 +42,12 @@ export default function Admin() {
   const [selectedMonth, setSelectedMonth] = useState((now.getMonth() + 1).toString());
   const [selectedYear, setSelectedYear] = useState(now.getFullYear().toString());
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
+  // Estado para controle de pagamento
+  const [payingId, setPayingId] = useState<number | null>(null);
+  const [paymentMethodMap, setPaymentMethodMap] = useState<Record<number, string>>({});
 
   const { data: stats, isLoading: isLoadingStats } = useGetStatsSummary();
-  const { data: appointments, isLoading: isLoadingAppointments } = useListAppointments({
+  const { data: appointments, isLoading: isLoadingAppointments, refetch: refetchAppointments } = useListAppointments({
     year: selectedYear,
     month: selectedMonth
   });
@@ -51,6 +60,54 @@ export default function Admin() {
     }
   }, [tenant?.slug, refreshProfile]);
 
+  // -------------------------------------------------------
+  // Helpers de método de pagamento
+  // -------------------------------------------------------
+  const getPaymentMethodLabel = (method: string | null | undefined) => {
+    switch (method) {
+      case "cash":   return "Dinheiro";
+      case "pix":    return "Pix";
+      case "card":   return "Cartão";
+      case "online": return "Online";
+      case "mercado_pago": return "Cartão Online";
+      default:       return "No Local";
+    }
+  };
+
+  const getPaymentMethodIcon = (method: string | null | undefined) => {
+    switch (method) {
+      case "pix":    return <Smartphone className="w-3.5 h-3.5" />;
+      case "card":   return <CreditCard className="w-3.5 h-3.5" />;
+      case "online": return <CreditCard className="w-3.5 h-3.5" />;
+      default:       return <Banknote className="w-3.5 h-3.5" />;  // cash e fallback
+    }
+  };
+
+  // -------------------------------------------------------
+  // Marcar como pago
+  // -------------------------------------------------------
+  const markAsPaid = useCallback(async (appointmentId: number, methodOverride?: string) => {
+    const method = methodOverride || paymentMethodMap[appointmentId] || "cash";
+    setPayingId(appointmentId);
+    try {
+      const response = await fetch(`/api/appointments/${appointmentId}/payment`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-tenant-slug": tenant?.slug || "" },
+        body: JSON.stringify({ paymentMethod: method }),
+      });
+      if (!response.ok) {
+        const err = await response.json();
+        throw new Error(err.error || "Erro desconhecido");
+      }
+      toast({ title: "Pagamento registrado! ✅", description: `Agendamento #${appointmentId} marcado como pago (${getPaymentMethodLabel(method)}).` });
+      refetchAppointments?.();
+    } catch (err: any) {
+      toast({ title: "Erro ao registrar pagamento", description: err.message, variant: "destructive" });
+    } finally {
+      setPayingId(null);
+    }
+  }, [paymentMethodMap, tenant?.slug, toast, refetchAppointments]);
+
   const getStatusBadge = (status: string) => {
     switch(status) {
       case 'confirmed': return <Badge className="bg-primary/20 text-primary border-primary/30">Confirmado</Badge>;
@@ -58,7 +115,7 @@ export default function Admin() {
       case 'cancelled': return <Badge variant="destructive" className="bg-destructive/20 text-destructive border-destructive/30">Cancelado</Badge>;
       default: return <Badge>{status}</Badge>;
     }
-  }
+  };
 
   const getLink = (path: string) => `/${tenant.slug}${path}`;
 
@@ -111,7 +168,7 @@ export default function Admin() {
       app.barber_name || 'N/D',
       getServiceNames(app),
       getFormattedPriceDetails(app),
-      app.is_paid ? 'Pago' : 'No Local',
+      app.is_paid ? `Pago - ${getPaymentMethodLabel(app.payment_method)}` : 'No Local',
       app.status === 'confirmed' ? 'Confirmado' : app.status === 'pending' ? 'Pendente' : 'Cancelado'
     ]);
 
@@ -138,7 +195,7 @@ export default function Admin() {
       'Barbeiro': app.barber_name || 'N/D',
       'Serviço': getServiceNames(app),
       'Valor': getFormattedPriceDetails(app),
-      'Pagamento': app.is_paid ? 'Pago' : 'No Local',
+      'Pagamento': app.is_paid ? `Pago - ${getPaymentMethodLabel(app.payment_method)}` : 'No Local',
       'Status': app.status === 'confirmed' ? 'Confirmado' : app.status === 'pending' ? 'Pendente' : 'Cancelado'
     }));
 
@@ -356,12 +413,40 @@ export default function Admin() {
                          {app.is_paid ? (
                            <div className="flex items-center gap-1.5 text-green-500 font-medium text-xs">
                              <CheckCircle2 className="w-3.5 h-3.5" />
-                             <span>Pago</span>
+                             {getPaymentMethodIcon(app.payment_method)}
+                             <span>{getPaymentMethodLabel(app.payment_method)}</span>
+                           </div>
+                         ) : app.status !== 'cancelled' ? (
+                           <div className="flex flex-col gap-1.5">
+                             <DropdownMenu>
+                               <DropdownMenuTrigger asChild>
+                                 <Button
+                                   size="sm"
+                                   variant="outline"
+                                   className="h-8 px-3 text-xs text-green-600 border-green-600/40 hover:bg-green-600/10 hover:text-green-500 font-bold gap-2"
+                                   disabled={payingId === app.id}
+                                 >
+                                   {payingId === app.id ? "..." : "Marcar como Pago"}
+                                   <ChevronDown className="w-3.5 h-3.5" />
+                                 </Button>
+                               </DropdownMenuTrigger>
+                               <DropdownMenuContent align="end" className="w-40">
+                                 <DropdownMenuItem onClick={() => markAsPaid(app.id, "cash")} className="gap-2">
+                                   <Banknote className="w-4 h-4 text-green-500" /> Dinheiro
+                                 </DropdownMenuItem>
+                                 <DropdownMenuItem onClick={() => markAsPaid(app.id, "pix")} className="gap-2">
+                                   <Smartphone className="w-4 h-4 text-blue-500" /> Pix
+                                 </DropdownMenuItem>
+                                 <DropdownMenuItem onClick={() => markAsPaid(app.id, "card")} className="gap-2">
+                                   <CreditCard className="w-4 h-4 text-purple-500" /> Cartão
+                                 </DropdownMenuItem>
+                               </DropdownMenuContent>
+                             </DropdownMenu>
                            </div>
                          ) : (
-                           <div className="flex items-center gap-1.5 text-amber-500 font-medium text-xs">
-                             <Wallet className="w-3.5 h-3.5" />
-                             <span>No Local</span>
+                           <div className="flex items-center gap-1.5 text-muted-foreground font-medium text-xs">
+                             <AlertCircle className="w-3.5 h-3.5" />
+                             <span>Cancelado</span>
                            </div>
                          )}
                        </TableCell>
