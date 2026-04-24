@@ -9,9 +9,10 @@ import { Step4Barber } from "./components/Step4-Barber";
 import { Step5Account } from "./components/Step5-Account";
 import { Card, CardContent } from "@/components/ui/card";
 import { Check, Loader2, Sparkles } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
+import { Zap, ShieldCheck, Users, MapPin, Calendar } from "lucide-react";
 
 const LOADING_STEPS = [
   "Verificando disponibilidade de painel...",
@@ -21,12 +22,22 @@ const LOADING_STEPS = [
   "Concluído com sucesso!"
 ];
 
+import { PLANS_INFO } from "@/lib/config/plans";
+
 export default function OnboardingPage() {
-  const { step, data } = useOnboarding();
+  const { step, data, updateData } = useOnboarding();
+  const searchParams = useSearchParams();
+  const planFromUrl = searchParams.get("plan");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [loadingStepIndex, setLoadingStepIndex] = useState(0);
   const router = useRouter();
   const { toast } = useToast();
+
+  useEffect(() => {
+    if (planFromUrl && data.planId !== planFromUrl) {
+      updateData({ planId: planFromUrl });
+    }
+  }, [planFromUrl, data.planId, updateData]);
 
   const handleFinish = async () => {
     if (isSubmitting) return;
@@ -104,7 +115,10 @@ export default function OnboardingPage() {
     { id: 5, label: "Acesso" },
   ];
 
+  const currentPlan = data.planId ? PLANS_INFO[data.planId] : null;
+
   if (isSubmitting) {
+    // ... mantido lógica anterior ...
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] text-center px-4 animate-in fade-in duration-500">
         <div className="relative mb-8">
@@ -120,34 +134,72 @@ export default function OnboardingPage() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-12 max-w-5xl">
-      <div className="grid grid-cols-1 md:grid-cols-12 gap-8 items-start">
+    <div className="container mx-auto px-4 py-8 md:py-12 max-w-5xl">
+      <div className="grid grid-cols-1 md:grid-cols-12 gap-6 md:gap-8 items-start">
         
         {/* Sidebar Rail */}
-        <div className="md:col-span-3 space-y-4">
-          <div className="sticky top-24">
-            <h1 className="text-xl font-bold mb-6 px-2">Configuração</h1>
-            <nav className="space-y-1">
-              {stepsList.map((s) => (
-                <div 
-                  key={s.id} 
-                  className={`flex items-center gap-3 p-3 rounded-lg transition-all ${
-                    step === s.id 
-                    ? "bg-primary/10 text-primary font-bold border-l-4 border-primary" 
-                    : step > s.id 
-                    ? "text-green-500 opacity-80" 
-                    : "text-muted-foreground opacity-50"
-                  }`}
-                >
-                  <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs border ${
-                    step > s.id ? "bg-green-500 border-green-500 text-white" : "border-current"
-                  }`}>
-                    {step > s.id ? <Check className="w-4 h-4" /> : s.id}
+        <div className="md:col-span-3 space-y-6">
+          <div className="sticky top-24 space-y-6">
+            <div>
+              <h1 className="text-xl font-bold mb-4 md:mb-6 px-2">Configuração</h1>
+              <nav className="flex md:flex-col gap-1 overflow-x-auto md:overflow-x-visible pb-2 md:pb-0 scrollbar-hide">
+                {stepsList.map((s) => (
+                  <div 
+                    key={s.id} 
+                    className={`flex items-center gap-3 p-3 rounded-lg transition-all shrink-0 md:shrink ${
+                      step === s.id 
+                      ? "bg-primary/10 text-primary font-bold border-l-2 md:border-l-4 border-primary" 
+                      : step > s.id 
+                      ? "text-green-500 opacity-80" 
+                      : "text-muted-foreground opacity-50"
+                    }`}
+                  >
+                    <div className={`w-5 h-5 md:w-6 md:h-6 rounded-full flex items-center justify-center text-[10px] md:text-xs border ${
+                      step > s.id ? "bg-green-500 border-green-500 text-white" : "border-current"
+                    }`}>
+                      {step > s.id ? <Check className="w-3 h-3 md:w-4 md:h-4" /> : s.id}
+                    </div>
+                    <span className="text-xs md:text-sm whitespace-nowrap">{s.label}</span>
                   </div>
-                  <span className="text-sm">{s.label}</span>
+                ))}
+              </nav>
+            </div>
+
+            {/* Plan Info Card - Responsive */}
+            {currentPlan && (
+              <div className="bg-card border border-border/50 rounded-2xl p-4 shadow-sm animate-in zoom-in-95 duration-300">
+                <div className="flex items-center gap-2 mb-3">
+                  <div className={`p-1.5 rounded-lg ${currentPlan.bg} ${currentPlan.color}`}>
+                    <Zap className="w-4 h-4 fill-current" />
+                  </div>
+                  <span className="text-sm font-bold">Plano {currentPlan.name}</span>
                 </div>
-              ))}
-            </nav>
+                
+                <div className="space-y-2 text-[11px] md:text-xs text-muted-foreground">
+                  <div className="flex items-center gap-2">
+                    <Users className="w-3 h-3" />
+                    <span>Até {currentPlan.barbers} Barbeiros</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <MapPin className="w-3 h-3" />
+                    <span>Até {currentPlan.units} Unidade{currentPlan.units > 1 ? 's' : ''}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Calendar className="w-3 h-3" />
+                    <span>{currentPlan.appointments} Agendamentos/mês</span>
+                  </div>
+                </div>
+
+                {step === 1 && (
+                  <button 
+                    onClick={() => router.push('/#planos')}
+                    className="w-full mt-4 py-2 text-[10px] font-bold uppercase tracking-wider text-primary hover:bg-primary/5 rounded-lg transition-all border border-primary/20"
+                  >
+                    Mudar Plano
+                  </button>
+                )}
+              </div>
+            )}
           </div>
         </div>
 

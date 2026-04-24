@@ -7,13 +7,33 @@ export async function POST(req: Request) {
   }
 
   const body = await req.json();
-  const { tenant, unit, services, barber, account } = body;
+  const { tenant, unit, services, barber, account, planId } = body;
 
   let createdUserId: string | null = null;
   let createdBarberUserId: string | null = null;
   let createdTenantId: string | null = null;
 
   try {
+    // 0. Buscar o Plano e Validar Limites (Backend Enforcement)
+    const { data: planData, error: planError } = await supabaseAdmin
+      .from("plans")
+      .select("*")
+      .eq("slug", planId || "basico")
+      .single();
+
+    if (planError || !planData) {
+      throw new Error("Plano selecionado inválido ou não encontrado.");
+    }
+
+    // Validação de segurança: No onboarding criamos 1 unidade e 1 barbeiro.
+    // Se o plano básico permitisse 0 (hipotético), aqui barraríamos.
+    if (1 > planData.max_units) {
+      throw new Error(`Seu plano permite no máximo ${planData.max_units} unidade(s).`);
+    }
+    if (1 > planData.max_barbers) {
+      throw new Error(`Seu plano permite no máximo ${planData.max_barbers} barbeiro(s).`);
+    }
+
     // 1. Criar Usuário no Auth
     const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
       email: account.email,
@@ -44,7 +64,8 @@ export async function POST(req: Request) {
         { 
           name: tenant.name, 
           slug: slug, 
-          owner_id: createdUserId 
+          owner_id: createdUserId,
+          plan_id: planData.id 
         }
       ])
       .select()
@@ -54,6 +75,25 @@ export async function POST(req: Request) {
       throw new Error(`Erro ao criar barbearia: ${tenantError?.message}`);
     }
     createdTenantId = tenantData.id;
+
+    // 2.1 Criar Assinatura Inicial (Trial de 3 dias por padrão)
+    const expiresAt = new Date();
+    expiresAt.setDate(expiresAt.getDate() + 3);
+
+    const { error: subError } = await supabaseAdmin
+      .from("subscriptions")
+      .insert([
+        {
+          tenant_id: createdTenantId,
+          plan_id: planData.id,
+          status: "trialing",
+          expires_at: expiresAt.toISOString()
+        }
+      ]);
+
+    if (subError) {
+      throw new Error(`Erro ao criar assinatura: ${subError.message}`);
+    }
 
     // 3. Criar Settings padrão
     const { error: settingsError } = await supabaseAdmin
@@ -236,6 +276,7 @@ export async function POST(req: Request) {
       await supabaseAdmin.from("service_units").delete().eq("unit_id", (await supabaseAdmin.from("units").select("id").eq("tenant_id", createdTenantId)).data?.[0]?.id);
       
       // Deletar entidades
+      await supabaseAdmin.from("subscriptions").delete().eq("tenant_id", createdTenantId);
       await supabaseAdmin.from("barbers").delete().eq("tenant_id", createdTenantId);
       await supabaseAdmin.from("services").delete().eq("tenant_id", createdTenantId);
       await supabaseAdmin.from("units").delete().eq("tenant_id", createdTenantId);

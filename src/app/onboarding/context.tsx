@@ -3,6 +3,7 @@
 import React, { createContext, useContext, useState, ReactNode } from "react";
 
 export interface OnboardingData {
+  planId?: string;
   tenant: {
     name: string;
   };
@@ -43,6 +44,7 @@ interface OnboardingContextProps {
 }
 
 const defaultData: OnboardingData = {
+  planId: "",
   tenant: { name: "" },
   unit: { name: "", address: "", number: "", city: "", state: "" },
   services: [],

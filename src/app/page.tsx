@@ -121,8 +121,8 @@ export default function RootPage() {
                   <span><strong>300</strong> agendamentos/mês</span>
                 </li>
               </ul>
-              <Button variant="outline" className="w-full h-12 rounded-xl font-bold hover:bg-primary hover:text-white transition-all">
-                Começar agora
+              <Button asChild variant="outline" className="w-full h-12 rounded-xl font-bold hover:bg-primary hover:text-white transition-all">
+                <a href="/onboarding?plan=basico">Começar agora</a>
               </Button>
             </div>
 
@@ -153,8 +153,8 @@ export default function RootPage() {
                   <span><strong>1.000</strong> agendamentos/mês</span>
                 </li>
               </ul>
-              <Button className="w-full h-12 rounded-xl font-bold shadow-lg shadow-primary/20 bg-primary hover:bg-primary/90 transition-all">
-                Escolher Profissional
+              <Button asChild className="w-full h-12 rounded-xl font-bold shadow-lg shadow-primary/20 bg-primary hover:bg-primary/90 transition-all">
+                <a href="/onboarding?plan=profissional">Escolher Profissional</a>
               </Button>
             </div>
 
@@ -182,8 +182,8 @@ export default function RootPage() {
                   <span><strong>5.000</strong> agendamentos/mês</span>
                 </li>
               </ul>
-              <Button variant="outline" className="w-full h-12 rounded-xl font-bold hover:bg-primary hover:text-white transition-all">
-                Escolher Premium
+              <Button asChild variant="outline" className="w-full h-12 rounded-xl font-bold hover:bg-primary hover:text-white transition-all">
+                <a href="/onboarding?plan=premium">Escolher Premium</a>
               </Button>
             </div>
 
@@ -211,8 +211,8 @@ export default function RootPage() {
                   <span>Agendamentos <strong>Ilimitados</strong></span>
                 </li>
               </ul>
-              <Button variant="outline" className="w-full h-12 rounded-xl font-bold hover:bg-primary hover:text-white transition-all">
-                Falar com Consultor
+              <Button asChild variant="outline" className="w-full h-12 rounded-xl font-bold hover:bg-primary hover:text-white transition-all">
+                <a href="/onboarding?plan=escala">Escolher Escala</a>
               </Button>
             </div>
           </div>

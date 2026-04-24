@@ -145,19 +145,33 @@ function BookingContent() {
 
   // Estados de Disponibilidade
   const [isGloballyClosed, setIsGloballyClosed] = useState(false);
-  const [closureReason, setClosureReason] = useState<"settings" | "barbers" | null>(null);
+  const [closureReason, setClosureReason] = useState<"settings" | "barbers" | "subscription_expired" | "limit_reached" | null>(null);
 
   const checkAvailability = (sData: any, bData: any[], uData: any[]) => {
-    // 1. Verificar Unidades (Pelo menos uma unidade com horário ativo)
+    // 0. Verificar Assinatura
+    if (sData.isSubscriptionActive === false) {
+      setIsGloballyClosed(true);
+      setClosureReason("subscription_expired");
+      return;
+    }
+
+    // 1. Verificar Limite de Agendamentos Mensais
+    if (sData.plan && sData.appointmentsCount >= sData.plan.max_appointments_month) {
+      setIsGloballyClosed(true);
+      setClosureReason("limit_reached");
+      return;
+    }
+
+    // 2. Verificar Unidades (Pelo menos uma unidade com horário ativo)
     const hasOpenUnit = uData && uData.length > 0;
 
     if (!hasOpenUnit) {
       setIsGloballyClosed(true);
-      setClosureReason("settings"); // Mantemos o motivo como "settings" para reaproveitar a mensagem de "Barbearia Fechada"
+      setClosureReason("settings");
       return;
     }
 
-    // 2. Verificar se há barbeiros bookable
+    // 3. Verificar se há barbeiros bookable
     if (!bData || bData.length === 0) {
       setIsGloballyClosed(true);
       setClosureReason("barbers");
@@ -775,12 +789,16 @@ function BookingContent() {
                     <Clock className="w-10 h-10" />
                   </div>
                   <CardTitle className="text-3xl font-serif text-center">
-                    {closureReason === "settings" ? "Barbearia Fechada" : "Indisponível no Momento"}
+                    {closureReason === "settings" && "Barbearia Fechada"}
+                    {closureReason === "barbers" && "Indisponível no Momento"}
+                    {closureReason === "subscription_expired" && "Assinatura Suspensa"}
+                    {closureReason === "limit_reached" && "Agenda Lotada"}
                   </CardTitle>
-                  <CardDescription className="text-center text-lg mt-2">
-                    {closureReason === "settings" 
-                      ? "Não estamos aceitando novos agendamentos no momento de acordo com nosso horário de funcionamento."
-                      : "No momento não temos profissionais disponíveis para agendamento online."}
+                  <CardDescription className="text-center text-lg mt-2 px-4">
+                    {closureReason === "settings" && "Não estamos aceitando novos agendamentos no momento de acordo com nosso horário de funcionamento."}
+                    {closureReason === "barbers" && "No momento não temos profissionais disponíveis para agendamento online."}
+                    {closureReason === "subscription_expired" && "A barbearia está com o sistema de agendamento temporariamente suspenso. Por favor, tente novamente mais tarde."}
+                    {closureReason === "limit_reached" && "Desculpe! Atingimos o limite máximo de agendamentos para este mês e não podemos aceitar novas reservas no momento."}
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="flex flex-col items-center gap-6 pb-8">

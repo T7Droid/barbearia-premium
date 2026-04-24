@@ -2,6 +2,7 @@ import { NextResponse, NextRequest } from "next/server";
 import { supabase, supabaseAdmin, isSupabaseConfigured } from "@/lib/supabase";
 import { TenantContext } from "@/lib/services/tenant-context";
 import { AuthService } from "@/lib/services/auth.service";
+import { TenantService } from "@/lib/services/tenant.service";
 
 export const dynamic = "force-dynamic";
 
@@ -98,6 +99,35 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const { name, description, imageUrl, active, unitIds, serviceIds, loginData, commissionPercentage } = body;
+
+    // --- NOVA VALIDAÇÃO DE PLANO E ASSINATURA ---
+    const [fullTenant, isSubActive] = await Promise.all([
+      TenantService.getTenantById(tenant.id),
+      TenantService.isSubscriptionActive(tenant.id)
+    ]);
+
+    if (!isSubActive) {
+      return NextResponse.json({ 
+        error: "Assinatura expirada ou inativa. Por favor, regularize seu pagamento para continuar." 
+      }, { status: 403 });
+    }
+
+    if (!fullTenant || !fullTenant.plans) {
+      return NextResponse.json({ error: "Plano não identificado." }, { status: 400 });
+    }
+
+    const { count: currentBarbers } = await supabaseAdmin
+      .from("barbers")
+      .select("*", { count: "exact", head: true })
+      .eq("tenant_id", tenant.id)
+      .eq("active", true);
+
+    if (currentBarbers !== null && currentBarbers >= fullTenant.plans.max_barbers) {
+      return NextResponse.json({ 
+        error: `Limite atingido: Seu plano (${fullTenant.plans.name}) permite no máximo ${fullTenant.plans.max_barbers} barbeiros ativos.` 
+      }, { status: 403 });
+    }
+    // --------------------------------------------
 
     let userId = null;
 

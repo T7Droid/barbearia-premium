@@ -2,6 +2,7 @@ import { NextResponse, NextRequest } from "next/server";
 import { supabase, supabaseAdmin, isSupabaseConfigured } from "@/lib/supabase";
 import { AuthService } from "@/lib/services/auth.service";
 import { TenantContext } from "@/lib/services/tenant-context";
+import { TenantService } from "@/lib/services/tenant.service";
 
 export async function GET(request: NextRequest) {
   if (!isSupabaseConfigured || !supabase) {
@@ -41,6 +42,23 @@ export async function GET(request: NextRequest) {
 
   const finalData = data || defaultData;
 
+  // --- NOVA LÓGICA DE PLANO E ASSINATURA ---
+  const [fullTenant, isSubActive] = await Promise.all([
+    TenantService.getTenantById(tenant.id),
+    TenantService.isSubscriptionActive(tenant.id)
+  ]);
+
+  const startOfMonth = new Date();
+  startOfMonth.setDate(1);
+  startOfMonth.setHours(0, 0, 0, 0);
+
+  const { count: appointmentsCount } = await supabaseAdmin!
+    .from("appointments")
+    .select("*", { count: "exact", head: true })
+    .eq("tenant_id", tenant.id)
+    .gte("created_at", startOfMonth.toISOString());
+  // ------------------------------------------
+
   const settings = {
     isPointsEnabled: finalData.is_points_enabled,
     pointsPerAppointment: finalData.points_per_appointment,
@@ -55,7 +73,10 @@ export async function GET(request: NextRequest) {
     mpConnected: tenantData?.mp_connected || false,
     mpConnectionError: tenantData?.mp_connection_error || null,
     tenantId: tenant.id,
-    tenantSlug: tenant.slug
+    tenantSlug: tenant.slug,
+    plan: fullTenant?.plans || null,
+    isSubscriptionActive: isSubActive,
+    appointmentsCount: appointmentsCount || 0
   };
 
   return NextResponse.json(settings);

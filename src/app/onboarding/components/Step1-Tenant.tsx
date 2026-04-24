@@ -4,11 +4,13 @@ import { useOnboarding } from "../context";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Scissors, Globe } from "lucide-react";
+import { Scissors, Globe, Zap, ChevronRight } from "lucide-react";
 import { generateSlug } from "@/lib/utils";
+import { PLANS_INFO } from "@/lib/config/plans";
 
 export function Step1Tenant() {
   const { data, updateData, setStep } = useOnboarding();
+  const currentPlan = data.planId ? PLANS_INFO[data.planId] : null;
 
   const handleNext = (e: React.FormEvent) => {
     e.preventDefault();
@@ -28,7 +30,31 @@ export function Step1Tenant() {
         <p className="text-muted-foreground">Como os seus clientes conhecerão o seu negócio?</p>
       </div>
 
-      <form onSubmit={handleNext} className="space-y-6 pt-4">
+      {currentPlan && (
+        <div className="flex items-center justify-between p-4 bg-muted/50 rounded-2xl border border-border/50 animate-in fade-in slide-in-from-bottom-2 duration-500">
+          <div className="flex items-center gap-3">
+            <div className={`p-2 rounded-lg ${currentPlan.bg} ${currentPlan.color}`}>
+              <Zap className="w-5 h-5 fill-current" />
+            </div>
+            <div className="text-left">
+              <p className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground">Plano Selecionado</p>
+              <p className="text-sm font-bold">{currentPlan.name}</p>
+            </div>
+          </div>
+          <Button 
+            type="button"
+            variant="ghost" 
+            size="sm" 
+            onClick={() => window.location.href = '/#planos'}
+            className="text-xs font-bold text-primary hover:bg-primary/5 gap-1"
+          >
+            Alterar
+            <ChevronRight className="w-3 h-3" />
+          </Button>
+        </div>
+      )}
+
+      <form onSubmit={handleNext} className="space-y-6 pt-2">
         <div className="space-y-4">
           <Label htmlFor="tenantName" className="text-base font-semibold">Nome Comercial</Label>
           <Input 

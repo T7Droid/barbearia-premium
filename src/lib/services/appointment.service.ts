@@ -1,6 +1,7 @@
 import { supabase, supabaseAdmin, isSupabaseConfigured } from "@/lib/supabase";
 import { randomUUID } from "crypto";
 import { config } from "@/lib/config";
+import { TenantService } from "./tenant.service";
 
 export interface Appointment {
   id: number;
@@ -191,6 +192,33 @@ export class AppointmentService {
 
     if (sessionError || !sessionDataRaw) throw new Error("Session not found");
     const session = sessionDataRaw.data;
+
+    // --- NOVA TRAVA: VALIDAR ASSINATURA E LIMITE MENSAL DE AGENDAMENTOS ---
+    const [fullTenant, isSubActive] = await Promise.all([
+      TenantService.getTenantById(sessionDataRaw.tenant_id),
+      TenantService.isSubscriptionActive(sessionDataRaw.tenant_id)
+    ]);
+
+    if (!isSubActive) {
+      throw new Error("SUBSCRIPTION_INACTIVE");
+    }
+
+    if (fullTenant && fullTenant.plans) {
+      const startOfMonth = new Date();
+      startOfMonth.setDate(1);
+      startOfMonth.setHours(0, 0, 0, 0);
+
+      const { count } = await supabaseAdmin
+        .from("appointments")
+        .select("*", { count: "exact", head: true })
+        .eq("tenant_id", sessionDataRaw.tenant_id)
+        .gte("created_at", startOfMonth.toISOString());
+
+      if (count !== null && count >= fullTenant.plans.max_appointments_month) {
+        throw new Error("LIMIT_APPOINTMENTS_REACHED");
+      }
+    }
+    // ---------------------------------------------------------------------
 
     // --- NOVA TRAVA: VALIDAR DISPONIBILIDADE FINAL NO CHECKOUT ---
     const totalDuration = session.servicesJson?.reduce((acc: number, s: any) => acc + (s.durationMinutes || 0), 0) || 0;

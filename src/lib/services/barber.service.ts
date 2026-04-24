@@ -1,5 +1,6 @@
 import { supabaseAdmin, isSupabaseConfigured } from "@/lib/supabase";
 import { config } from "@/lib/config";
+import { TenantService } from "./tenant.service";
 
 export interface Barber {
   id: number;
@@ -7,6 +8,7 @@ export interface Barber {
   description: string;
   imageUrl?: string;
   active: boolean;
+  tenant_id?: string;
 }
 
 export class BarberService {
@@ -16,6 +18,7 @@ export class BarberService {
     if (data.description !== undefined) mapped.description = data.description;
     if (data.imageUrl !== undefined) mapped.image_url = data.imageUrl;
     if (data.active !== undefined) mapped.active = data.active;
+    if (data.tenant_id !== undefined) mapped.tenant_id = data.tenant_id;
     return mapped;
   }
 
@@ -26,20 +29,27 @@ export class BarberService {
       name: data.name,
       description: data.description,
       imageUrl: data.image_url,
-      active: data.active
+      active: data.active,
+      tenant_id: data.tenant_id
     };
   }
 
-  static async list(): Promise<Barber[]> {
+  static async list(tenantId?: string): Promise<Barber[]> {
     if (!config.supabase.isConfigured || !supabaseAdmin) {
       throw new Error("Supabase is missing.");
     }
 
-    const { data, error } = await supabaseAdmin
+    let query = supabaseAdmin
       .from("barbers")
       .select("*")
       .eq("active", true)
       .order("id", { ascending: true });
+
+    if (tenantId) {
+      query = query.eq("tenant_id", tenantId);
+    }
+
+    const { data, error } = await query;
 
     if (error) {
       console.error("Error listing barbers:", error);
@@ -67,14 +77,35 @@ export class BarberService {
     return this.mapFromSupabase(data);
   }
 
-  static async create(data: Omit<Barber, "id">): Promise<Barber> {
+  static async create(data: Omit<Barber, "id">, tenantId: string): Promise<Barber> {
     if (!config.supabase.isConfigured || !supabaseAdmin) {
       throw new Error("Supabase is missing.");
     }
 
+    // 1. Validar Plano e Limites
+    const tenant = await TenantService.getTenantById(tenantId);
+    if (!tenant || !tenant.plans) {
+      throw new Error("Plano da barbearia não encontrado para validação.");
+    }
+
+    // 2. Contar barbeiros ativos atuais
+    const { count, error: countError } = await supabaseAdmin
+      .from("barbers")
+      .select("*", { count: "exact", head: true })
+      .eq("tenant_id", tenantId)
+      .eq("active", true);
+
+    if (countError) throw countError;
+
+    if (count !== null && count >= tenant.plans.max_barbers) {
+      throw new Error(`LIMITE_ATINGIDO: Seu plano (${tenant.plans.name}) permite no máximo ${tenant.plans.max_barbers} barbeiros ativos.`);
+    }
+
+    // 3. Criar
+    const payload = { ...data, tenant_id: tenantId };
     const { data: newBarber, error } = await supabaseAdmin
       .from("barbers")
-      .insert(this.mapToSupabase(data))
+      .insert(this.mapToSupabase(payload))
       .select()
       .single();
 

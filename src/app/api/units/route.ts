@@ -2,6 +2,7 @@ import { NextResponse, NextRequest } from "next/server";
 import { supabase, supabaseAdmin, isSupabaseConfigured } from "@/lib/supabase";
 import { TenantContext } from "@/lib/services/tenant-context";
 import { AuthService } from "@/lib/services/auth.service";
+import { TenantService } from "@/lib/services/tenant.service";
 
 export async function GET(request: NextRequest) {
   if (!isSupabaseConfigured || !supabase) {
@@ -53,6 +54,34 @@ export async function POST(request: NextRequest) {
       google_maps_link,
       weekly_hours
     } = body;
+
+    // --- NOVA VALIDAÇÃO DE PLANO E ASSINATURA ---
+    const [fullTenant, isSubActive] = await Promise.all([
+      TenantService.getTenantById(tenant.id),
+      TenantService.isSubscriptionActive(tenant.id)
+    ]);
+
+    if (!isSubActive) {
+      return NextResponse.json({ 
+        error: "Assinatura expirada ou inativa. Por favor, regularize seu pagamento para continuar." 
+      }, { status: 403 });
+    }
+
+    if (!fullTenant || !fullTenant.plans) {
+      return NextResponse.json({ error: "Plano não identificado." }, { status: 400 });
+    }
+
+    const { count: currentUnits } = await supabaseAdmin
+      .from("units")
+      .select("*", { count: "exact", head: true })
+      .eq("tenant_id", tenant.id);
+
+    if (currentUnits !== null && currentUnits >= fullTenant.plans.max_units) {
+      return NextResponse.json({ 
+        error: `Limite atingido: Seu plano (${fullTenant.plans.name}) permite no máximo ${fullTenant.plans.max_units} unidade(s).` 
+      }, { status: 403 });
+    }
+    // --------------------------------------------
 
     const { data, error } = await supabaseAdmin
       .from("units")
