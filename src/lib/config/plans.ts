@@ -1,6 +1,7 @@
 export const PLANS_INFO: Record<string, any> = {
   basico: { 
     name: "Básico", 
+    price: "R$29/mês",
     barbers: 1, 
     units: 1, 
     appointments: 300, 
@@ -10,6 +11,7 @@ export const PLANS_INFO: Record<string, any> = {
   },
   profissional: { 
     name: "Profissional", 
+    price: "R$59/mês",
     barbers: 3, 
     units: 1, 
     appointments: 1000, 
@@ -19,6 +21,7 @@ export const PLANS_INFO: Record<string, any> = {
   },
   premium: { 
     name: "Premium", 
+    price: "R$99/mês",
     barbers: 10, 
     units: 3, 
     appointments: 5000, 
@@ -28,6 +31,7 @@ export const PLANS_INFO: Record<string, any> = {
   },
   escala: { 
     name: "Escala", 
+    price: "R$149/mês",
     barbers: 30, 
     units: 10, 
     appointments: "Ilimitados", 

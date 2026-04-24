@@ -172,7 +172,12 @@ export default function OnboardingPage() {
                   <div className={`p-1.5 rounded-lg ${currentPlan.bg} ${currentPlan.color}`}>
                     <Zap className="w-4 h-4 fill-current" />
                   </div>
-                  <span className="text-sm font-bold">Plano {currentPlan.name}</span>
+                  <span className="text-sm font-bold">
+                    Plano {currentPlan.name} 
+                    <span className="text-[10px] md:text-xs text-muted-foreground font-normal ml-1">
+                      ({currentPlan.price})
+                    </span>
+                  </span>
                 </div>
                 
                 <div className="space-y-2 text-[11px] md:text-xs text-muted-foreground">
