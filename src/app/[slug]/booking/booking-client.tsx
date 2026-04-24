@@ -19,7 +19,7 @@ import { useTenant } from "@/hooks/use-tenant";
 import { useUserStore } from "@/lib/store/user-store";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { CheckCircle2, ChevronRight, Clock, CreditCard, User, Scissors, Wallet, MapPin } from "lucide-react";
+import { CheckCircle2, ChevronRight, Clock, CreditCard, User, Scissors, Wallet, MapPin, MessageCircle, Smartphone } from "lucide-react";
 import {
   useListServices,
   useGetAvailability,
@@ -805,13 +805,21 @@ function BookingContent() {
                   <p className="text-muted-foreground text-center max-w-md">
                     Siga-nos nas redes sociais ou entre em contato pelo WhatsApp para mais informações sobre horários e disponibilidade futura.
                   </p>
-                  <div className="flex gap-4">
-                    <Button variant="outline" asChild>
+                  <div className="flex flex-col sm:flex-row gap-4 w-full max-w-sm">
+                    <Button variant="outline" asChild className="flex-1 h-12">
                       <Link href="/">Voltar ao Início</Link>
                     </Button>
-                    <Button onClick={() => window.location.reload()} className="gap-2">
-                      <Clock className="w-4 h-4" /> Tentar Novamente
-                    </Button>
+                    {settings?.adminPhone && (
+                      <Button asChild className="flex-1 h-12 bg-[#25D366] hover:bg-[#128C7E] text-white gap-2 shadow-lg shadow-green-500/20">
+                        <a 
+                          href={`https://wa.me/55${settings.adminPhone.replace(/\D/g, "")}?text=${encodeURIComponent("Olá! Gostaria de informações sobre horários e disponibilidade da barbearia.")}`} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                        >
+                          <MessageCircle className="w-5 h-5" /> WhatsApp
+                        </a>
+                      </Button>
+                    )}
                   </div>
                 </CardContent>
               </Card>

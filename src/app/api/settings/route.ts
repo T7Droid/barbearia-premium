@@ -57,6 +57,26 @@ export async function GET(request: NextRequest) {
     .select("*", { count: "exact", head: true })
     .eq("tenant_id", tenant.id)
     .gte("created_at", startOfMonth.toISOString());
+
+  // Buscar data de expiração da assinatura
+  const { data: subData } = await supabaseAdmin!
+    .from("subscriptions")
+    .select("expires_at")
+    .eq("tenant_id", tenant.id)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .single();
+
+  // Buscar o WhatsApp do administrador (dono)
+  let adminPhone = null;
+  if (fullTenant?.owner_id) {
+    const { data: profileData } = await supabaseAdmin!
+      .from("profiles")
+      .select("phone")
+      .eq("id", fullTenant.owner_id)
+      .single();
+    adminPhone = profileData?.phone || null;
+  }
   // ------------------------------------------
 
   const settings = {
@@ -76,7 +96,9 @@ export async function GET(request: NextRequest) {
     tenantSlug: tenant.slug,
     plan: fullTenant?.plans || null,
     isSubscriptionActive: isSubActive,
-    appointmentsCount: appointmentsCount || 0
+    appointmentsCount: appointmentsCount || 0,
+    subscriptionExpiresAt: subData?.expires_at || null,
+    adminPhone: adminPhone
   };
 
   return NextResponse.json(settings);

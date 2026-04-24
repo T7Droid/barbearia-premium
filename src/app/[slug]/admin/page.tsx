@@ -18,8 +18,9 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useListAppointments, useGetStatsSummary } from "@workspace/api-client-react";
-import { Calendar, DollarSign, Scissors, Users, Settings, CreditCard, Wallet, CheckCircle2, AlertCircle, MapPin, Banknote, Smartphone, ChevronDown } from "lucide-react";
+import { Calendar, DollarSign, Scissors, Users, Settings, CreditCard, Wallet, CheckCircle2, AlertCircle, MapPin, Banknote, Smartphone, ChevronDown, Search } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Input } from "@/components/ui/input";
 import Link from "next/link";
 import { useEffect, useState, useCallback } from "react";
 import { useUserStore } from "@/lib/store/user-store";
@@ -45,6 +46,7 @@ export default function Admin() {
   // Estado para controle de pagamento
   const [payingId, setPayingId] = useState<number | null>(null);
   const [paymentMethodMap, setPaymentMethodMap] = useState<Record<number, string>>({});
+  const [searchTerm, setSearchTerm] = useState("");
 
   const { data: stats, isLoading: isLoadingStats } = useGetStatsSummary();
   const { data: appointments, isLoading: isLoadingAppointments, refetch: refetchAppointments } = useListAppointments({
@@ -143,11 +145,23 @@ export default function Admin() {
     return totalFormatted;
   };
 
-  const sortedAppointments = appointments ? [...appointments].sort((a: any, b: any) => {
+  const filteredAppointments = (appointments || []).filter((app: any) => {
+    if (!searchTerm) return true;
+    const term = searchTerm.toLowerCase();
+    const serviceName = getServiceNames(app).toLowerCase();
+    return (
+      app.customer_name?.toLowerCase().includes(term) ||
+      app.customer_phone?.includes(term) ||
+      app.barber_name?.toLowerCase().includes(term) ||
+      serviceName.includes(term)
+    );
+  });
+
+  const sortedAppointments = filteredAppointments.sort((a: any, b: any) => {
     const valA = `${a.appointment_date}T${a.appointment_time}`;
     const valB = `${b.appointment_date}T${b.appointment_time}`;
     return sortOrder === "asc" ? valA.localeCompare(valB) : valB.localeCompare(valA);
-  }) : [];
+  });
 
   const pendingRevenueFromTable = appointments?.reduce((sum: number, app: any) => {
     const isPaid = app.is_paid === true || app.isPaid === true;
@@ -357,6 +371,17 @@ export default function Admin() {
           </div>
         </div>
         <Card className="bg-card border-border/50">
+          <div className="p-4 border-b border-border/50 bg-muted/20">
+            <div className="relative max-w-md">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input 
+                placeholder="Buscar agendamento por nome, telefone ou serviço..." 
+                className="pl-9 bg-background/50"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+            </div>
+          </div>
           <div className="overflow-x-auto">
             <Table>
               <TableHeader>
@@ -387,8 +412,8 @@ export default function Admin() {
                   ))
                 ) : sortedAppointments?.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
-                      Nenhum agendamento encontrado.
+                    <TableCell colSpan={8} className="text-center py-12 text-muted-foreground">
+                      {searchTerm ? "Nenhum agendamento corresponde à sua busca." : "Nenhum agendamento encontrado para este período."}
                     </TableCell>
                   </TableRow>
                 ) : (

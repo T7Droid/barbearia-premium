@@ -12,7 +12,7 @@ import { DemoStore } from "@/lib/persistence/demo-store";
 import { useTenant } from "@/hooks/use-tenant";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import { formatDateBR } from "@/lib/format";
+import { formatDateBR, formatCurrencyFromCents } from "@/lib/format";
 import {
   Select,
   SelectContent,
@@ -41,20 +41,21 @@ export default function SettingsPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [connectingMP, setConnectingMP] = useState(false);
-  const [settings, setSettings] = useState({
+  const [settings, setSettings] = useState<any>({
     isPointsEnabled: true,
     cancellationWindowDays: 2,
     isPrepaymentRequired: true,
     businessStartTime: "09:00",
     businessEndTime: "18:00",
     slotInterval: 45,
-    subscriptionStatus: "active" as "active" | "past_due" | "canceled" | "trialing",
-    subscriptionNextPayment: "2026-05-15",
+    subscriptionExpiresAt: null,
+    plan: null,
+    isSubscriptionActive: true,
     pointsPerAppointment: 50,
     initialPoints: 0,
     mpConnected: false,
     mpPublicKey: "",
-    mpConnectionError: null as string | null
+    mpConnectionError: null
   });
   const [copied, setCopied] = useState(false);
 
@@ -287,9 +288,9 @@ export default function SettingsPage() {
             <div className="flex-1">
               <div className="flex items-center gap-2">
                 <CardTitle>Minha Assinatura</CardTitle>
-                <div className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${settings.subscriptionStatus === 'active' ? 'bg-green-500/20 text-green-500' : 'bg-red-500/20 text-red-500'
+                <div className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${settings.isSubscriptionActive ? 'bg-green-500/20 text-green-500' : 'bg-red-500/20 text-red-500'
                   }`}>
-                  {settings.subscriptionStatus === 'active' ? 'Ativa' : 'Pendente'}
+                  {settings.isSubscriptionActive ? 'Ativa' : 'Inativa/Vencida'}
                 </div>
               </div>
               <CardDescription>Gerencie seu plano e pagamentos do KingBarber.</CardDescription>
@@ -299,11 +300,15 @@ export default function SettingsPage() {
             <div className="grid grid-cols-2 gap-4">
               <div className="p-3 rounded-lg bg-accent/50 border border-border/40">
                 <p className="text-[10px] text-muted-foreground uppercase font-bold">Próximo Vencimento</p>
-                <p className="text-lg font-bold text-foreground">{formatDateBR(settings.subscriptionNextPayment)}</p>
+                <p className="text-lg font-bold text-foreground">
+                  {settings.subscriptionExpiresAt ? formatDateBR(settings.subscriptionExpiresAt) : 'N/D'}
+                </p>
               </div>
               <div className="p-3 rounded-lg bg-accent/50 border border-border/40">
                 <p className="text-[10px] text-muted-foreground uppercase font-bold">Valor Mensal</p>
-                <p className="text-lg font-bold text-foreground">R$ 99,90</p>
+                <p className="text-lg font-bold text-foreground">
+                  {settings.plan ? formatCurrencyFromCents(settings.plan.price * 100) : 'R$ 0,00'}
+                </p>
               </div>
             </div>
             <Button variant="outline" className="w-full gap-2 hover:bg-primary hover:text-white transition-all shadow-md active:scale-95"
