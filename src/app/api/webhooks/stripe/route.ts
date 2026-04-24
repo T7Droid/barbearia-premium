@@ -47,7 +47,7 @@ export async function POST(request: NextRequest) {
             .eq("id", tenantId);
 
           // 2. Atualizar ou criar assinatura no banco
-          const subscription = await stripe.subscriptions.retrieve(stripeSubscriptionId as string);
+          const subscription = await stripe.subscriptions.retrieve(stripeSubscriptionId as string) as any;
           
           await supabaseAdmin!
             .from("subscriptions")
@@ -58,7 +58,7 @@ export async function POST(request: NextRequest) {
               expires_at: new Date(subscription.current_period_end * 1000).toISOString(),
               stripe_subscription_id: stripeSubscriptionId,
               updated_at: new Date().toISOString(),
-            }, { onConflict: 'tenant_id' }); // Ajustar se houver chave única melhor
+            }, { onConflict: 'tenant_id' });
         }
         break;
       }
