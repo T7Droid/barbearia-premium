@@ -21,8 +21,6 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Plano inválido ou não configurado para Stripe" }, { status: 400 });
     }
 
-    // Criar ou recuperar o Customer ID do Stripe para este tenant
-    // (Em uma implementação completa, salvaríamos o stripe_customer_id no banco para reuso)
     const customerId = (tenant as any).stripe_customer_id;
 
     const session = await stripe.checkout.sessions.create({

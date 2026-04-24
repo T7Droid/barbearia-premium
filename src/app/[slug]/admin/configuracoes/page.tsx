@@ -69,7 +69,6 @@ export default function SettingsPage() {
       const res = await fetch("/api/settings", { headers });
       const data = await res.json();
       setSettings(data);
-      // Sincronizar com DemoStore
       DemoStore.saveSettings(data);
     } catch (error) {
       const saved = DemoStore.getSettings();
@@ -120,7 +119,6 @@ export default function SettingsPage() {
       fetchSettings();
     }
 
-    // Verificar se voltou do redirecionamento do Mercado Pago
     const params = new URLSearchParams(window.location.search);
     if (params.get("mp_success") === "true") {
       toast({ title: "Sucesso!", description: "Sua conta do Mercado Pago foi conectada com sucesso." });
@@ -186,10 +184,8 @@ export default function SettingsPage() {
 
       if (res.ok) {
         toast({ title: "Sucesso", description: "Configurações salvas no banco de dados." });
-        // RE-FETCH AFTER POST
         await fetchSettings();
       } else {
-        // Fallback para DemoStore mesmo em erro da API
         DemoStore.saveSettings(settings);
         toast({ title: "Aviso", description: "Salvo localmente no navegador." });
       }

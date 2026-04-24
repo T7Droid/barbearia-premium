@@ -29,7 +29,6 @@ export async function POST(request: NextRequest) {
         const stripeSubscriptionId = session.subscription;
         const stripeCustomerId = session.customer;
 
-        // Se for checkout, temos metadata. No invoice, precisamos buscar a subscription no Stripe
         let tenantId = session.metadata?.tenantId;
         let planId = session.metadata?.planId;
 
@@ -40,13 +39,11 @@ export async function POST(request: NextRequest) {
         }
 
         if (tenantId) {
-          // 1. Atualizar stripe_customer_id no tenant
           await supabaseAdmin!
             .from("tenants")
             .update({ stripe_customer_id: stripeCustomerId })
             .eq("id", tenantId);
 
-          // 2. Atualizar ou criar assinatura no banco
           const subscription = await stripe.subscriptions.retrieve(stripeSubscriptionId as string) as any;
 
           await supabaseAdmin!

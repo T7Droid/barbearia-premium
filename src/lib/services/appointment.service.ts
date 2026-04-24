@@ -148,7 +148,7 @@ export class AppointmentService {
       amount: totalAmount,
       serviceName: combinedNames,
       servicesJson: validServices,
-      serviceId: validServices[0].id // Mantenha o primeiro ID para retrocompatibilidade se necessário
+      serviceId: validServices[0].id
     };
 
     if (!config.supabase.isConfigured || !supabaseAdmin) {
@@ -223,9 +223,7 @@ export class AppointmentService {
         throw new Error("LIMIT_APPOINTMENTS_REACHED");
       }
     }
-    // ---------------------------------------------------------------------
 
-    // --- NOVA TRAVA: VALIDAR DISPONIBILIDADE FINAL NO CHECKOUT ---
     const totalDuration = session.servicesJson?.reduce((acc: number, s: any) => acc + (s.durationMinutes || 0), 0) || 0;
     const isAvailable = await this.isSlotAvailable(
       session.appointmentDate,

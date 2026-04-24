@@ -15,7 +15,6 @@ export default function SubscriptionExpiredPage() {
   const [checking, setChecking] = useState(true);
 
   useEffect(() => {
-    // Verificar se a assinatura foi renovada enquanto o usuário estava nesta página
     const checkStatus = async () => {
       try {
         const res = await fetch("/api/settings", {
@@ -42,11 +41,11 @@ export default function SubscriptionExpiredPage() {
     try {
       const res = await fetch("/api/subscription/checkout", {
         method: "POST",
-        headers: { 
+        headers: {
           "Content-Type": "application/json",
-          "x-tenant-slug": tenant.slug 
+          "x-tenant-slug": tenant.slug
         },
-        body: JSON.stringify({ planId: "basico" }) // Fallback para básico ou recuperar o anterior
+        body: JSON.stringify({ planId: "basico" })
       });
       const data = await res.json();
       if (data.url) {

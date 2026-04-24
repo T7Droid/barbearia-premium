@@ -11,8 +11,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const router = useRouter();
   const pathname = usePathname();
   const tenant = useTenant();
-  
-  // Sincronização inicial com a store para evitar flash do login form
   const initialUser = userStore.getState().user;
   const [isAuthorized, setIsAuthorized] = useState(initialUser?.role === "admin");
   const [isLoading, setIsLoading] = useState(!isAuthorized);
@@ -23,39 +21,37 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     const adminRootPath = `/${tenant.slug}/admin`;
 
     const checkAuth = async () => {
-      const timeoutId = setTimeout(() => controller.abort(), 10000); 
+      const timeoutId = setTimeout(() => controller.abort(), 10000);
 
       try {
         const headers = { "x-tenant-slug": tenant.slug };
         const res = await fetch("/api/auth/me", { signal: controller.signal, headers, cache: "no-store" });
         clearTimeout(timeoutId);
-        
+
         if (!res.ok) {
           throw new Error("Falha na autenticação");
         }
-        
+
         const data = await res.json();
 
         if (data.authenticated && data.user?.role === "admin") {
           setIsAuthorized(true);
           userStore.setUser(data.user);
-          
+
           const isExpiredPath = pathname.endsWith("/assinatura-vencida");
-          
-          // Se a assinatura estiver inativa, bloqueia o acesso (exceto na página de erro e login)
+
           if (data.isSubscriptionActive === false && !isExpiredPath && pathname !== adminLoginPath) {
             router.push(`/${tenant.slug}/admin/assinatura-vencida`);
             return;
           }
 
-          // Se estiver na tela de login mas já estiver autenticado como admin e com assinatura OK, vai para o painel
           if (pathname === adminLoginPath && data.isSubscriptionActive !== false) {
             router.push(adminRootPath);
           }
         } else {
           setIsAuthorized(false);
           userStore.setUser(null);
-          
+
           if (pathname !== adminLoginPath) {
             router.push(`${adminLoginPath}?from=${encodeURIComponent(pathname)}`);
           }
@@ -66,7 +62,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         } else {
           console.error("Auth check error:", error);
         }
-        
+
         userStore.setUser(null);
         if (pathname !== adminLoginPath) {
           router.push(adminLoginPath);

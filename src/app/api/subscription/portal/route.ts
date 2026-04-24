@@ -13,7 +13,6 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Não autorizado" }, { status: 403 });
     }
 
-    // Recuperar o Customer ID do Stripe salvo no tenant
     const customerId = (tenant as any).stripe_customer_id || (tenant as any).stripeCustomerId;
 
     if (!customerId) {
