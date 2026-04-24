@@ -126,7 +126,6 @@ export default function RootPage() {
               </Button>
             </div>
 
-            {/* Plano Profissional - DESTAKE */}
             <div className="bg-card border-2 border-primary p-8 rounded-3xl flex flex-col relative shadow-2xl scale-105 z-10">
               <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-primary text-primary-foreground px-4 py-1 rounded-full text-xs font-bold uppercase tracking-wider shadow-lg">
                 Mais Popular

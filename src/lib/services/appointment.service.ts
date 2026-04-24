@@ -116,6 +116,7 @@ export class AppointmentService {
   static async createCheckoutSession(data: any): Promise<any> {
     const { rescheduleId, serviceIds, serviceId: legacyId } = data;
     let isPaid = false;
+    let originalPaymentMethod = null;
 
     // Support both single ID (legacy) and array of IDs
     const ids = Array.isArray(serviceIds) ? serviceIds : (legacyId ? [legacyId] : []);
@@ -131,7 +132,10 @@ export class AppointmentService {
 
     if (rescheduleId) {
       const oldAppointment = await this.getById(parseInt(rescheduleId));
-      if (oldAppointment?.isPaid) isPaid = true;
+      if (oldAppointment?.isPaid) {
+        isPaid = true;
+        originalPaymentMethod = oldAppointment.paymentMethod;
+      }
     }
 
     const totalAmount = validServices.reduce((sum, s) => sum + (s.price || 0), 0);
@@ -140,6 +144,7 @@ export class AppointmentService {
     const sessionData = {
       ...data,
       isPaid,
+      originalPaymentMethod,
       amount: totalAmount,
       serviceName: combinedNames,
       servicesJson: validServices,

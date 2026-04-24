@@ -108,7 +108,6 @@ export default function BarberDashboard() {
       setHasProfile(data.hasProfile ?? true);
       if (data.stats) setStats(data.stats);
       
-      // Forçar atualização do estado de comissão com valor real da API
       const realCommission = data.commissionPercentage !== undefined ? data.commissionPercentage : 50;
       setCommissionPercentage(realCommission);
       
@@ -242,7 +241,7 @@ export default function BarberDashboard() {
                 </div>
                 <CardTitle className="text-3xl font-serif">Bem-vindo, {user.name}!</CardTitle>
                 <CardDescription className="text-lg">
-                  Você é o administrador da **{tenant.name}**, mas ainda não possui um perfil profissional vinculado.
+                  Você é o administrador da <strong className="font-bold text-foreground">{tenant.name}</strong>, mas ainda não possui um perfil profissional vinculado.
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">

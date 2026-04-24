@@ -19,7 +19,7 @@ import { useTenant } from "@/hooks/use-tenant";
 import { useUserStore } from "@/lib/store/user-store";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { CheckCircle2, ChevronRight, Clock, CreditCard, User, Scissors, Wallet, MapPin, MessageCircle, Smartphone } from "lucide-react";
+import { CheckCircle2, ChevronRight, Clock, CreditCard, User, Scissors, Wallet, MapPin, MessageCircle, Smartphone, Store } from "lucide-react";
 import {
   useListServices,
   useGetAvailability,
@@ -146,6 +146,7 @@ function BookingContent() {
   // Estados de Disponibilidade
   const [isGloballyClosed, setIsGloballyClosed] = useState(false);
   const [closureReason, setClosureReason] = useState<"settings" | "barbers" | "subscription_expired" | "limit_reached" | null>(null);
+  const [originalPaymentMethod, setOriginalPaymentMethod] = useState<string | null>(null);
 
   const checkAvailability = (sData: any, bData: any[], uData: any[]) => {
     // 0. Verificar Assinatura
@@ -271,6 +272,22 @@ function BookingContent() {
       }
     });
   }, [tenant]);
+
+  // Buscar dados do agendamento original em caso de reagendamento para preservar status de pagamento
+  useEffect(() => {
+    if (rescheduleId && tenant?.slug) {
+      const headers = { "x-tenant-slug": tenant.slug };
+      fetch(`/api/appointments/${rescheduleId}`, { headers })
+        .then(res => res.json())
+        .then(data => {
+          if (data && data.isPaid) {
+            setIsPrePaid(true);
+            setOriginalPaymentMethod(data.paymentMethod);
+          }
+        })
+        .catch(err => console.error("Error fetching original appointment:", err));
+    }
+  }, [rescheduleId, tenant?.slug]);
 
   // Pre-selecionar serviço se vier via URL
   useEffect(() => {
@@ -572,6 +589,7 @@ function BookingContent() {
 
       if (result.isPaid) {
         setIsPrePaid(true);
+        setOriginalPaymentMethod(result.originalPaymentMethod);
         handlePaymentSubmit(undefined, result.sessionId);
       } else {
         setIsPrePaid(false);
@@ -697,7 +715,7 @@ function BookingContent() {
       const appointment = await confirmAppointment.mutateAsync({
         data: {
           sessionId: sid,
-          paymentMethodId: isPrePaid ? "pre_paid" : (paymentMethod === "card" ? "mercado_pago" : (paymentMethod === "pix" ? "pix" : "offline_local")),
+          paymentMethodId: isPrePaid ? (originalPaymentMethod || "online") : (paymentMethod === "card" ? "mercado_pago" : (paymentMethod === "pix" ? "pix" : "offline_local")),
           mp_data: paymentMethod === "pix" ? pixData : currentMpData
         } as any
       });
@@ -1277,6 +1295,10 @@ function BookingContent() {
                 <div className="bg-background rounded-lg p-6 border border-border/50 h-fit">
                   <h3 className="font-medium text-lg mb-4 text-foreground">Resumo do Agendamento</h3>
                   <div className="space-y-3 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground flex items-center gap-2"><Store className="w-4 h-4" /> Unidade</span>
+                      <span className="font-medium text-right text-foreground">{selectedUnit?.name || "Padrão"}</span>
+                    </div>
                     <div className="flex justify-between">
                       <span className="text-muted-foreground flex items-center gap-2"><User className="w-4 h-4" /> Barbeiro</span>
                       <span className="font-medium text-right text-foreground">{selectedBarber?.name || "Qualquer um"}</span>
