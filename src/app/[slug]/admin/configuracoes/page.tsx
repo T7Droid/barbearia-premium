@@ -41,6 +41,7 @@ export default function SettingsPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [connectingMP, setConnectingMP] = useState(false);
+  const [loadingStripe, setLoadingStripe] = useState(false);
   const [settings, setSettings] = useState<any>({
     isPointsEnabled: true,
     cancellationWindowDays: 2,
@@ -51,6 +52,7 @@ export default function SettingsPage() {
     subscriptionExpiresAt: null,
     plan: null,
     isSubscriptionActive: true,
+    stripeCustomerId: null,
     pointsPerAppointment: 50,
     initialPoints: 0,
     mpConnected: false,
@@ -74,6 +76,42 @@ export default function SettingsPage() {
       if (saved) setSettings(saved);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleManageStripe = async () => {
+    setLoadingStripe(true);
+    try {
+      // Se já tem customer ID, vai para o Portal. Se não, vai para o Checkout com o plano atual.
+      const endpoint = settings.stripeCustomerId 
+        ? "/api/subscription/portal" 
+        : "/api/subscription/checkout";
+      
+      const res = await fetch(endpoint, {
+        method: "POST",
+        headers: { 
+          "Content-Type": "application/json",
+          "x-tenant-slug": tenant.slug 
+        },
+        body: JSON.stringify({ 
+          planId: settings.plan?.slug || "basico" 
+        })
+      });
+
+      const data = await res.json();
+      if (data.url) {
+        window.location.href = data.url;
+      } else {
+        toast({ 
+          title: "Erro", 
+          description: data.error || "Falha ao gerar acesso ao Stripe.", 
+          variant: "destructive" 
+        });
+      }
+    } catch (e) {
+      toast({ title: "Erro", description: "Erro de conexão com o servidor.", variant: "destructive" });
+    } finally {
+      setLoadingStripe(false);
     }
   };
 
@@ -311,9 +349,20 @@ export default function SettingsPage() {
                 </p>
               </div>
             </div>
-            <Button variant="outline" className="w-full gap-2 hover:bg-primary hover:text-white transition-all shadow-md active:scale-95"
-              onClick={() => window.open('https://stripe.com', '_blank')}>
-              Gerenciar Assinatura (Stripe) <ExternalLink className="w-4 h-4" />
+            <Button 
+              variant="outline" 
+              className="w-full gap-2 hover:bg-primary hover:text-white transition-all shadow-md active:scale-95"
+              onClick={handleManageStripe}
+              disabled={loadingStripe}
+            >
+              {loadingStripe ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <>
+                  {settings.stripeCustomerId ? 'Gerenciar Assinatura (Stripe)' : 'Ativar Assinatura Online'} 
+                  <ExternalLink className="w-4 h-4" />
+                </>
+              )}
             </Button>
           </CardContent>
         </Card>

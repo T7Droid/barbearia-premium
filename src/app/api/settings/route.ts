@@ -23,7 +23,7 @@ export async function GET(request: NextRequest) {
   // Buscar informações de conexão do tenant
   const { data: tenantData } = await supabaseAdmin!
     .from("tenants")
-    .select("mp_connected, mp_public_key, mp_connection_error")
+    .select("mp_connected, mp_public_key, mp_connection_error, stripe_customer_id")
     .eq("id", tenant.id)
     .single();
 
@@ -98,7 +98,8 @@ export async function GET(request: NextRequest) {
     isSubscriptionActive: isSubActive,
     appointmentsCount: appointmentsCount || 0,
     subscriptionExpiresAt: subData?.expires_at || null,
-    adminPhone: adminPhone
+    adminPhone: adminPhone,
+    stripeCustomerId: (tenantData as any)?.stripe_customer_id || null
   };
 
   return NextResponse.json(settings);

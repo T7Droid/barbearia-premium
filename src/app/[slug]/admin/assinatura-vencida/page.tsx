@@ -2,64 +2,118 @@
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { AlertCircle, CreditCard, ExternalLink, LogOut } from "lucide-react";
-import { useRouter, useParams } from "next/navigation";
+import { AlertCircle, CreditCard, ExternalLink, Loader2, LogOut } from "lucide-react";
+import { useState, useEffect } from "react";
+import { useTenant } from "@/hooks/use-tenant";
+import { useRouter } from "next/navigation";
+import { supabase } from "@/lib/supabase";
 
 export default function SubscriptionExpiredPage() {
+  const tenant = useTenant();
   const router = useRouter();
-  const params = useParams();
-  const slug = params?.slug as string;
+  const [loading, setLoading] = useState(false);
+  const [checking, setChecking] = useState(true);
 
-  const handleLogout = async () => {
-    await fetch("/api/auth/logout", { method: "POST" });
-    router.push(`/${slug}/admin/login`);
+  useEffect(() => {
+    // Verificar se a assinatura foi renovada enquanto o usuário estava nesta página
+    const checkStatus = async () => {
+      try {
+        const res = await fetch("/api/settings", {
+          headers: { "x-tenant-slug": tenant.slug }
+        });
+        const data = await res.json();
+        if (data.isSubscriptionActive) {
+          router.push(`/${tenant.slug}/admin`);
+        }
+      } catch (e) {
+        // ignore
+      } finally {
+        setChecking(false);
+      }
+    };
+
+    if (tenant?.slug) {
+      checkStatus();
+    }
+  }, [tenant, router]);
+
+  const handlePay = async () => {
+    setLoading(true);
+    try {
+      const res = await fetch("/api/subscription/checkout", {
+        method: "POST",
+        headers: { 
+          "Content-Type": "application/json",
+          "x-tenant-slug": tenant.slug 
+        },
+        body: JSON.stringify({ planId: "basico" }) // Fallback para básico ou recuperar o anterior
+      });
+      const data = await res.json();
+      if (data.url) {
+        window.location.href = data.url;
+      }
+    } catch (e) {
+      // toast error
+    } finally {
+      setLoading(false);
+    }
   };
 
-  return (
-    <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4">
-      <div className="w-full max-w-md space-y-8 animate-in fade-in zoom-in duration-500">
-        <div className="text-center space-y-2">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-red-500/10 mb-4">
-            <AlertCircle className="w-10 h-10 text-red-500" />
-          </div>
-          <h1 className="text-3xl font-bold tracking-tight text-foreground">Acesso Bloqueado</h1>
-          <p className="text-muted-foreground">
-            Sua assinatura do sistema KingBarber está vencida ou não foi identificada.
-          </p>
-        </div>
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    router.push("/login");
+  };
 
-        <Card className="border-red-500/20 bg-card/50 backdrop-blur-sm shadow-2xl">
-          <CardHeader>
-            <CardTitle className="text-xl">Regularize sua situação</CardTitle>
-            <CardDescription>
-              Para continuar utilizando o painel administrativo e gerenciar sua barbearia, é necessário efetuar o pagamento da licença.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="p-4 rounded-lg bg-orange-500/5 border border-orange-500/10 space-y-2">
-              <div className="flex items-center gap-2 text-orange-500 font-semibold text-sm">
-                <CreditCard className="w-4 h-4" />
-                <span>Pague com Stripe</span>
-              </div>
-              <p className="text-xs text-muted-foreground">
-                O pagamento é processado de forma segura via Stripe. Após a confirmação, seu acesso será liberado instantaneamente.
-              </p>
-            </div>
-
-            <Button className="w-full h-12 text-lg font-semibold gap-2 shadow-lg shadow-primary/20" onClick={() => window.open('https://stripe.com', '_blank')}>
-              Efetuar Pagamento <ExternalLink className="w-4 h-4" />
-            </Button>
-
-            <Button variant="ghost" className="w-full gap-2 text-muted-foreground hover:text-foreground" onClick={handleLogout}>
-              <LogOut className="w-4 h-4" /> Sair do Sistema
-            </Button>
-          </CardContent>
-        </Card>
-
-        <p className="text-center text-xs text-muted-foreground">
-          Dúvidas? Entre em contato com o suporte técnico.
-        </p>
+  if (checking) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
       </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-muted/30 p-4">
+      <Card className="max-w-md w-full border-destructive/20 shadow-2xl">
+        <div className="h-2 w-full bg-destructive" />
+        <CardHeader className="text-center">
+          <div className="w-16 h-16 bg-destructive/10 rounded-full flex items-center justify-center mx-auto mb-4">
+            <AlertCircle className="w-8 h-8 text-destructive" />
+          </div>
+          <CardTitle className="text-2xl font-serif">Acesso Suspenso</CardTitle>
+          <CardDescription>
+            A assinatura da sua barbearia (**{tenant?.name}**) está vencida ou não foi identificada.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <div className="bg-destructive/5 border border-destructive/10 rounded-lg p-4 text-sm text-destructive-foreground/80 leading-relaxed">
+            Para continuar utilizando o painel administrativo e aceitando agendamentos online, é necessário regularizar sua assinatura.
+          </div>
+
+          <div className="space-y-3">
+            <Button 
+              className="w-full h-12 text-lg font-bold gap-2" 
+              onClick={handlePay}
+              disabled={loading}
+            >
+              {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <CreditCard className="w-5 h-5" />}
+              Regularizar Agora
+            </Button>
+            
+            <Button 
+              variant="outline" 
+              className="w-full gap-2"
+              onClick={handleLogout}
+            >
+              <LogOut className="w-4 h-4" /> Sair da Conta
+            </Button>
+          </div>
+
+          <p className="text-[10px] text-center text-muted-foreground uppercase tracking-widest font-bold">
+            Dúvidas? Entre em contato com o suporte KingBarber.
+          </p>
+        </CardContent>
+      </Card>
     </div>
   );
 }

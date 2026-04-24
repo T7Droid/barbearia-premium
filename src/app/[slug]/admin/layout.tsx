@@ -40,8 +40,16 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           setIsAuthorized(true);
           userStore.setUser(data.user);
           
-          // Se estiver na tela de login mas já estiver autenticado como admin, redireciona para o painel
-          if (pathname === adminLoginPath) {
+          const isExpiredPath = pathname.endsWith("/assinatura-vencida");
+          
+          // Se a assinatura estiver inativa, bloqueia o acesso (exceto na página de erro e login)
+          if (data.isSubscriptionActive === false && !isExpiredPath && pathname !== adminLoginPath) {
+            router.push(`/${tenant.slug}/admin/assinatura-vencida`);
+            return;
+          }
+
+          // Se estiver na tela de login mas já estiver autenticado como admin e com assinatura OK, vai para o painel
+          if (pathname === adminLoginPath && data.isSubscriptionActive !== false) {
             router.push(adminRootPath);
           }
         } else {

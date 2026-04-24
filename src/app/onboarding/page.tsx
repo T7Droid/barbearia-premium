@@ -24,7 +24,9 @@ const LOADING_STEPS = [
 
 import { PLANS_INFO } from "@/lib/config/plans";
 
-export default function OnboardingPage() {
+import { Suspense } from "react";
+
+function OnboardingContent() {
   const { step, data, updateData } = useOnboarding();
   const searchParams = useSearchParams();
   const planFromUrl = searchParams.get("plan");
@@ -118,7 +120,6 @@ export default function OnboardingPage() {
   const currentPlan = data.planId ? PLANS_INFO[data.planId] : null;
 
   if (isSubmitting) {
-    // ... mantido lógica anterior ...
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] text-center px-4 animate-in fade-in duration-500">
         <div className="relative mb-8">
@@ -232,5 +233,18 @@ export default function OnboardingPage() {
 
       </div>
     </div>
+  );
+}
+
+export default function OnboardingPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex flex-col items-center justify-center min-h-[60vh] text-center px-4">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        <p className="mt-4 text-muted-foreground">Carregando formulário...</p>
+      </div>
+    }>
+      <OnboardingContent />
+    </Suspense>
   );
 }
