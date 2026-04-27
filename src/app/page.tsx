@@ -183,9 +183,9 @@ export default function RootPage() {
                   <Check className="w-5 h-5 text-primary shrink-0" />
                   <span>Link próprio e QR Code exclusivo</span>
                 </li>
-                 <li className="flex items-start gap-3 text-sm text-muted-foreground">
+                <li className="flex items-start gap-3 text-sm text-muted-foreground">
                   <Check className="w-5 h-5 text-primary shrink-0" />
-                  <span>Relatórios de comissões automáticos</span>
+                  <span>Exportação de dados e tabelas (PDF/Excel)</span>
                 </li>
               </ul>
               <Button asChild className="w-full h-12 rounded-xl font-bold shadow-lg shadow-primary/20 bg-primary hover:bg-primary/90 transition-all">
@@ -240,6 +240,10 @@ export default function RootPage() {
                   <Check className="w-5 h-5 text-primary shrink-0" />
                   <span>Sistema de Pontos e Fidelidade</span>
                 </li>
+                <li className="flex items-start gap-3 text-sm text-muted-foreground">
+                  <Check className="w-5 h-5 text-primary shrink-0" />
+                  <span>Exportação de relatórios e BI (PDF/Excel)</span>
+                </li>
               
               </ul>
               <Button asChild variant="outline" className="w-full h-12 rounded-xl font-bold hover:bg-primary hover:text-white transition-all">
@@ -293,6 +297,10 @@ export default function RootPage() {
                  <li className="flex items-start gap-3 text-sm text-muted-foreground">
                   <Check className="w-5 h-5 text-primary shrink-0" />
                   <span>Sistema de Pontos e Fidelidade</span>
+                </li>
+                <li className="flex items-start gap-3 text-sm text-muted-foreground">
+                  <Check className="w-5 h-5 text-primary shrink-0" />
+                  <span>Exportação de relatórios e BI (PDF/Excel)</span>
                 </li>
                  <li className="flex items-start gap-3 text-sm text-muted-foreground">
                   <Check className="w-5 h-5 text-primary shrink-0" />

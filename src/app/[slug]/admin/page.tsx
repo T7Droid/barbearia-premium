@@ -450,7 +450,7 @@ export default function Admin() {
               Visualize o crescimento da sua barbearia com gráficos de faturamento, performance de profissionais e tendências de mercado.
             </p>
             <Button asChild className="gap-2 shadow-xl shadow-primary/20">
-              <Link href={getLink("/admin/configuracoes")}>
+              <Link href={getLink("/admin/configuracoes?upgrade=escala")}>
                 <CreditCard className="w-4 h-4" /> Liberar agora no Plano Escala
               </Link>
             </Button>

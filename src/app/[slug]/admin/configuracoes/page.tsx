@@ -78,10 +78,10 @@ export default function SettingsPage() {
     }
   };
 
-  const handleManageStripe = async () => {
+  const handleManageStripe = async (targetPlanId?: string) => {
     setLoadingStripe(true);
     try {
-      // Se já tem customer ID, vai para o Portal. Se não, vai para o Checkout com o plano atual.
+      // Se já tem customer ID, vai para o Portal. Se não, vai para o Checkout com o plano solicitado ou atual.
       const endpoint = settings.stripeCustomerId 
         ? "/api/subscription/portal" 
         : "/api/subscription/checkout";
@@ -93,7 +93,7 @@ export default function SettingsPage() {
           "x-tenant-slug": tenant.slug 
         },
         body: JSON.stringify({ 
-          planId: settings.plan?.slug || "basico" 
+          planId: targetPlanId || settings.plan?.slug || "basico" 
         })
       });
 
@@ -120,6 +120,19 @@ export default function SettingsPage() {
     }
 
     const params = new URLSearchParams(window.location.search);
+    
+    // Tratamento de Upgrade Automático
+    const upgradePlan = params.get("upgrade");
+    if (upgradePlan && !loading && settings.plan) {
+      // Pequeno delay para garantir que tudo carregou e evitar loops
+      const timer = setTimeout(() => {
+        handleManageStripe(upgradePlan);
+        // Limpa a URL
+        window.history.replaceState({}, '', window.location.pathname);
+      }, 500);
+      return () => clearTimeout(timer);
+    }
+
     if (params.get("mp_success") === "true") {
       toast({ title: "Sucesso!", description: "Sua conta do Mercado Pago foi conectada com sucesso." });
       window.history.replaceState({}, '', window.location.pathname);
@@ -129,7 +142,7 @@ export default function SettingsPage() {
       toast({ title: "Erro na conexão", description: decodeURIComponent(mpError), variant: "destructive" });
       window.history.replaceState({}, '', window.location.pathname);
     }
-  }, [tenant]);
+  }, [tenant, loading]); // Adicionado loading como dependência para o upgrade automático
 
   const handleConnectMP = async () => {
     setConnectingMP(true);
