@@ -41,6 +41,7 @@ yarn-error.log*
 next-env.d.ts
 
 # local documentation
+UPSTASH_RATELIMIT_PLAN.md
 MERCADO_PAGO_CARD_GUIDE.md
 MERCADO_PAGO_PIX_GUIDE.md
 scratch

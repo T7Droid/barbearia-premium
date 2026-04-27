@@ -257,6 +257,7 @@ export default function BarberSchedulePage() {
                     <CardDescription>Defina sua jornada nesta unidade específica.</CardDescription>
                   </div>
                   
+                  {/* 
                   <div className="bg-background/40 border border-primary/20 rounded-xl p-4 flex items-center gap-6 shadow-sm">
                     <div className="flex flex-col gap-1">
                       <Label className="text-xs font-bold uppercase tracking-widest text-primary/80">Tempo de Respiro</Label>
@@ -281,6 +282,7 @@ export default function BarberSchedulePage() {
                       </div>
                     )}
                   </div>
+                  */}
                 </div>
               </CardHeader>
               <CardContent className="p-0">
