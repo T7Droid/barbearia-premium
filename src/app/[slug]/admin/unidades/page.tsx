@@ -25,6 +25,20 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { 
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Calendar } from "@/components/ui/calendar";
+import { Checkbox } from "@/components/ui/checkbox";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
 
 export default function UnidadesPage() {
   const { toast } = useToast();
@@ -34,6 +48,15 @@ export default function UnidadesPage() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [editingUnit, setEditingUnit] = useState<any>(null);
+
+  // Estados para Bloqueio de Datas
+  const [blockedDays, setBlockedDays] = useState<any[]>([]);
+  const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
+  const [isBlockDialogOpen, setIsBlockDialogOpen] = useState(false);
+  const [isConfirmCancelOpen, setIsConfirmCancelOpen] = useState(false);
+  const [targetUnitIds, setTargetUnitIds] = useState<string[]>([]);
+  const [isProcessingBlock, setIsProcessingBlock] = useState(false);
+  const [appointmentCount, setAppointmentCount] = useState(0);
 
   const DAYS_OF_WEEK = [
     { id: "monday", label: "Segunda-feira" },
@@ -94,8 +117,23 @@ export default function UnidadesPage() {
     }
   };
 
+  const fetchBlockedDays = async () => {
+    try {
+      const res = await fetch("/api/admin/blocked-days", {
+        headers: { "x-tenant-slug": tenant.slug }
+      });
+      const data = await res.json();
+      setBlockedDays(data);
+    } catch (error) {
+      console.error("Erro ao carregar bloqueios", error);
+    }
+  };
+
   useEffect(() => {
-    if (tenant.slug) fetchUnits();
+    if (tenant.slug) {
+      fetchUnits();
+      fetchBlockedDays();
+    }
   }, [tenant.slug]);
 
   const handleOpenDialog = (unit: any = null) => {
@@ -157,6 +195,111 @@ export default function UnidadesPage() {
     } finally {
       setIsSaving(false);
     }
+  };
+
+  const handleDateClick = async (date: Date | undefined) => {
+    if (!date) return;
+    
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    if (date < today) {
+      toast({ title: "Data Inválida", description: "Você só pode gerenciar bloqueios para datas futuras.", variant: "destructive" });
+      return;
+    }
+
+    setSelectedDate(date);
+    const dateStr = format(date, "yyyy-MM-dd");
+
+    // Pre-selecionar unidades que já estão bloqueadas
+    const existingBlocks = blockedDays.filter(b => b.date === dateStr);
+    setTargetUnitIds(existingBlocks.map(b => b.unit_id));
+
+    setIsProcessingBlock(true);
+    try {
+      // Verificar se há agendamentos para TODAS as unidades naquele dia
+      const res = await fetch("/api/admin/blocked-days", {
+        method: "POST",
+        headers: { 
+          "Content-Type": "application/json",
+          "x-tenant-slug": tenant.slug 
+        },
+        body: JSON.stringify({ 
+          date: dateStr, 
+          unitIds: units.map(u => u.id), 
+          forceCancel: false 
+        })
+      });
+      
+      const data = await res.json();
+      
+      if (data.hasAppointments) {
+        setAppointmentCount(data.count);
+        setIsConfirmCancelOpen(true);
+      } else {
+        setIsBlockDialogOpen(true);
+      }
+    } catch (error) {
+      toast({ title: "Erro", description: "Falha ao verificar agendamentos", variant: "destructive" });
+    } finally {
+      setIsProcessingBlock(false);
+    }
+  };
+
+  const saveBlocks = async (force = false) => {
+    if (targetUnitIds.length === 0) {
+      // Se desmarcou tudo, vamos remover todos os bloqueios daquela data
+      const dateStr = format(selectedDate!, "yyyy-MM-dd");
+      setIsProcessingBlock(true);
+      try {
+        await Promise.all(units.map(u => 
+          fetch(`/api/admin/blocked-days?date=${dateStr}&unitId=${u.id}`, {
+            method: "DELETE",
+            headers: { "x-tenant-slug": tenant.slug }
+          })
+        ));
+        toast({ title: "Sucesso", description: "Bloqueios removidos" });
+        setIsBlockDialogOpen(false);
+        fetchBlockedDays();
+      } catch (e) {
+        toast({ title: "Erro", description: "Falha ao remover bloqueios", variant: "destructive" });
+      } finally {
+        setIsProcessingBlock(false);
+      }
+      return;
+    }
+
+    setIsProcessingBlock(true);
+    try {
+      const dateStr = format(selectedDate!, "yyyy-MM-dd");
+      const res = await fetch("/api/admin/blocked-days", {
+        method: "POST",
+        headers: { 
+          "Content-Type": "application/json",
+          "x-tenant-slug": tenant.slug 
+        },
+        body: JSON.stringify({ 
+          date: dateStr, 
+          unitIds: targetUnitIds, 
+          forceCancel: force 
+        })
+      });
+
+      if (res.ok) {
+        toast({ title: "Sucesso", description: force ? "Agendamentos cancelados e dia bloqueado" : "Bloqueio atualizado com sucesso" });
+        setIsBlockDialogOpen(false);
+        setIsConfirmCancelOpen(false);
+        fetchBlockedDays();
+      }
+    } catch (error) {
+      toast({ title: "Erro", description: "Falha ao salvar bloqueio", variant: "destructive" });
+    } finally {
+      setIsProcessingBlock(false);
+    }
+  };
+
+  const isDayBlocked = (date: Date) => {
+    const dateStr = format(date, "yyyy-MM-dd");
+    return blockedDays.some(b => b.date === dateStr);
   };
 
   return (
@@ -239,6 +382,171 @@ export default function UnidadesPage() {
           ))}
         </div>
       )}
+
+      {/* Seção de Bloqueio de Agenda */}
+      <div className="mt-16 pt-8 border-t">
+        <div className="mb-6">
+          <h2 className="text-2xl font-serif font-bold tracking-tight">Bloqueio de Agenda</h2>
+          <p className="text-muted-foreground">
+            Selecione uma data no calendário abaixo para bloquear agendamentos em unidades específicas. 
+            Isso é útil para feriados, manutenções ou folgas coletivas.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
+          <Card className="lg:col-span-1">
+            <CardHeader>
+              <CardTitle className="text-lg">Calendário de Bloqueios</CardTitle>
+              <CardDescription>Clique em um dia para gerenciar</CardDescription>
+            </CardHeader>
+            <CardContent className="relative">
+              {isProcessingBlock && (
+                <div className="absolute inset-0 z-10 bg-background/60 backdrop-blur-[1px] flex items-center justify-center rounded-md">
+                  <div className="flex flex-col items-center gap-2">
+                    <Loader2 className="w-8 h-8 animate-spin text-primary" />
+                    <span className="text-xs font-medium text-muted-foreground">Verificando...</span>
+                  </div>
+                </div>
+              )}
+              <Calendar
+                mode="single"
+                selected={selectedDate}
+                onSelect={handleDateClick}
+                locale={ptBR}
+                disabled={isProcessingBlock}
+                className="rounded-md border shadow-sm"
+                modifiers={{
+                  blocked: (date) => isDayBlocked(date)
+                }}
+                modifiersClassNames={{
+                  blocked: "bg-destructive/10 text-destructive font-bold border-destructive/20"
+                }}
+              />
+            </CardContent>
+          </Card>
+
+          <Card className="lg:col-span-2">
+            <CardHeader>
+              <CardTitle className="text-lg">Datas Bloqueadas</CardTitle>
+              <CardDescription>Resumo dos próximos bloqueios ativos</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {blockedDays.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  Nenhum bloqueio configurado.
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {Array.from(new Set(blockedDays.map(b => b.date)))
+                    .sort()
+                    .filter(d => new Date(d) >= new Date(new Date().setHours(0,0,0,0)))
+                    .map(dateStr => {
+                      const dateBlocks = blockedDays.filter(b => b.date === dateStr);
+                      return (
+                        <div key={dateStr} className="flex items-center justify-between p-3 rounded-lg border bg-muted/20">
+                          <div>
+                            <p className="font-medium">{format(new Date(dateStr + "T12:00:00"), "dd 'de' MMMM, yyyy", { locale: ptBR })}</p>
+                            <div className="flex flex-wrap gap-1 mt-1">
+                              {dateBlocks.map(b => {
+                                const unit = units.find(u => u.id === b.unit_id);
+                                return (
+                                  <span key={b.unit_id} className="text-[10px] px-2 py-0.5 rounded bg-destructive/10 text-destructive border border-destructive/20">
+                                    {unit?.name || "Unidade"}
+                                  </span>
+                                );
+                              })}
+                            </div>
+                          </div>
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            className="text-muted-foreground hover:text-destructive"
+                            onClick={() => handleDateClick(new Date(dateStr + "T12:00:00"))}
+                          >
+                            Editar
+                          </Button>
+                        </div>
+                      );
+                    })
+                  }
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+
+      {/* Dialog de Seleção de Unidades */}
+      <Dialog open={isBlockDialogOpen} onOpenChange={setIsBlockDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Gerenciar Bloqueio</DialogTitle>
+            <DialogDescription>
+              Selecione quais unidades estarão fechadas em {selectedDate && format(selectedDate, "dd/MM/yyyy")}.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="py-4 space-y-4">
+            <p className="text-sm font-medium">Unidades para bloquear:</p>
+            <div className="space-y-3">
+              {units.map((unit) => (
+                <div key={unit.id} className="flex items-center space-x-3 p-2 rounded-md hover:bg-muted/50 transition-colors">
+                  <Checkbox 
+                    id={`unit-${unit.id}`}
+                    checked={targetUnitIds.includes(unit.id)}
+                    onCheckedChange={(checked) => {
+                      if (checked) {
+                        setTargetUnitIds([...targetUnitIds, unit.id]);
+                      } else {
+                        setTargetUnitIds(targetUnitIds.filter(id => id !== unit.id));
+                      }
+                    }}
+                  />
+                  <Label htmlFor={`unit-${unit.id}`} className="flex-1 cursor-pointer">{unit.name}</Label>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsBlockDialogOpen(false)}>Cancelar</Button>
+            <Button 
+              onClick={() => saveBlocks()} 
+              disabled={isProcessingBlock}
+              className="gap-2"
+            >
+              {isProcessingBlock && <Loader2 className="w-4 h-4 animate-spin" />}
+              Salvar Bloqueio
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Alert Dialog de Confirmação de Cancelamento */}
+      <AlertDialog open={isConfirmCancelOpen} onOpenChange={setIsConfirmCancelOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Existem agendamentos para este dia!</AlertDialogTitle>
+            <AlertDialogDescription>
+              Foram encontrados <strong>{appointmentCount}</strong> agendamento(s) para o dia {selectedDate && format(selectedDate, "dd/MM/yyyy")}.
+              Se você prosseguir com o bloqueio, todos esses agendamentos serão <strong>cancelados</strong>.
+              Deseja continuar?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Não, voltar</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={() => {
+                setIsConfirmCancelOpen(false);
+                setIsBlockDialogOpen(true);
+              }}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Sim, entendi e quero bloquear
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent className="max-w-2xl">

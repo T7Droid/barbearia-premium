@@ -35,8 +35,19 @@ export async function GET(request: NextRequest) {
     const unitId = searchParams.get("unitId");
     const totalDuration = parseInt(searchParams.get("totalDuration") || "0");
 
-    // 2. Buscar agendamentos no intervalo
-    const appointments = await AppointmentService.getBookedSlotsInRange(start, end, tenant.id);
+    // 2. Buscar agendamentos e bloqueios no intervalo
+    const [appointments, { data: blocks }] = await Promise.all([
+      AppointmentService.getBookedSlotsInRange(start, end, tenant.id),
+      supabaseAdmin
+        .from("blocked_days")
+        .select("date")
+        .eq("tenant_id", tenant.id)
+        .eq("unit_id", unitId)
+        .gte("date", start)
+        .lte("date", end)
+    ]);
+
+    const blockedDatesSet = new Set(blocks?.map(b => b.date) || []);
 
     // Agrupar agendamentos por data e barbeiro
     const bookedByDate: Record<string, {time: string, duration: number}[]> = {};
@@ -74,6 +85,12 @@ export async function GET(request: NextRequest) {
       const dateStr = format(date, "yyyy-MM-dd");
       const dayName = daysMap[date.getDay()];
       
+      // Se a data estiver explicitamente bloqueada pelo admin para esta unidade
+      if (blockedDatesSet.has(dateStr)) {
+        busyDates.push(dateStr);
+        continue;
+      }
+
       // Determinar a configuração do dia para este barbeiro/unidade
       let dayConfig = null;
       if (barberSchedule) {

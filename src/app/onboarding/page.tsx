@@ -36,10 +36,21 @@ function OnboardingContent() {
   const { toast } = useToast();
 
   useEffect(() => {
+    // Segurança: Se não houver plano na URL nem no contexto, redireciona para a home
+    if (!planFromUrl && !data.planId) {
+      toast({
+        title: "Atenção!",
+        description: "Por favor, escolha um plano para iniciar a criação da sua barbearia.",
+        variant: "destructive"
+      });
+      router.push("/");
+      return;
+    }
+
     if (planFromUrl && data.planId !== planFromUrl) {
       updateData({ planId: planFromUrl });
     }
-  }, [planFromUrl, data.planId, updateData]);
+  }, [planFromUrl, data.planId, updateData, router, toast]);
 
   const handleFinish = async () => {
     if (isSubmitting) return;

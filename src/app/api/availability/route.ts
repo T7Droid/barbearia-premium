@@ -24,6 +24,21 @@ export async function GET(request: NextRequest) {
   }
 
   try {
+    // 0. Verificar bloqueio administrativo para a unidade
+    if (unitId) {
+      const { data: isBlocked } = await supabaseAdmin
+        .from("blocked_days")
+        .select("id")
+        .eq("tenant_id", tenant.id)
+        .eq("unit_id", unitId)
+        .eq("date", date)
+        .maybeSingle();
+
+      if (isBlocked) {
+        return NextResponse.json([]);
+      }
+    }
+
     // Determinar o dia da semana (Usar Meio-dia para evitar shifts de fuso horário)
     const targetDate = new Date(date + "T12:00:00");
     const daysMap = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"];
