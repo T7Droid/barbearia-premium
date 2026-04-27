@@ -147,8 +147,24 @@ export default function AdminServices() {
     const url = editingService ? `/api/services/${editingService.id}` : "/api/services";
 
     try {
+      let finalImageUrl = "/cortepremium.jpeg"; // Fallback padrão
+      const nameLower = formData.name.toLowerCase();
+
+      if (nameLower.includes("coloração") || nameLower.includes("coloracao") || nameLower.includes("camuflagem")) {
+        finalImageUrl = "/coloracaocamuflagem.jpeg";
+      } else if (nameLower.includes("barba")) {
+        finalImageUrl = "/service-beard.png";
+      } else if (nameLower.includes("combo")) {
+        finalImageUrl = "/service-combo.png";
+      } else if (nameLower.includes("hidratação") || nameLower.includes("hidratacao")) {
+        finalImageUrl = "/service-hydration.png";
+      } else if (nameLower.includes("cabelo") || nameLower.includes("corte")) {
+        finalImageUrl = "/cortepremium.jpeg";
+      }
+
       const payload = {
         ...formData,
+        imageUrl: finalImageUrl,
         price: Math.round(parseFloat(formData.price) * 100),
         durationMinutes: parseInt(formData.durationMinutes)
       };
@@ -387,6 +403,8 @@ export default function AdminServices() {
                       </div>
                     </div>
 
+                    {/* Campo URL da Imagem ocultado a pedido */}
+                    {/*
                     <div className="space-y-2">
                       <Label htmlFor="imageUrl">URL da Imagem (opcional)</Label>
                       <div className="relative">
@@ -400,6 +418,7 @@ export default function AdminServices() {
                         />
                       </div>
                     </div>
+                    */}
                   </TabsContent>
 
                   <TabsContent value="unidades" className="p-6 space-y-4 m-0">
