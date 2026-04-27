@@ -20,12 +20,28 @@ export function Step3Services() {
   const addService = () => {
     if (!newService.name || !newService.price) return;
     
+    const nameLower = newService.name.toLowerCase();
+    let finalImageUrl = "/images/cortepremium.jpeg"; // Fallback padrão
+
+    if (nameLower.includes("coloração") || nameLower.includes("coloracao") || nameLower.includes("camuflagem")) {
+      finalImageUrl = "/images/coloracaocamuflagem.jpeg";
+    } else if (nameLower.includes("barba")) {
+      finalImageUrl = "/images/service-beard.png";
+    } else if (nameLower.includes("combo")) {
+      finalImageUrl = "/images/service-combo.png";
+    } else if (nameLower.includes("hidratação") || nameLower.includes("hidratacao")) {
+      finalImageUrl = "/images/service-hydration.png";
+    } else if (nameLower.includes("cabelo") || nameLower.includes("corte")) {
+      finalImageUrl = "/images/cortepremium.jpeg";
+    }
+    
     const serviceToAdd = {
       id: Math.random().toString(36).substr(2, 9),
       name: newService.name,
       price: Math.round(parseFloat(newService.price) * 100), // cents
       duration_minutes: parseInt(newService.duration),
       description: newService.description,
+      imageUrl: finalImageUrl,
     };
 
     updateData({ services: [...data.services, serviceToAdd] });

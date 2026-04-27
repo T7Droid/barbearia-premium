@@ -148,7 +148,8 @@ export async function POST(req: Request) {
       name: s.name,
       price: s.price,
       duration_minutes: s.duration_minutes,
-      description: s.description
+      description: s.description,
+      image_url: s.imageUrl
     }));
 
     const { data: createdServices, error: servicesError } = await supabaseAdmin

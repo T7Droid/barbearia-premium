@@ -20,6 +20,7 @@ export interface OnboardingData {
     price: number;
     duration_minutes: number;
     description: string;
+    imageUrl?: string;
   }>;
   barber: {
     name: string;

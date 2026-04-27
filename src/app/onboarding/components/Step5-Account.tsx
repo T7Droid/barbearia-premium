@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Key, Mail, User, Phone, Eye, EyeOff, Loader2, ArrowLeft, ShieldCheck } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 interface Step5AccountProps {
   onFinish: () => void;
@@ -17,6 +17,24 @@ export function Step5Account({ onFinish, isSubmitting }: Step5AccountProps) {
   const { data, updateData, setStep } = useOnboarding();
   const [showPassword, setShowPassword] = useState(false);
   const [confirmPassword, setConfirmPassword] = useState("");
+
+  // Sincronização para Plano Básico: Garante que Admin e Barbeiro sejam a mesma pessoa
+  useEffect(() => {
+    if (data.planId === "basico") {
+      const hasChanges = data.account.fullName !== data.barber.name || 
+                        data.account.email !== data.barber.email;
+      
+      if (hasChanges) {
+        updateData({
+          account: {
+            ...data.account,
+            fullName: data.barber.name,
+            email: data.barber.email
+          }
+        });
+      }
+    }
+  }, [data.planId, data.barber.name, data.barber.email, data.account.fullName, data.account.email, updateData]);
 
   const passwordRegex = /^(?=.*[a-zA-Z])(?=.*[0-9]).{6,}$/;
   const isPasswordSecure = passwordRegex.test(data.account.password || "");
@@ -53,8 +71,14 @@ export function Step5Account({ onFinish, isSubmitting }: Step5AccountProps) {
               onChange={(e) => updateData({ account: { ...data.account, fullName: e.target.value } })}
               placeholder="Ex: Carlos Oliveira"
               required
+              disabled={data.planId === "basico"}
             />
           </div>
+          {data.planId === "basico" && (
+            <p className="text-[10px] text-primary font-medium italic">
+              Nome fixado conforme o profissional
+            </p>
+          )}
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -70,8 +94,14 @@ export function Step5Account({ onFinish, isSubmitting }: Step5AccountProps) {
                 onChange={(e) => updateData({ account: { ...data.account, email: e.target.value } })}
                 placeholder="carlos@exemplo.com"
                 required
+                disabled={data.planId === "basico"}
               />
             </div>
+            {data.planId === "basico" && (
+              <p className="text-[10px] text-primary font-medium italic">
+                E-mail fixado conforme o profissional
+              </p>
+            )}
           </div>
           <div className="space-y-2">
             <Label htmlFor="phone">WhatsApp (contato)</Label>

@@ -147,19 +147,19 @@ export default function AdminServices() {
     const url = editingService ? `/api/services/${editingService.id}` : "/api/services";
 
     try {
-      let finalImageUrl = "/cortepremium.jpeg"; // Fallback padrão
+      let finalImageUrl = "/images/cortepremium.jpeg"; // Fallback padrão
       const nameLower = formData.name.toLowerCase();
 
       if (nameLower.includes("coloração") || nameLower.includes("coloracao") || nameLower.includes("camuflagem")) {
-        finalImageUrl = "/coloracaocamuflagem.jpeg";
+        finalImageUrl = "/images/coloracaocamuflagem.jpeg";
       } else if (nameLower.includes("barba")) {
-        finalImageUrl = "/service-beard.png";
+        finalImageUrl = "/images/service-beard.png";
       } else if (nameLower.includes("combo")) {
-        finalImageUrl = "/service-combo.png";
+        finalImageUrl = "/images/service-combo.png";
       } else if (nameLower.includes("hidratação") || nameLower.includes("hidratacao")) {
-        finalImageUrl = "/service-hydration.png";
+        finalImageUrl = "/images/service-hydration.png";
       } else if (nameLower.includes("cabelo") || nameLower.includes("corte")) {
-        finalImageUrl = "/cortepremium.jpeg";
+        finalImageUrl = "/images/cortepremium.jpeg";
       }
 
       const payload = {

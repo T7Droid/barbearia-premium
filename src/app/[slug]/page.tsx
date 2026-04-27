@@ -5,13 +5,91 @@ import { Layout } from "@/components/layout";
 import { Button } from "@/components/ui/button";
 import { useListServices } from "@workspace/api-client-react";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Clock, MapPin, Phone } from "lucide-react";
+import { Clock, MapPin, Phone, Loader2 } from "lucide-react";
 import { formatCurrencyFromCents } from "@/lib/format";
 import { useTenant } from "@/hooks/use-tenant";
+import { useState, useEffect } from "react";
 
 export default function Home() {
   const { data: services, isLoading, isError } = useListServices();
   const tenant = useTenant();
+  const [units, setUnits] = useState<any[]>([]);
+  const [isLoadingUnits, setIsLoadingUnits] = useState(true);
+
+  useEffect(() => {
+    const fetchUnits = async () => {
+      try {
+        const res = await fetch("/api/units", {
+          headers: { "x-tenant-slug": tenant.slug },
+          cache: "no-store"
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setUnits(data);
+        }
+      } catch (e) {
+        console.error("Erro ao carregar unidades", e);
+      } finally {
+        setIsLoadingUnits(false);
+      }
+    };
+    if (tenant.slug) fetchUnits();
+  }, [tenant.slug]);
+
+  const renderBusinessHours = (weeklyHours: any) => {
+    if (!weeklyHours) return <span>Horários não informados</span>;
+
+    const days = [
+      { key: "monday", label: "Seg." },
+      { key: "tuesday", label: "Ter." },
+      { key: "wednesday", label: "Qua." },
+      { key: "thursday", label: "Qui." },
+      { key: "friday", label: "Sex." },
+      { key: "saturday", label: "Sáb." },
+      { key: "sunday", label: "Dom." },
+    ];
+
+    const monToFriKeys = ["monday", "tuesday", "wednesday", "thursday", "friday"];
+    const monToFriValues = monToFriKeys.map(k => weeklyHours[k]);
+    
+    const first = monToFriValues[0];
+    const allMonFriSame = monToFriValues.every(v => 
+      v?.active === first?.active && 
+      v?.start === first?.start && 
+      v?.end === first?.end
+    );
+
+    const formatLine = (label: string, dayData: any) => {
+      if (!dayData?.active) {
+        return (
+          <span key={label} className="block">
+            {label}: <i className="opacity-70">Fechada</i>
+          </span>
+        );
+      }
+      const start = dayData.start?.replace(":00", "h");
+      const end = dayData.end?.replace(":00", "h");
+      return (
+        <span key={label} className="block">
+          {label}: {start} às {end}
+        </span>
+      );
+    };
+
+    const lines = [];
+    if (allMonFriSame) {
+      lines.push(formatLine("Seg a Sex", first));
+    } else {
+      monToFriKeys.forEach((key, idx) => {
+        lines.push(formatLine(days[idx].label, weeklyHours[key]));
+      });
+    }
+
+    lines.push(formatLine("Sáb", weeklyHours.saturday));
+    lines.push(formatLine("Dom", weeklyHours.sunday));
+
+    return lines;
+  };
 
   if (isError) return <div>Erro ao carregar serviços. Tente atualizar a página.</div>;
 
@@ -125,7 +203,20 @@ export default function Home() {
                 <Clock className="text-primary w-6 h-6" />
               </div>
               <h3 className="font-serif text-xl font-semibold mb-2">Horário</h3>
-              <p className="text-muted-foreground">Seg a Sex: 09h às 21h<br />Sáb: 09h às 18h</p>
+              <div className="text-muted-foreground text-sm space-y-4">
+                {isLoadingUnits ? (
+                  <Loader2 className="w-4 h-4 animate-spin mx-auto" />
+                ) : units.length === 0 ? (
+                  <span>Horários não informados</span>
+                ) : (
+                  units.map((unit) => (
+                    <div key={unit.id} className="space-y-1">
+                      <p className="font-bold text-primary text-xs uppercase tracking-widest">{unit.name}</p>
+                      {renderBusinessHours(unit.weekly_hours)}
+                    </div>
+                  ))
+                )}
+              </div>
             </div>
             <div className="flex flex-col items-center p-6">
               <a 
