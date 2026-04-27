@@ -363,59 +363,61 @@ export default function SettingsPage() {
           </CardContent>
         </Card>
 
-        <Card className="bg-card border-border/50 shadow-lg">
-          <CardHeader className="flex flex-row items-center gap-4">
-            <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-              <Ticket className="w-5 h-5 text-primary" />
-            </div>
-            <div className="flex-1">
-              <CardTitle>Sistema de Fidelidade</CardTitle>
-              <CardDescription>Clientes ganham pontos a cada agendamento.</CardDescription>
-            </div>
-            <Switch
-              checked={settings.isPointsEnabled}
-              onCheckedChange={(val) => setSettings({ ...settings, isPointsEnabled: val })}
-            />
-          </CardHeader>
-          {settings.isPointsEnabled && (
-            <CardContent className="pt-0">
-              <div className="flex flex-col gap-2 max-w-xs mt-2">
-                <Label className="text-[10px] text-muted-foreground uppercase font-bold">Pontos por Agendamento</Label>
-                <div className="flex items-center gap-4">
-                  <Input
-                    type="number"
-                    min={0}
-                    value={settings.pointsPerAppointment === 0 ? "0" : settings.pointsPerAppointment.toString().replace(/^0+/, '') || "0"}
-                    onChange={(e) => {
-                      const val = parseInt(e.target.value.replace(/^0+/, ''), 10);
-                      setSettings({ ...settings, pointsPerAppointment: isNaN(val) ? 0 : val });
-                    }}
-                    className="text-lg font-medium"
-                  />
-                  <span className="text-muted-foreground">Pts</span>
-                </div>
+        {settings.plan?.slug !== 'basico' && (
+          <Card className="bg-card border-border/50 shadow-lg">
+            <CardHeader className="flex flex-row items-center gap-4">
+              <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                <Ticket className="w-5 h-5 text-primary" />
               </div>
+              <div className="flex-1">
+                <CardTitle>Sistema de Fidelidade</CardTitle>
+                <CardDescription>Clientes ganham pontos a cada agendamento.</CardDescription>
+              </div>
+              <Switch
+                checked={settings.isPointsEnabled}
+                onCheckedChange={(val) => setSettings({ ...settings, isPointsEnabled: val })}
+              />
+            </CardHeader>
+            {settings.isPointsEnabled && (
+              <CardContent className="pt-0">
+                <div className="flex flex-col gap-2 max-w-xs mt-2">
+                  <Label className="text-[10px] text-muted-foreground uppercase font-bold">Pontos por Agendamento</Label>
+                  <div className="flex items-center gap-4">
+                    <Input
+                      type="number"
+                      min={0}
+                      value={settings.pointsPerAppointment === 0 ? "0" : settings.pointsPerAppointment.toString().replace(/^0+/, '') || "0"}
+                      onChange={(e) => {
+                        const val = parseInt(e.target.value.replace(/^0+/, ''), 10);
+                        setSettings({ ...settings, pointsPerAppointment: isNaN(val) ? 0 : val });
+                      }}
+                      className="text-lg font-medium"
+                    />
+                    <span className="text-muted-foreground">Pts</span>
+                  </div>
+                </div>
 
-              <div className="flex flex-col gap-2 max-w-xs mt-4">
-                <Label className="text-[10px] text-muted-foreground uppercase font-bold">Pontos Iniciais (Boas-vindas)</Label>
-                <div className="flex items-center gap-4">
-                  <Input
-                    type="number"
-                    min={0}
-                    value={settings.initialPoints === 0 ? "0" : settings.initialPoints.toString().replace(/^0+/, '') || "0"}
-                    onChange={(e) => {
-                      const val = parseInt(e.target.value.replace(/^0+/, ''), 10);
-                      setSettings({ ...settings, initialPoints: isNaN(val) ? 0 : val });
-                    }}
-                    className="text-lg font-medium"
-                  />
-                  <span className="text-muted-foreground">Pts</span>
+                <div className="flex flex-col gap-2 max-w-xs mt-4">
+                  <Label className="text-[10px] text-muted-foreground uppercase font-bold">Pontos Iniciais (Boas-vindas)</Label>
+                  <div className="flex items-center gap-4">
+                    <Input
+                      type="number"
+                      min={0}
+                      value={settings.initialPoints === 0 ? "0" : settings.initialPoints.toString().replace(/^0+/, '') || "0"}
+                      onChange={(e) => {
+                        const val = parseInt(e.target.value.replace(/^0+/, ''), 10);
+                        setSettings({ ...settings, initialPoints: isNaN(val) ? 0 : val });
+                      }}
+                      className="text-lg font-medium"
+                    />
+                    <span className="text-muted-foreground">Pts</span>
+                  </div>
+                  <p className="text-[10px] text-muted-foreground italic">Pontos atribuídos automaticamente ao criar a conta.</p>
                 </div>
-                <p className="text-[10px] text-muted-foreground italic">Pontos atribuídos automaticamente ao criar a conta.</p>
-              </div>
-            </CardContent>
-          )}
-        </Card>
+              </CardContent>
+            )}
+          </Card>
+        )}
 
         <Card className="bg-card border-border/50 shadow-lg">
           <CardHeader className="flex flex-row items-center gap-4 pb-2">

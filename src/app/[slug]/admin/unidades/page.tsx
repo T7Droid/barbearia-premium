@@ -185,7 +185,10 @@ export default function UnidadesPage() {
         body: JSON.stringify(formData)
       });
 
-      if (!res.ok) throw new Error("Erro ao salvar");
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.error || "Erro ao salvar");
+      }
 
       toast({ title: "Sucesso", description: `Unidade ${editingUnit ? "atualizada" : "criada"} com sucesso` });
       setIsDialogOpen(false);

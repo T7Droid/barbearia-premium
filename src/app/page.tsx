@@ -120,13 +120,29 @@ export default function RootPage() {
                   <Check className="w-5 h-5 text-primary shrink-0" />
                   <span><strong>300</strong> agendamentos/mês</span>
                 </li>
+                <li className="flex items-start gap-3 text-sm text-muted-foreground">
+                  <Check className="w-5 h-5 text-primary shrink-0" />
+                  <span>Painel de gestão para o barbeiro</span>
+                </li>
+                <li className="flex items-start gap-3 text-sm text-muted-foreground">
+                  <Check className="w-5 h-5 text-primary shrink-0" />
+                  <span>Pagamentos via Pix e Cartão</span>
+                </li>
+                <li className="flex items-start gap-3 text-sm text-muted-foreground">
+                  <Check className="w-5 h-5 text-primary shrink-0" />
+                  <span>Cancelamento e remarcação online</span>
+                </li>
+                <li className="flex items-start gap-3 text-sm text-muted-foreground">
+                  <Check className="w-5 h-5 text-primary shrink-0" />
+                  <span>Link próprio e QR Code exclusivo</span>
+                </li>
               </ul>
               <Button asChild variant="outline" className="w-full h-12 rounded-xl font-bold hover:bg-primary hover:text-white transition-all">
                 <a href="/onboarding?plan=basico">Começar agora</a>
               </Button>
             </div>
 
-            <div className="bg-card border-2 border-primary p-8 rounded-3xl flex flex-col relative shadow-2xl scale-105 z-10">
+            <div className="bg-card border-2 border-primary p-8 rounded-3xl flex flex-col relative shadow-2xl scale-105 z-10 mt-6 md:mt-0">
               <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-primary text-primary-foreground px-4 py-1 rounded-full text-xs font-bold uppercase tracking-wider shadow-lg">
                 Mais Popular
               </div>
@@ -150,6 +166,26 @@ export default function RootPage() {
                 <li className="flex items-start gap-3 text-sm text-muted-foreground">
                   <Check className="w-5 h-5 text-primary shrink-0" />
                   <span><strong>1.000</strong> agendamentos/mês</span>
+                </li>
+                <li className="flex items-start gap-3 text-sm text-muted-foreground">
+                  <Check className="w-5 h-5 text-primary shrink-0" />
+                  <span>Painel individual para cada barbeiro</span>
+                </li>
+                <li className="flex items-start gap-3 text-sm text-muted-foreground">
+                  <Check className="w-5 h-5 text-primary shrink-0" />
+                  <span>Pagamentos via Pix e Cartão</span>
+                </li>
+                <li className="flex items-start gap-3 text-sm text-muted-foreground">
+                  <Check className="w-5 h-5 text-primary shrink-0" />
+                  <span>Cancelamento e remarcação online</span>
+                </li>
+                <li className="flex items-start gap-3 text-sm text-muted-foreground">
+                  <Check className="w-5 h-5 text-primary shrink-0" />
+                  <span>Link próprio e QR Code exclusivo</span>
+                </li>
+                 <li className="flex items-start gap-3 text-sm text-muted-foreground">
+                  <Check className="w-5 h-5 text-primary shrink-0" />
+                  <span>Relatórios de comissões automáticos</span>
                 </li>
               </ul>
               <Button asChild className="w-full h-12 rounded-xl font-bold shadow-lg shadow-primary/20 bg-primary hover:bg-primary/90 transition-all">
@@ -180,6 +216,31 @@ export default function RootPage() {
                   <Check className="w-5 h-5 text-primary shrink-0" />
                   <span><strong>5.000</strong> agendamentos/mês</span>
                 </li>
+                <li className="flex items-start gap-3 text-sm text-muted-foreground">
+                  <Check className="w-5 h-5 text-primary shrink-0" />
+                  <span>Acessos individuais para toda a equipe</span>
+                </li>
+                <li className="flex items-start gap-3 text-sm text-muted-foreground">
+                  <Check className="w-5 h-5 text-primary shrink-0" />
+                  <span>Pagamentos via Pix e Cartão</span>
+                </li>
+                <li className="flex items-start gap-3 text-sm text-muted-foreground">
+                  <Check className="w-5 h-5 text-primary shrink-0" />
+                  <span>Cancelamento e remarcação online</span>
+                </li>
+                <li className="flex items-start gap-3 text-sm text-muted-foreground">
+                  <Check className="w-5 h-5 text-primary shrink-0" />
+                  <span>Link próprio e QR Code exclusivo</span>
+                </li>
+                  <li className="flex items-start gap-3 text-sm text-muted-foreground">
+                  <Check className="w-5 h-5 text-primary shrink-0" />
+                  <span>Relatórios de comissões automáticos</span>
+                </li>
+                 <li className="flex items-start gap-3 text-sm text-muted-foreground">
+                  <Check className="w-5 h-5 text-primary shrink-0" />
+                  <span>Sistema de Pontos e Fidelidade</span>
+                </li>
+              
               </ul>
               <Button asChild variant="outline" className="w-full h-12 rounded-xl font-bold hover:bg-primary hover:text-white transition-all">
                 <a href="/onboarding?plan=premium">Escolher Premium</a>
@@ -208,6 +269,38 @@ export default function RootPage() {
                 <li className="flex items-start gap-3 text-sm text-muted-foreground">
                   <Check className="w-5 h-5 text-primary shrink-0" />
                   <span>Agendamentos <strong>Ilimitados</strong></span>
+                </li>
+                <li className="flex items-start gap-3 text-sm text-muted-foreground">
+                  <Check className="w-5 h-5 text-primary shrink-0" />
+                  <span>Gestão profissional para grandes times</span>
+                </li>
+                <li className="flex items-start gap-3 text-sm text-muted-foreground">
+                  <Check className="w-5 h-5 text-primary shrink-0" />
+                  <span>Pagamentos via Pix e Cartão</span>
+                </li>
+                <li className="flex items-start gap-3 text-sm text-muted-foreground">
+                  <Check className="w-5 h-5 text-primary shrink-0" />
+                  <span>Cancelamento e remarcação online</span>
+                </li>
+                <li className="flex items-start gap-3 text-sm text-muted-foreground">
+                  <Check className="w-5 h-5 text-primary shrink-0" />
+                  <span>Link próprio e QR Code exclusivo</span>
+                </li>
+                  <li className="flex items-start gap-3 text-sm text-muted-foreground">
+                  <Check className="w-5 h-5 text-primary shrink-0" />
+                  <span>Relatórios de comissões automáticos</span>
+                </li>
+                 <li className="flex items-start gap-3 text-sm text-muted-foreground">
+                  <Check className="w-5 h-5 text-primary shrink-0" />
+                  <span>Sistema de Pontos e Fidelidade</span>
+                </li>
+                 <li className="flex items-start gap-3 text-sm text-muted-foreground">
+                  <Check className="w-5 h-5 text-primary shrink-0" />
+                  <span>Estatísticas avançadas e BI</span>
+                </li>
+                <li className="flex items-start gap-3 text-sm text-muted-foreground">
+                  <Check className="w-5 h-5 text-primary shrink-0" />
+                  <span className="font-bold text-primary italic">Suporte prioritário 24/7</span>
                 </li>
               </ul>
               <Button asChild variant="outline" className="w-full h-12 rounded-xl font-bold hover:bg-primary hover:text-white transition-all">

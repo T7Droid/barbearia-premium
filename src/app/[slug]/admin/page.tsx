@@ -18,7 +18,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useListAppointments, useGetStatsSummary } from "@workspace/api-client-react";
-import { Calendar, DollarSign, Scissors, Users, Settings, CreditCard, Wallet, CheckCircle2, AlertCircle, MapPin, Banknote, Smartphone, ChevronDown, Search } from "lucide-react";
+import { Calendar, DollarSign, Scissors, Users, Settings, CreditCard, Wallet, CheckCircle2, AlertCircle, MapPin, Banknote, Smartphone, ChevronDown, Search, TrendingUp } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
 import Link from "next/link";
@@ -34,6 +34,20 @@ import { FileText, FileSpreadsheet } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useToast } from "@/hooks/use-toast";
+import { 
+  BarChart, 
+  Bar, 
+  XAxis, 
+  YAxis, 
+  CartesianGrid, 
+  Tooltip as RechartsTooltip, 
+  ResponsiveContainer, 
+  PieChart, 
+  Pie, 
+  Cell, 
+  Legend 
+} from "recharts";
+import { useMemo } from "react";
 
 export default function Admin() {
   const { toast } = useToast();
@@ -53,6 +67,28 @@ export default function Admin() {
     year: selectedYear,
     month: selectedMonth
   });
+
+  const [settings, setSettings] = useState<any>(null);
+  const [loadingSettings, setLoadingSettings] = useState(true);
+
+  const fetchSettings = useCallback(async () => {
+    if (!tenant?.slug) return;
+    try {
+      const res = await fetch("/api/settings", { 
+        headers: { "x-tenant-slug": tenant.slug } 
+      });
+      const data = await res.json();
+      setSettings(data);
+    } catch (e) {
+      console.error("Erro ao buscar plano:", e);
+    } finally {
+      setLoadingSettings(false);
+    }
+  }, [tenant?.slug]);
+
+  useEffect(() => {
+    fetchSettings();
+  }, [fetchSettings]);
   
   const { refreshProfile } = useUserStore();
 
@@ -108,7 +144,48 @@ export default function Admin() {
     } finally {
       setPayingId(null);
     }
-  }, [paymentMethodMap, tenant?.slug, toast, refetchAppointments]);
+  }, [tenant?.slug, paymentMethodMap, refetchAppointments, toast]);
+
+  // -------------------------------------------------------
+  // Processamento de dados para os gráficos
+  // -------------------------------------------------------
+  const chartData = useMemo(() => {
+    if (!appointments || appointments.length === 0) return { services: [], status: [], barbers: [] };
+
+    const serviceMap: Record<string, number> = {};
+    const statusMap: Record<string, number> = {};
+    const barberMap: Record<string, number> = {};
+
+    appointments.forEach((a: any) => {
+      // 1. Faturamento por Serviço (Apenas pagos e não cancelados)
+      if (a.is_paid && a.status !== 'cancelled') {
+        const services = a.services_json || [];
+        services.forEach((s: any) => {
+          serviceMap[s.name] = (serviceMap[s.name] || 0) + (Number(a.total_price) / services.length);
+        });
+      }
+
+      // 2. Status dos Agendamentos
+      const statusLabel = a.status === 'confirmed' ? 'Confirmado' : a.status === 'pending' ? 'Pendente' : 'Cancelado';
+      statusMap[statusLabel] = (statusMap[statusLabel] || 0) + 1;
+
+      // 3. Agendamentos por Barbeiro
+      if (a.status !== 'cancelled') {
+        const barberName = a.barbers?.name || "Sem Nome";
+        barberMap[barberName] = (barberMap[barberName] || 0) + 1;
+      }
+    });
+
+    return {
+      services: Object.entries(serviceMap).map(([name, value]) => ({ name, value: Math.round(value / 100) })), // Em reais
+      status: Object.entries(statusMap).map(([name, value]) => ({ name, value })),
+      barbers: Object.entries(barberMap).map(([name, value]) => ({ name, value })),
+    };
+  }, [appointments]);
+
+  const COLORS = ['#daa520', '#1a1a1a', '#4b5563', '#9ca3af', '#e5e7eb'];
+
+  const isEscala = settings?.plan?.slug === 'escala';
 
   const getStatusBadge = (status: string) => {
     switch(status) {
@@ -313,8 +390,79 @@ export default function Admin() {
           </Card>
         </div>
 
-        {}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+      {/* SEÇÃO DE BI - EXCLUSIVA ESCALA */}
+      {isEscala ? (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+          <Card className="bg-card border-border/50 shadow-lg">
+            <CardHeader>
+              <CardTitle className="text-lg font-serif">Faturamento por Serviço (R$)</CardTitle>
+            </CardHeader>
+            <CardContent className="h-[300px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={chartData.services}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={60}
+                    outerRadius={80}
+                    paddingAngle={5}
+                    dataKey="value"
+                    label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}
+                  >
+                    {chartData.services.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <RechartsTooltip formatter={(value) => `R$ ${value},00`} />
+                  <Legend />
+                </PieChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-card border-border/50 shadow-lg">
+            <CardHeader>
+              <CardTitle className="text-lg font-serif">Agendamentos por Barbeiro</CardTitle>
+            </CardHeader>
+            <CardContent className="h-[300px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={chartData.barbers} margin={{ top: 20, right: 30, left: 0, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} opacity={0.1} />
+                  <XAxis dataKey="name" fontSize={12} tickLine={false} axisLine={false} />
+                  <YAxis fontSize={12} tickLine={false} axisLine={false} />
+                  <RechartsTooltip cursor={{ fill: 'rgba(218, 165, 32, 0.05)' }} />
+                  <Bar dataKey="value" fill="#daa520" radius={[4, 4, 0, 0]} name="Qtd. Atendimentos" />
+                </BarChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+        </div>
+      ) : (
+        <Card className="mb-8 border-dashed border-2 border-primary/20 bg-primary/[0.02] relative overflow-hidden group">
+          <div className="absolute inset-0 bg-grid-white/[0.02] bg-[size:20px_20px]" />
+          <CardContent className="flex flex-col items-center justify-center py-12 text-center relative z-10">
+            <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mb-6 animate-bounce">
+              <TrendingUp className="w-8 h-8 text-primary" />
+            </div>
+            <h3 className="text-2xl font-serif font-bold text-foreground mb-2">Dashboard de BI e Estatísticas Avançadas</h3>
+            <p className="text-muted-foreground max-w-md mb-8">
+              Visualize o crescimento da sua barbearia com gráficos de faturamento, performance de profissionais e tendências de mercado.
+            </p>
+            <Button asChild className="gap-2 shadow-xl shadow-primary/20">
+              <Link href={getLink("/admin/configuracoes")}>
+                <CreditCard className="w-4 h-4" /> Liberar agora no Plano Escala
+              </Link>
+            </Button>
+          </CardContent>
+          <div className="absolute top-0 right-0 w-1/3 h-full opacity-5 pointer-events-none group-hover:opacity-10 transition-opacity">
+            <div className="w-full h-full bg-primary rounded-full blur-[100px]" />
+          </div>
+        </Card>
+      )}
+
+      {/* Lista de Agendamentos */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
           <h2 className="text-2xl font-serif font-bold text-foreground">Últimos Agendamentos</h2>
           
           <div className="flex items-center gap-3">
