@@ -16,11 +16,14 @@ import {
   TrendingUp,
   CheckCircle2,
   AlertCircle,
-  Loader2,
   Wallet,
   FileText,
   FileSpreadsheet,
-  Download
+  Download,
+  Banknote,
+  Smartphone,
+  CreditCard,
+  Loader2
 } from "lucide-react";
 import { 
   Select, 
@@ -79,6 +82,26 @@ export default function BarberDashboard() {
       return `${totalFormatted} (${details})`;
     }
     return totalFormatted;
+  };
+
+  const getPaymentMethodLabel = (method: string | null | undefined) => {
+    switch (method) {
+      case "cash":   return "Dinheiro";
+      case "pix":    return "Pix";
+      case "card":   return "Cartão";
+      case "online": return "Online";
+      case "mercado_pago": return "Cartão Online";
+      default:       return "No Local";
+    }
+  };
+
+  const getPaymentMethodIcon = (method: string | null | undefined) => {
+    switch (method) {
+      case "pix":    return <Smartphone className="w-3.5 h-3.5" />;
+      case "card":   return <CreditCard className="w-3.5 h-3.5" />;
+      case "online": return <CreditCard className="w-3.5 h-3.5" />;
+      default:       return <Banknote className="w-3.5 h-3.5" />; 
+    }
   };
 
   const [todayAppointments, setTodayAppointments] = useState<any[]>([]);
@@ -318,14 +341,14 @@ export default function BarberDashboard() {
                   <div className="text-2xl font-bold text-foreground">
                     {formatCurrencyFromCents(
                       (todayAppointments || [])
-                        .filter(app => app.status === 'completed' && app.is_paid)
+                        .filter(app => app.is_paid && app.status !== 'cancelled')
                         .reduce((acc, app) => acc + Math.round(((app.total_price || 0) * commissionPercentage) / 100), 0)
                     )}
                   </div>
                   <p className="text-[10px] font-bold text-muted-foreground mt-1 uppercase">
                     + {formatCurrencyFromCents(
                       (todayAppointments || [])
-                        .filter(app => (app.status === 'confirmed' || app.status === 'pending') || (app.status === 'completed' && !app.is_paid))
+                        .filter(app => !app.is_paid && app.status !== 'cancelled')
                         .reduce((acc, app) => acc + Math.round(((app.total_price || 0) * commissionPercentage) / 100), 0)
                     )} a receber
                   </p>
@@ -458,6 +481,7 @@ export default function BarberDashboard() {
                               <TableHead className="text-foreground">Serviço</TableHead>
                               <TableHead className="text-foreground">Valor</TableHead>
                               <TableHead className="text-foreground">Comissão</TableHead>
+                              <TableHead className="text-foreground">Pagamento</TableHead>
                               <TableHead className="text-foreground">Status</TableHead>
                             </TableRow>
                           </TableHeader>
@@ -481,6 +505,13 @@ export default function BarberDashboard() {
                                 </TableCell>
                                 <TableCell className="text-green-600 font-bold">
                                   {formatCurrencyFromCents(Math.round(((app.total_price || 0) * commissionPercentage) / 100))}
+                                </TableCell>
+                                <TableCell>
+                                  <div className={`flex items-center gap-1.5 font-medium text-xs ${app.is_paid ? 'text-green-500' : 'text-muted-foreground'}`}>
+                                    {app.is_paid && <CheckCircle2 className="w-3.5 h-3.5" />}
+                                    {getPaymentMethodIcon(app.payment_method)}
+                                    <span>{app.is_paid ? getPaymentMethodLabel(app.payment_method) : "No Local"}</span>
+                                  </div>
                                 </TableCell>
                                 <TableCell>
                                   <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider

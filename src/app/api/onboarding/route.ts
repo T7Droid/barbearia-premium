@@ -163,7 +163,11 @@ export async function POST(req: Request) {
 
     // 6. Criar Barbeiro e sua Conta (se necessário)
     let barberUserId = createdUserId; // Assume o Admin por padrão
-    const isBarberDifferent = barber.email.toLowerCase() !== account.email.toLowerCase();
+    
+    // Se for plano básico, forçamos ser a mesma pessoa (1 unidade, 1 barbeiro)
+    // Isso evita criar 2 perfis/auths diferentes.
+    const isBasicPlan = planId === "basico";
+    const isBarberDifferent = !isBasicPlan && barber.email.toLowerCase() !== account.email.toLowerCase();
 
     if (isBarberDifferent) {
       // Criar conta para o Barbeiro colaborador
