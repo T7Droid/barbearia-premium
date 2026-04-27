@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { useTenant } from "@/hooks/use-tenant";
-import { MapPin, Plus, Trash2, Edit2, ExternalLink, Loader2, LayoutGrid, Clock } from "lucide-react";
+import { MapPin, Plus, Trash2, Edit2, ExternalLink, Loader2, LayoutGrid, Clock, TrendingUp, Sparkles, ShieldCheck } from "lucide-react";
 import Link from "next/link";
 import { Switch } from "@/components/ui/switch";
 import {
@@ -48,6 +48,11 @@ export default function UnidadesPage() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [editingUnit, setEditingUnit] = useState<any>(null);
+
+  // Estados para Upgrade e Planos
+  const [settings, setSettings] = useState<any>(null);
+  const [isUpgradeDialogOpen, setIsUpgradeDialogOpen] = useState(false);
+  const [upgradeTarget, setUpgradeTarget] = useState<"premium" | "escala">("premium");
 
   // Estados para Bloqueio de Datas
   const [blockedDays, setBlockedDays] = useState<any[]>([]);
@@ -103,6 +108,18 @@ export default function UnidadesPage() {
 
   const getLink = (path: string) => `/${tenant?.slug}${path}`;
 
+  const fetchSettings = async () => {
+    try {
+      const res = await fetch("/api/settings", { 
+        headers: { "x-tenant-slug": tenant.slug } 
+      });
+      const data = await res.json();
+      setSettings(data);
+    } catch (e) {
+      console.error("Erro ao carregar configurações:", e);
+    }
+  };
+
   const fetchUnits = async () => {
     try {
       const res = await fetch("/api/units", {
@@ -132,11 +149,32 @@ export default function UnidadesPage() {
   useEffect(() => {
     if (tenant.slug) {
       fetchUnits();
+      fetchSettings();
       fetchBlockedDays();
     }
   }, [tenant.slug]);
 
   const handleOpenDialog = (unit: any = null) => {
+    if (!unit) {
+      // Verificar limites de plano para novas unidades
+      const currentPlan = settings?.plan?.slug || 'basico';
+      const unitCount = units.length;
+
+      // Básico e Profissional permitem apenas 1 unidade
+      if ((currentPlan === 'basico' || currentPlan === 'profissional') && unitCount >= 1) {
+        setUpgradeTarget('premium');
+        setIsUpgradeDialogOpen(true);
+        return;
+      }
+
+      // Premium permite até 3 unidades
+      if (currentPlan === 'premium' && unitCount >= 3) {
+        setUpgradeTarget('escala');
+        setIsUpgradeDialogOpen(true);
+        return;
+      }
+    }
+
     if (unit) {
       setEditingUnit(unit);
       setFormData({
@@ -708,6 +746,65 @@ export default function UnidadesPage() {
               {editingUnit ? "Salvar Alterações" : "Criar Unidade"}
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog de Upgrade de Plano */}
+      <Dialog open={isUpgradeDialogOpen} onOpenChange={setIsUpgradeDialogOpen}>
+        <DialogContent className="max-w-md p-0 overflow-hidden border-none shadow-2xl">
+          <div className={`h-2 w-full ${upgradeTarget === 'premium' ? 'bg-amber-500' : 'bg-purple-600'}`} />
+          <div className="p-8">
+            <div className="flex flex-col items-center text-center space-y-4">
+              <div className={`w-16 h-16 rounded-2xl flex items-center justify-center mb-2 ${
+                upgradeTarget === 'premium' ? 'bg-amber-500/10 text-amber-500' : 'bg-purple-600/10 text-purple-600'
+              }`}>
+                {upgradeTarget === 'premium' ? <Sparkles className="w-8 h-8" /> : <TrendingUp className="w-8 h-8" />}
+              </div>
+              
+              <div className="space-y-2">
+                <DialogTitle className="text-2xl font-serif font-bold">
+                  Limite de Unidades Atingido
+                </DialogTitle>
+                <DialogDescription className="text-base">
+                  Seu plano atual ({settings?.plan?.name}) permite até <strong>{settings?.plan?.units}</strong> {settings?.plan?.units === 1 ? 'unidade' : 'unidades'}.
+                </DialogDescription>
+              </div>
+
+              <div className="w-full bg-muted/30 rounded-xl p-4 text-sm text-left space-y-3 border border-border/50">
+                <p className="font-bold flex items-center gap-2">
+                   <ShieldCheck className="w-4 h-4 text-primary" />
+                   Vantagens do Plano {upgradeTarget === 'premium' ? 'Premium' : 'Escala'}:
+                </p>
+                <ul className="space-y-2">
+                  <li className="flex items-start gap-2">
+                    <div className="w-1.5 h-1.5 rounded-full bg-primary mt-1.5 shrink-0" />
+                    <span>Cadastre até <strong>{upgradeTarget === 'premium' ? '3' : '10'} unidades</strong> simultâneas</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <div className="w-1.5 h-1.5 rounded-full bg-primary mt-1.5 shrink-0" />
+                    <span>Gestão centralizada de toda a sua rede</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <div className="w-1.5 h-1.5 rounded-full bg-primary mt-1.5 shrink-0" />
+                    <span>Relatórios consolidados por unidade</span>
+                  </li>
+                </ul>
+              </div>
+
+              <div className="w-full pt-4 flex flex-col gap-3">
+                <Button asChild className={`w-full h-12 font-bold text-base shadow-lg transition-all active:scale-95 ${
+                  upgradeTarget === 'premium' ? 'bg-amber-500 hover:bg-amber-600 shadow-amber-500/20' : 'bg-purple-600 hover:bg-purple-700 shadow-purple-600/20'
+                }`}>
+                  <Link href={getLink(`/admin/configuracoes?upgrade=${upgradeTarget}`)}>
+                    Fazer Upgrade Agora
+                  </Link>
+                </Button>
+                <Button variant="ghost" onClick={() => setIsUpgradeDialogOpen(false)} className="text-muted-foreground">
+                  Talvez mais tarde
+                </Button>
+              </div>
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
     </div>
