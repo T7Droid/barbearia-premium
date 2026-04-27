@@ -46,7 +46,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
 
         // Usar refreshProfile para centralizar a busca do usuário no store
         const userData = await refreshProfile(tenant?.slug);
-        
+
         if (userData) {
           DemoStore.saveUser(userData);
         } else {
@@ -146,7 +146,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
               {user?.role === 'admin' && (
                 <Link href={getLink("/admin")} onClick={(e) => handleLinkClick(e, "/admin")} className={`text-sm font-medium transition-colors hover:text-primary ${pathname.startsWith(getLink("/admin")) ? 'text-primary' : 'text-muted-foreground'}`}>Administração</Link>
               )}
-              
+
               {(user?.role === 'barber' || user?.role === 'admin') && (
                 <Link href={getLink("/barber")} onClick={(e) => handleLinkClick(e, "/barber")} className={`text-sm font-medium transition-colors hover:text-primary ${pathname.startsWith(getLink("/barber")) ? 'text-primary' : 'text-muted-foreground'}`}>Painel Profissional</Link>
               )}
@@ -187,7 +187,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
                     </div>
                   </DropdownMenuLabel>
                   <DropdownMenuSeparator />
-                  
+
                   {/* Itens Administrativos */}
                   {user.role === 'admin' && (
                     <>

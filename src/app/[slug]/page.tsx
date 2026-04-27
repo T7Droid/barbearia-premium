@@ -25,7 +25,9 @@ export default function Home() {
         });
         if (res.ok) {
           const data = await res.json();
-          setUnits(data);
+          // Ordenar por nome para garantir consistência entre as seções do footer
+          const sortedData = data.sort((a: any, b: any) => a.name.localeCompare(b.name));
+          setUnits(sortedData);
         }
       } catch (e) {
         console.error("Erro ao carregar unidades", e);
@@ -196,7 +198,23 @@ export default function Home() {
                 <MapPin className="text-primary w-6 h-6" />
               </div>
               <h3 className="font-serif text-xl font-semibold mb-2">Localização</h3>
-              <p className="text-muted-foreground">Rua Frei Gaspar 7777<br />Centro - São Vicente</p>
+              <div className="text-muted-foreground text-sm space-y-4">
+                {isLoadingUnits ? (
+                  <Loader2 className="w-4 h-4 animate-spin mx-auto" />
+                ) : units.length === 0 ? (
+                  <p>Rua Frei Gaspar 7777<br />Centro - São Vicente</p>
+                ) : (
+                  units.map((unit) => (
+                    <div key={unit.id} className="space-y-1">
+                      <p className="font-bold text-yellow-400 text-xs uppercase tracking-widest">{unit.name}</p>
+                      <p>
+                        {unit.address}, {unit.number}<br />
+                        {unit.city} - {unit.state}
+                      </p>
+                    </div>
+                  ))
+                )}
+              </div>
             </div>
             <div className="flex flex-col items-center p-6">
               <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mb-4">
@@ -211,7 +229,7 @@ export default function Home() {
                 ) : (
                   units.map((unit) => (
                     <div key={unit.id} className="space-y-1">
-                      <p className="font-bold text-primary text-xs uppercase tracking-widest">{unit.name}</p>
+                      <p className="font-bold text-yellow-400 text-xs uppercase tracking-widest">{unit.name}</p>
                       {renderBusinessHours(unit.weekly_hours)}
                     </div>
                   ))
