@@ -171,7 +171,7 @@ export default function Admin() {
 
       // 3. Agendamentos por Barbeiro
       if (a.status !== 'cancelled') {
-        const barberName = a.barbers?.name || "Sem Nome";
+        const barberName = a.barber_name || "Sem Nome";
         barberMap[barberName] = (barberMap[barberName] || 0) + 1;
       }
     });
