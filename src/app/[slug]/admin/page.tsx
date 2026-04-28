@@ -391,7 +391,12 @@ export default function Admin() {
         </div>
 
       {/* SEÇÃO DE BI - EXCLUSIVA ESCALA */}
-      {isEscala ? (
+      {loadingSettings ? (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+          <Skeleton className="h-[380px] w-full rounded-xl" />
+          <Skeleton className="h-[380px] w-full rounded-xl" />
+        </div>
+      ) : isEscala ? (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
           <Card className="bg-card border-border/50 shadow-lg">
             <CardHeader>

@@ -27,6 +27,14 @@ import {
   X,
   LayoutGrid
 } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
 import { 
   Tabs, 
@@ -39,7 +47,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useTenant } from "@/hooks/use-tenant";
 import { supabase } from "@/lib/supabase";
-import { Mail, AlertCircle } from "lucide-react";
+import { Mail, AlertCircle, TrendingUp, Sparkles, ShieldCheck } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
@@ -64,6 +72,11 @@ export default function AdminBarbers() {
   const [showEmail, setShowEmail] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [isResettingPassword, setIsResettingPassword] = useState(false);
+
+  // Estados para Upgrade e Planos
+  const [settings, setSettings] = useState<any>(null);
+  const [isUpgradeDialogOpen, setIsUpgradeDialogOpen] = useState(false);
+  const [upgradeTarget, setUpgradeTarget] = useState<"profissional" | "premium" | "escala">("profissional");
 
   const [formData, setFormData] = useState({
     name: "",
@@ -96,19 +109,22 @@ export default function AdminBarbers() {
     if (!tenant?.slug) return;
     try {
       const headers = { "x-tenant-slug": tenant.slug };
-      const [barbersRes, unitsRes, servicesRes] = await Promise.all([
+      const [barbersRes, unitsRes, servicesRes, settingsRes] = await Promise.all([
         fetch("/api/barbers", { headers, cache: "no-store" }),
         fetch("/api/units", { headers }),
-        fetch("/api/services", { headers })
+        fetch("/api/services", { headers }),
+        fetch("/api/settings", { headers })
       ]);
       
       const barbersData = await barbersRes.json();
       const unitsData = await unitsRes.json();
       const servicesData = await servicesRes.json();
+      const settingsData = await settingsRes.json();
       
       if (Array.isArray(barbersData)) setBarbers(barbersData);
       if (Array.isArray(unitsData)) setUnits(unitsData);
       if (Array.isArray(servicesData)) setServices(servicesData);
+      if (settingsData) setSettings(settingsData);
     } catch (error) {
       toast({ title: "Erro", description: "Falha ao carregar dados", variant: "destructive" });
     } finally {
@@ -122,6 +138,33 @@ export default function AdminBarbers() {
   }, [tenant]);
 
   const handleOpenModal = (barber?: any) => {
+    if (!barber) {
+      // Verificar limites de plano para novos barbeiros
+      const currentPlan = settings?.plan?.slug || 'basico';
+      const barberCount = barbers.filter(b => b.active).length;
+
+      // Básico permite 1
+      if (currentPlan === 'basico' && barberCount >= 1) {
+        setUpgradeTarget('profissional');
+        setIsUpgradeDialogOpen(true);
+        return;
+      }
+
+      // Profissional permite 3
+      if (currentPlan === 'profissional' && barberCount >= 3) {
+        setUpgradeTarget('premium');
+        setIsUpgradeDialogOpen(true);
+        return;
+      }
+
+      // Premium permite 10
+      if (currentPlan === 'premium' && barberCount >= 10) {
+        setUpgradeTarget('escala');
+        setIsUpgradeDialogOpen(true);
+        return;
+      }
+    }
+
     if (barber) {
       setEditingBarber(barber);
       setFormData({
@@ -628,6 +671,67 @@ export default function AdminBarbers() {
           </Card>
         </div>
       )}
+
+      {/* Dialog de Upgrade de Plano */}
+      <Dialog open={isUpgradeDialogOpen} onOpenChange={setIsUpgradeDialogOpen}>
+        <DialogContent className="max-w-md p-0 overflow-hidden border-none shadow-2xl">
+          <div className={`h-2 w-full ${upgradeTarget === 'profissional' ? 'bg-blue-500' : upgradeTarget === 'premium' ? 'bg-amber-500' : 'bg-purple-600'}`} />
+          <div className="p-8">
+            <div className="flex flex-col items-center text-center space-y-4">
+              <div className={`w-16 h-16 rounded-2xl flex items-center justify-center mb-2 ${
+                upgradeTarget === 'profissional' ? 'bg-blue-500/10 text-blue-500' : upgradeTarget === 'premium' ? 'bg-amber-500/10 text-amber-500' : 'bg-purple-600/10 text-purple-600'
+              }`}>
+                {upgradeTarget === 'profissional' ? <UserPlus className="w-8 h-8" /> : upgradeTarget === 'premium' ? <Sparkles className="w-8 h-8" /> : <TrendingUp className="w-8 h-8" />}
+              </div>
+              
+              <div className="space-y-2">
+                <DialogTitle className="text-2xl font-serif font-bold">
+                  Limite de Barbeiros Atingido
+                </DialogTitle>
+                <DialogDescription className="text-base">
+                  Seu plano atual ({settings?.plan?.name}) permite no máximo <strong>{settings?.plan?.max_barbers || settings?.plan?.barbers}</strong> {settings?.plan?.max_barbers === 1 ? 'barbeiro ativo' : 'barbeiros ativos'}.
+                </DialogDescription>
+              </div>
+
+              <div className="w-full bg-muted/30 rounded-xl p-4 text-sm text-left space-y-3 border border-border/50">
+                <p className="font-bold flex items-center gap-2">
+                   <ShieldCheck className="w-4 h-4 text-primary" />
+                   Vantagens do Plano {upgradeTarget === 'profissional' ? 'Profissional' : upgradeTarget === 'premium' ? 'Premium' : 'Escala'}:
+                </p>
+                <ul className="space-y-2">
+                  <li className="flex items-start gap-2">
+                    <div className="w-1.5 h-1.5 rounded-full bg-primary mt-1.5 shrink-0" />
+                    <span>Cadastre até <strong>{upgradeTarget === 'profissional' ? '3' : upgradeTarget === 'premium' ? '10' : '30'} barbeiros</strong> simultâneos</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <div className="w-1.5 h-1.5 rounded-full bg-primary mt-1.5 shrink-0" />
+                    <span>Acesso individual e painel para cada profissional</span>
+                  </li>
+                  {upgradeTarget !== 'profissional' && (
+                    <li className="flex items-start gap-2">
+                      <div className="w-1.5 h-1.5 rounded-full bg-primary mt-1.5 shrink-0" />
+                      <span>{upgradeTarget === 'premium' ? 'Relatórios de comissões automáticos' : 'Agendamentos Ilimitados'}</span>
+                    </li>
+                  )}
+                </ul>
+              </div>
+
+              <div className="w-full pt-4 flex flex-col gap-3">
+                <Button asChild className={`w-full h-12 font-bold text-base shadow-lg transition-all active:scale-95 ${
+                  upgradeTarget === 'profissional' ? 'bg-blue-500 hover:bg-blue-600 shadow-blue-500/20' : upgradeTarget === 'premium' ? 'bg-amber-500 hover:bg-amber-600 shadow-amber-500/20' : 'bg-purple-600 hover:bg-purple-700 shadow-purple-600/20'
+                }`}>
+                  <Link href={getLink(`/admin/configuracoes?upgrade=${upgradeTarget}`)}>
+                    Fazer Upgrade Agora
+                  </Link>
+                </Button>
+                <Button variant="ghost" onClick={() => setIsUpgradeDialogOpen(false)} className="w-full">
+                  Agora Não
+                </Button>
+              </div>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

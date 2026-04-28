@@ -31,7 +31,7 @@ export function GlobalLayout({ children }: { children: React.ReactNode }) {
                 <span className="text-yellow-400">King</span>Barbers
               </span>
             </div>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-xs text-muted-foreground text-center">
               © {new Date().getFullYear()} KingBarbers - Sistema de Agendamento Profissional. Todos os direitos reservados.
             </p>
             <div className="flex items-center gap-4 text-xs text-muted-foreground mt-2">

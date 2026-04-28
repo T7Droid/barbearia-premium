@@ -333,12 +333,16 @@ export default function SettingsPage() {
               <CreditCard className="w-5 h-5 text-primary" />
             </div>
             <div className="flex-1">
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 <CardTitle>Minha Assinatura</CardTitle>
-                <div className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${settings.isSubscriptionActive ? 'bg-green-500/20 text-green-500' : 'bg-red-500/20 text-red-500'
-                  }`}>
+                <div className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${settings.isSubscriptionActive ? 'bg-green-500/20 text-green-500' : 'bg-red-500/20 text-red-500'}`}>
                   {settings.isSubscriptionActive ? 'Ativa' : 'Inativa/Vencida'}
                 </div>
+                {settings.plan && (
+                  <div className="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-primary/20 text-primary">
+                    Plano {settings.plan.name}
+                  </div>
+                )}
               </div>
               <CardDescription>Gerencie seu plano e pagamentos do KingBarber.</CardDescription>
             </div>
