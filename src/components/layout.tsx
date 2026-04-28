@@ -34,7 +34,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
   }
 
   const { user, setUser, refreshProfile } = useUserStore();
-  const [isPointsEnabled, setIsPointsEnabled] = useState(true);
+  const [isPointsEnabled, setIsPointsEnabled] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -114,8 +114,12 @@ export function Layout({ children }: { children: React.ReactNode }) {
       <header className="border-b border-border/40 bg-card/50 backdrop-blur-md sticky top-0 z-50">
         <div className="container mx-auto px-4 h-16 flex items-center justify-between">
           <Link href={getLink("/")} onClick={(e) => handleLinkClick(e, "/")} className="flex items-center gap-2 group">
-            <Scissors className="w-6 h-6 text-primary group-hover:text-primary/80 transition-colors" />
-            <span className="font-serif text-xl font-bold tracking-wide uppercase italic">
+            {isRoot || !tenant || tenant.name === "King Barber" || tenant.name === "KingBarbers" ? (
+              <Scissors className="w-6 h-6 text-primary group-hover:text-primary/80 transition-colors" />
+            ) : (
+              <img src="/icons/icone_barbearia.png" alt="Logo" className="h-[2em] w-auto object-contain" />
+            )}
+            <span className="font-serif text-xl font-bold tracking-wide uppercase">
               {isRoot || !tenant || tenant.name === "King Barber" || tenant.name === "KingBarbers" ? (
                 <>
                   <span className="text-yellow-400">King</span>Barbers

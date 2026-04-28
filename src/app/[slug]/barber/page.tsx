@@ -402,7 +402,7 @@ export default function BarberDashboard() {
                   <TrendingUp className="w-4 h-4 text-blue-500" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">{stats?.efficiency || "100"}%</div>
+                  <div className="text-2xl font-bold">{stats?.efficiency ?? "100"}%</div>
                   <p className="text-xs text-muted-foreground mt-1">Comparecimento</p>
                 </CardContent>
               </Card>

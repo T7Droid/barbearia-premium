@@ -65,14 +65,28 @@ export async function GET(request: NextRequest) {
 
     if (appError) throw appError;
 
-    // 3. Calcular estatísticas do dia
-    const todayCount = appointments?.length || 0;
+    // 3. Calcular estatísticas
+    const now = new Date();
+    const todayStr = format(now, "yyyy-MM-dd");
+    const timeStr = format(now, "HH:mm");
+
+    // "Hoje": Apenas data de hoje e horários futuros
+    const todayAppointments = appointments?.filter(a => 
+      a.appointment_date === todayStr && a.appointment_time > timeStr
+    ) || [];
+    const todayCount = todayAppointments.length;
+
+    // "Concluídos": Apenas concluídos do mês selecionado
     const completedCount = appointments?.filter(a => a.status === "completed").length || 0;
+
+    // "Pendentes": Pendentes/Confirmados do mês selecionado
     const pendingCount = appointments?.filter(a => a.status === "pending" || a.status === "confirmed").length || 0;
+
+    // Eficiência: Concluídos vs (Concluídos + Cancelados/Faltas se quiser, mas manteremos a lógica de validTotal)
+    // Para ser mais preciso: vamos considerar como 'base' apenas o que já foi concluído ou cancelado? 
+    // Ou simplesmente manter a lógica anterior, mas garantindo que o 0 seja exibido.
     const canceledCount = appointments?.filter(a => a.status === "cancelled").length || 0;
-    
-    // Eficiência (Comparecimento vs Total agendado sem contar cancelados)
-    const validTotal = todayCount - canceledCount;
+    const validTotal = (appointments?.length || 0) - canceledCount;
     const efficiency = validTotal > 0 ? Math.round((completedCount / validTotal) * 100) : 100;
 
     return NextResponse.json({
