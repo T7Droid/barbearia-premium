@@ -365,7 +365,7 @@ export default function SettingsPage() {
             <Button 
               variant="outline" 
               className="w-full gap-2 hover:bg-primary hover:text-white transition-all shadow-md active:scale-95"
-              onClick={handleManageStripe}
+              onClick={() => handleManageStripe()}
               disabled={loadingStripe}
             >
               {loadingStripe ? (
