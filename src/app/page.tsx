@@ -346,6 +346,12 @@ export default function RootPage() {
           Já é cliente? Acesse direto através da URL específica da sua barbearia.
         </p>
 
+        <img 
+          src="/imagem_marketing.png" 
+          alt="Marketing King Barber" 
+          className="mt-8 max-w-md w-full"
+        />
+
       </div>
     </GlobalLayout>
   );
