@@ -101,8 +101,8 @@ export default function RootPage() {
             <div className="bg-card border border-border/50 p-8 rounded-3xl flex flex-col hover:border-primary/30 transition-all shadow-sm">
               <div className="mb-6 text-center">
                 <div className="flex justify-center mb-6">
-                  <div className="w-20 h-20 rounded-full overflow-hidden border-2 border-[#CD7F32] bg-primary/5 flex items-center justify-center p-1 shadow-lg">
-                    <img src="/bronze_logo.png" alt="Plano Básico" className="w-full h-full object-cover rounded-full" />
+                  <div className="w-20 h-20 rounded-full overflow-hidden border-2 border-[#CD7F32] bg-black flex items-center justify-center p-3 shadow-lg">
+                    <img src="/bronze_logo.png" alt="Plano Básico" className="w-full h-full object-contain" />
                   </div>
                 </div>
                 <h3 className="text-xl font-bold text-foreground">Básico</h3>
@@ -153,8 +153,8 @@ export default function RootPage() {
               </div>
               <div className="mb-6 text-center">
                 <div className="flex justify-center mb-6">
-                  <div className="w-24 h-24 rounded-full overflow-hidden border-4 border-[#D4AF37] bg-primary/10 flex items-center justify-center p-1 shadow-xl ring-4 ring-[#D4AF37]/20">
-                    <img src="/prata_logo.png" alt="Plano Profissional" className="w-full h-full object-cover rounded-full" />
+                  <div className="w-24 h-24 rounded-full overflow-hidden border-4 border-[#C0C0C0] bg-black flex items-center justify-center p-4 shadow-xl ring-4 ring-[#C0C0C0]/20">
+                    <img src="/prata_logo.png" alt="Plano Profissional" className="w-full h-full object-contain" />
                   </div>
                 </div>
                 <h3 className="text-xl font-bold text-foreground">Profissional</h3>
@@ -207,8 +207,8 @@ export default function RootPage() {
             <div className="bg-card border border-border/50 p-8 rounded-3xl flex flex-col hover:border-primary/30 transition-all shadow-sm">
               <div className="mb-6 text-center">
                 <div className="flex justify-center mb-6">
-                  <div className="w-20 h-20 rounded-full overflow-hidden border-2 border-[#D4AF37] bg-primary/5 flex items-center justify-center p-1 shadow-lg">
-                    <img src="/ouro_logo.jpeg" alt="Plano Premium" className="w-full h-full object-cover rounded-full" />
+                  <div className="w-20 h-20 rounded-full overflow-hidden border-2 border-[#D4AF37] bg-black flex items-center justify-center p-3 shadow-lg">
+                    <img src="/ouro_logo.jpeg" alt="Plano Premium" className="w-full h-full object-contain" />
                   </div>
                 </div>
                 <h3 className="text-xl font-bold text-foreground">Premium</h3>
@@ -270,8 +270,8 @@ export default function RootPage() {
             <div className="bg-card border border-border/50 p-8 rounded-3xl flex flex-col hover:border-primary/30 transition-all shadow-sm">
               <div className="mb-6 text-center">
                 <div className="flex justify-center mb-6">
-                  <div className="w-20 h-20 rounded-full overflow-hidden border-2 border-white bg-primary/5 flex items-center justify-center p-1 shadow-lg">
-                    <img src="/diamante_logo.png" alt="Plano Escala" className="w-full h-full object-cover object-top rounded-full" />
+                  <div className="w-20 h-20 rounded-full overflow-hidden border-2 border-white bg-black flex items-center justify-center p-3 shadow-lg">
+                    <img src="/diamante_logo.png" alt="Plano Escala" className="w-full h-full object-contain object-center" />
                   </div>
                 </div>
                 <h3 className="text-xl font-bold text-foreground">Escala</h3>
