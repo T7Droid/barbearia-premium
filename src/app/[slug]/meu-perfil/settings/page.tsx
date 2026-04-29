@@ -27,6 +27,7 @@ export default function ClientSettingsPage() {
     phone: "",
     notificationsEnabled: false,
     pushNotificationsEnabled: false,
+    fcmToken: "",
   });
 
   const formatPhone = (value: string) => {
@@ -61,6 +62,7 @@ export default function ClientSettingsPage() {
             phone: data.phone ? formatPhone(data.phone) : "",
             notificationsEnabled: data.notificationsEnabled ?? false,
             pushNotificationsEnabled: data.pushNotificationsEnabled ?? false,
+            fcmToken: data.fcmToken || "",
           });
           // Garantir que o Store Reativo e DemoStore estão sincronizados
           setUser(data);
@@ -102,7 +104,7 @@ export default function ClientSettingsPage() {
           phone: rawPhone,
           notificationsEnabled: profile.notificationsEnabled,
           pushNotificationsEnabled: profile.pushNotificationsEnabled,
-          fcmToken: (profile as any).fcmToken
+          fcmToken: profile.fcmToken
         }),
       });
 
@@ -263,9 +265,11 @@ export default function ClientSettingsPage() {
                     const { requestNotificationPermission } = await import("@/lib/firebase");
                     const token = await requestNotificationPermission();
                     if (token) {
-                      setProfile({ ...profile, pushNotificationsEnabled: true });
-                      // Armazenar o token para enviar no handleSave
-                      (profile as any).fcmToken = token;
+                      setProfile({ 
+                        ...profile, 
+                        pushNotificationsEnabled: true,
+                        fcmToken: token 
+                      });
                     } else {
                       toast({
                         title: "Permissão Negada",
