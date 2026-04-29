@@ -12,10 +12,8 @@ const firebaseConfig = {
   measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID
 };
 
-// Initialize Firebase
 const app = initializeApp(firebaseConfig);
 
-// Initialize Services
 export const messaging = typeof window !== "undefined" ? getMessaging(app) : null;
 
 export const requestNotificationPermission = async () => {
@@ -24,8 +22,13 @@ export const requestNotificationPermission = async () => {
   try {
     const permission = await Notification.requestPermission();
     if (permission === "granted") {
+      const registration = await navigator.serviceWorker.register('/sw.js', {
+        scope: '/'
+      });
+      
       const token = await getToken(messaging, {
-        vapidKey: process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY
+        vapidKey: process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY,
+        serviceWorkerRegistration: registration
       });
       return token;
     }
@@ -36,7 +39,6 @@ export const requestNotificationPermission = async () => {
   }
 };
 
-// Analytics (Safe for SSR)
 if (typeof window !== "undefined") {
   isSupported().then(yes => yes && getAnalytics(app));
 }
