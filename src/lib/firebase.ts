@@ -30,6 +30,8 @@ export const requestNotificationPermission = async () => {
         vapidKey: process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY,
         serviceWorkerRegistration: registration
       });
+
+      console.log("🔥 MEU FCM TOKEN ATUAL:", token);
       return token;
     }
     return null;
