@@ -1,6 +1,7 @@
 import { supabase, supabaseAdmin, isSupabaseConfigured } from "@/lib/supabase";
 import { randomUUID } from "crypto";
 import { config } from "@/lib/config";
+import { NotificationService } from "./notification.service";
 import { TenantService } from "./tenant.service";
 
 export interface Appointment {
@@ -350,6 +351,34 @@ export class AppointmentService {
         } catch (e) {
           console.error("[REAGENDAMENTO] Erro ao incrementar contador:", e);
         }
+      }
+    }
+    // ----------------------------
+
+    // --- PUSH NOTIFICATION LOGIC ---
+    if (session.userId) {
+      try {
+        const { data: profile } = await supabaseAdmin
+          .from("profiles")
+          .select("fcm_token, push_notifications_enabled")
+          .eq("id", session.userId)
+          .eq("tenant_id", sessionDataRaw.tenant_id)
+          .single();
+
+        if (profile?.fcm_token && profile?.push_notifications_enabled) {
+          const date = new Date(session.appointmentDate).toLocaleDateString("pt-BR");
+          const title = "Agendamento Confirmado! ✂️";
+          const body = `Seu horário para ${session.serviceName} foi confirmado para ${date} às ${session.appointmentTime}. Nos vemos lá!`;
+          
+          await NotificationService.sendPushNotification(
+            profile.fcm_token,
+            title,
+            body,
+            { appointmentId: String(appointment.id), slug: session.slug }
+          );
+        }
+      } catch (e) {
+        console.error("[PUSH] Erro ao enviar notificação pós-agendamento:", e);
       }
     }
     // ----------------------------

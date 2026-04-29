@@ -12,7 +12,8 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const session = await AppointmentService.createCheckoutSession({
       ...body,
-      tenantId: tenant.id
+      tenantId: tenant.id,
+      slug: tenant.slug
     });
     return NextResponse.json(session);
   } catch (error) {
