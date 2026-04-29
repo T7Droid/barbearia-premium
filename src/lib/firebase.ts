@@ -17,7 +17,7 @@ const app = initializeApp(firebaseConfig);
 export const messaging = typeof window !== "undefined" ? getMessaging(app) : null;
 
 export const requestNotificationPermission = async () => {
-  if (typeof window === "undefined" || !messaging) return null;
+  if (typeof window === "undefined" || !messaging || !('serviceWorker' in navigator)) return null;
 
   try {
     const permission = await Notification.requestPermission();
