@@ -2,7 +2,17 @@ import { notFound } from "next/navigation";
 import { headers } from "next/headers";
 import { TenantService } from "@/lib/services/tenant.service";
 import { TenantProvider } from "@/components/tenant-provider";
+import { Metadata } from "next";
 
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
+  const { slug } = await params;
+  const tenant = await TenantService.getTenantBySlug(slug);
+  
+  return {
+    title: tenant?.name || "King Barber",
+    manifest: `/${slug}/manifest.json`,
+  };
+}
 export default async function TenantLayout(props: {
   children: React.ReactNode;
   params: Promise<{ slug: string }>;

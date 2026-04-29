@@ -18,7 +18,6 @@ const playfair = Playfair_Display({
 export const metadata: Metadata = {
   title: "King Barber | Agende seu Horário",
   description: "A melhor experiência em barbearia clássica e moderna de São Paulo.",
-  manifest: "/manifest.json",
   icons: {
     icon: "/icone_logo_fundo_transparente.png",
     apple: "/icons/apple-touch-icon.png",

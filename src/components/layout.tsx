@@ -20,8 +20,8 @@ import { useTenant } from "@/components/tenant-provider";
 import { useUserStore } from "@/lib/store/user-store";
 
 export function Layout({ children }: { children: React.ReactNode }) {
-  const pathname = usePathname();
-  const isRoot = pathname === "/";
+   const pathname = usePathname();
+   const isRoot = pathname === "/" || pathname === "/home";
   const router = useRouter();
   const { toast } = useToast();
 
@@ -94,7 +94,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
   };
 
   const getLink = (path: string) => {
-    if (!tenant) return path;
+    if (!tenant) return path === "/" ? "/home" : path;
     if (path === "/") return `/${tenant.slug}`;
     return `/${tenant.slug}${path}`;
   };
