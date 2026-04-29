@@ -22,16 +22,16 @@ export async function GET() {
       
       const notificationTitle = payload.notification?.title || 'Novo Agendamento';
       const notificationOptions = {
-        body: payload.notification?.body || 'Você tem uma nova atualização.',
-        icon: '/icons/icon-192x192.png',
-        badge: '/icons/icon-192x192.png',
+        body: payload.notification?.body || 'Teste de notificação simples.',
         vibrate: [100, 50, 100],
         data: payload.data,
         tag: 'push-notification',
         renotify: true
       };
 
-      self.registration.showNotification(notificationTitle, notificationOptions);
+      self.registration.showNotification(notificationTitle, notificationOptions)
+        .then(() => console.log('[SW] Notificação exibida com sucesso'))
+        .catch(err => console.error('[SW] Erro ao exibir notificação:', err));
     });
 
     // Lógica de Cache PWA
