@@ -25,7 +25,8 @@ export default function ClientSettingsPage() {
     name: "",
     email: "",
     phone: "",
-    notificationsEnabled: true,
+    notificationsEnabled: false,
+    pushNotificationsEnabled: false,
   });
 
   const formatPhone = (value: string) => {
@@ -58,7 +59,8 @@ export default function ClientSettingsPage() {
             name: data.name || "",
             email: data.email || "",
             phone: data.phone ? formatPhone(data.phone) : "",
-            notificationsEnabled: data.notificationsEnabled ?? true,
+            notificationsEnabled: data.notificationsEnabled ?? false,
+            pushNotificationsEnabled: data.pushNotificationsEnabled ?? false,
           });
           // Garantir que o Store Reativo e DemoStore estão sincronizados
           setUser(data);
@@ -73,7 +75,8 @@ export default function ClientSettingsPage() {
             name: savedUser.name || "",
             email: savedUser.email || "",
             phone: savedUser.phone ? formatPhone(savedUser.phone) : "",
-            notificationsEnabled: savedUser.notificationsEnabled ?? true,
+            notificationsEnabled: savedUser.notificationsEnabled ?? false,
+            pushNotificationsEnabled: savedUser.pushNotificationsEnabled ?? false,
           });
         }
         setLoading(false);
@@ -97,7 +100,9 @@ export default function ClientSettingsPage() {
         body: JSON.stringify({
           name: profile.name,
           phone: rawPhone,
-          notificationsEnabled: profile.notificationsEnabled
+          notificationsEnabled: profile.notificationsEnabled,
+          pushNotificationsEnabled: profile.pushNotificationsEnabled,
+          fcmToken: (profile as any).fcmToken
         }),
       });
 
@@ -234,6 +239,55 @@ export default function ClientSettingsPage() {
                     <p className="text-sm font-medium">Lembretes e Confirmações</p>
                     <p className="text-xs text-muted-foreground">
                       Você receberá e-mails automáticos com detalhes do seu horário, confirmações de pagamento e alertas de cancelamento.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Push Notifications */}
+          <Card className="bg-card border-border/50 shadow-xl transition-all hover:border-primary/20">
+            <CardHeader className="flex flex-row items-center gap-4 pb-2">
+              <div className="w-10 h-10 rounded-full bg-blue-500/10 flex items-center justify-center">
+                <Bell className="w-5 h-5 text-blue-500" />
+              </div>
+              <div className="flex-1">
+                <CardTitle>Notificações Push</CardTitle>
+                <CardDescription>Receba alertas instantâneos no seu navegador ou celular.</CardDescription>
+              </div>
+              <Switch
+                checked={profile.pushNotificationsEnabled}
+                onCheckedChange={async (val) => {
+                  if (val) {
+                    const { requestNotificationPermission } = await import("@/lib/firebase");
+                    const token = await requestNotificationPermission();
+                    if (token) {
+                      setProfile({ ...profile, pushNotificationsEnabled: true });
+                      // Armazenar o token para enviar no handleSave
+                      (profile as any).fcmToken = token;
+                    } else {
+                      toast({
+                        title: "Permissão Negada",
+                        description: "Para receber notificações, você precisa permitir o acesso no seu navegador.",
+                        variant: "destructive"
+                      });
+                    }
+                  } else {
+                    setProfile({ ...profile, pushNotificationsEnabled: false });
+                  }
+                }}
+                className="data-[state=checked]:bg-primary"
+              />
+            </CardHeader>
+            <CardContent>
+              <div className="p-4 rounded-lg bg-accent/30 border border-border/40">
+                <div className="flex items-start gap-3">
+                  <Bell className="w-4 h-4 text-primary mt-1 shrink-0" />
+                  <div className="space-y-1">
+                    <p className="text-sm font-medium">Lembretes e Confirmações</p>
+                    <p className="text-xs text-muted-foreground">
+                      Você receberá notificações automáticas com detalhes do seu horário, confirmações de pagamento e alertas de cancelamento diretamente no seu dispositivo.
                     </p>
                   </div>
                 </div>

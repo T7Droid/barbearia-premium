@@ -58,6 +58,8 @@ export async function POST(request: NextRequest) {
           phone: phone || "",
           role: "client",
           points: initialPoints,
+          notifications_enabled: false,
+          push_notifications_enabled: false,
           accepted_terms: acceptedTerms === true,
           accepted_privacy: acceptedPrivacy === true
         });

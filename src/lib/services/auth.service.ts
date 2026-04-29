@@ -42,7 +42,8 @@ export class AuthService {
       points: profile?.points || 0,
       phone: profile?.phone || "",
       tenantId: profile?.tenant_id || tenantId,
-      notificationsEnabled: profile?.notifications_enabled ?? true,
+      notificationsEnabled: profile?.notifications_enabled ?? false,
+      pushNotificationsEnabled: profile?.push_notifications_enabled ?? false,
       rescheduleCount: profile?.reschedule_count || 0,
       cancelCount: profile?.cancel_count || 0,
       canPayAtShop: profile?.can_pay_at_shop ?? true,
@@ -96,6 +97,7 @@ export class AuthService {
         full_name: updates.name,
         phone: updates.phone,
         notifications_enabled: updates.notificationsEnabled,
+        push_notifications_enabled: updates.pushNotificationsEnabled,
         fcm_token: updates.fcmToken,
         role: updates.role // Permitir atualização de role se explicitamente enviado (para admin ops)
       })

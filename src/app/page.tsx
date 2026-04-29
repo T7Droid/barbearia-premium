@@ -102,7 +102,7 @@ export default function RootPage() {
               <div className="mb-6 text-center">
                 <div className="flex justify-center mb-6">
                   <div className="w-20 h-20 rounded-full overflow-hidden border-2 border-[#CD7F32] bg-primary/5 flex items-center justify-center p-1 shadow-lg">
-                    <img src="/basico.png" alt="Plano Básico" className="w-full h-full object-cover rounded-full" />
+                    <img src="/bronze_logo.png" alt="Plano Básico" className="w-full h-full object-cover rounded-full" />
                   </div>
                 </div>
                 <h3 className="text-xl font-bold text-foreground">Básico</h3>
@@ -154,7 +154,7 @@ export default function RootPage() {
               <div className="mb-6 text-center">
                 <div className="flex justify-center mb-6">
                   <div className="w-24 h-24 rounded-full overflow-hidden border-4 border-[#D4AF37] bg-primary/10 flex items-center justify-center p-1 shadow-xl ring-4 ring-[#D4AF37]/20">
-                    <img src="/professional.png" alt="Plano Profissional" className="w-full h-full object-cover rounded-full" />
+                    <img src="/prata_logo.png" alt="Plano Profissional" className="w-full h-full object-cover rounded-full" />
                   </div>
                 </div>
                 <h3 className="text-xl font-bold text-foreground">Profissional</h3>
@@ -208,7 +208,7 @@ export default function RootPage() {
               <div className="mb-6 text-center">
                 <div className="flex justify-center mb-6">
                   <div className="w-20 h-20 rounded-full overflow-hidden border-2 border-[#D4AF37] bg-primary/5 flex items-center justify-center p-1 shadow-lg">
-                    <img src="/kingbarbers_logo.png" alt="Plano Premium" className="w-full h-full object-cover rounded-full" />
+                    <img src="/ouro_logo.jpeg" alt="Plano Premium" className="w-full h-full object-cover rounded-full" />
                   </div>
                 </div>
                 <h3 className="text-xl font-bold text-foreground">Premium</h3>
@@ -271,7 +271,7 @@ export default function RootPage() {
               <div className="mb-6 text-center">
                 <div className="flex justify-center mb-6">
                   <div className="w-20 h-20 rounded-full overflow-hidden border-2 border-white bg-primary/5 flex items-center justify-center p-1 shadow-lg">
-                    <img src="/escala.png" alt="Plano Escala" className="w-full h-full object-cover object-top rounded-full" />
+                    <img src="/diamante_logo.png" alt="Plano Escala" className="w-full h-full object-cover object-top rounded-full" />
                   </div>
                 </div>
                 <h3 className="text-xl font-bold text-foreground">Escala</h3>
