@@ -766,7 +766,7 @@ export default function UnidadesPage() {
                   Limite de Unidades Atingido
                 </DialogTitle>
                 <DialogDescription className="text-base">
-                  Seu plano atual ({settings?.plan?.name}) permite até <strong>{settings?.plan?.units}</strong> {settings?.plan?.units === 1 ? 'unidade' : 'unidades'}.
+                  Seu plano atual ({settings?.plan?.name}) permite exibir até <strong>{settings?.plan?.max_units || 1}</strong> { (settings?.plan?.max_units || 1) === 1 ? 'unidade' : 'unidades'}.
                 </DialogDescription>
               </div>
 
