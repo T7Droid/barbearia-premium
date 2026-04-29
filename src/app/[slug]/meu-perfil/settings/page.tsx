@@ -79,6 +79,7 @@ export default function ClientSettingsPage() {
             phone: savedUser.phone ? formatPhone(savedUser.phone) : "",
             notificationsEnabled: savedUser.notificationsEnabled ?? false,
             pushNotificationsEnabled: savedUser.pushNotificationsEnabled ?? false,
+            fcmToken: savedUser.fcmToken || "",
           });
         }
         setLoading(false);
