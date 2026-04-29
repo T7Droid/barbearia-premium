@@ -24,8 +24,11 @@ export async function GET() {
       const notificationOptions = {
         body: payload.notification?.body || 'Você tem uma nova atualização.',
         icon: '/icons/icon-192x192.png',
-        badge: '/icons/badge-72x72.png',
-        data: payload.data
+        badge: '/icons/icon-192x192.png',
+        vibrate: [100, 50, 100],
+        data: payload.data,
+        tag: 'push-notification',
+        renotify: true
       };
 
       self.registration.showNotification(notificationTitle, notificationOptions);
