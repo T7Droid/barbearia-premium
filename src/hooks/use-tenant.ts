@@ -1,1 +1,1 @@
-export { useTenant } from "@/components/tenant-provider";
+export { useTenant, useOptionalTenant } from "@/components/tenant-provider";

@@ -6,14 +6,14 @@ import { messaging } from "@/lib/firebase";
 import { useToast } from "@/hooks/use-toast";
 import { ToastAction } from "@/components/ui/toast";
 import { useRouter } from "next/navigation";
-import { useTenant } from "@/hooks/use-tenant";
+import { useOptionalTenant } from "@/components/tenant-provider";
 import { Bell } from "lucide-react";
 import React from "react";
 
 export function FCMListener() {
   const { toast } = useToast();
   const router = useRouter();
-  const tenant = useTenant();
+  const tenant = useOptionalTenant();
 
   useEffect(() => {
     if (!messaging) return;
@@ -26,9 +26,14 @@ export function FCMListener() {
       const title = payload.notification?.title || "Nova Notificação";
       const body = payload.notification?.body || "Você recebeu uma nova atualização.";
       
-      // O slug do tenant pode vir no payload de dados ou ser usado o atual
-      const slug = payload.data?.slug || tenant.slug;
-      const targetUrl = `/${slug}/meu-perfil/historico`;
+      // O slug do tenant pode vir no payload de dados ou ser usado o atual ou do localStorage
+      let slug = payload.data?.slug || tenant?.slug;
+      
+      if (!slug && typeof window !== "undefined") {
+        slug = localStorage.getItem("last_tenant_slug") || "";
+      }
+
+      const targetUrl = slug ? `/${slug}/meu-perfil/historico` : "/home";
 
       toast({
         title: title,
@@ -50,7 +55,7 @@ export function FCMListener() {
     });
 
     return () => unsubscribe();
-  }, [messaging, toast, router, tenant.slug]);
+  }, [messaging, toast, router, tenant?.slug]);
 
   return null; // Este componente não renderiza nada visualmente
 }
