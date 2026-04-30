@@ -17,21 +17,43 @@ export async function GET() {
     firebase.initializeApp(firebaseConfig);
     const messaging = firebase.messaging();
 
-    messaging.onBackgroundMessage((payload) => {
-      console.log('[SW] Mensagem recebida em segundo plano:', payload);
+    // Evento Push Nativo (O segredo para o Android/PWA funcionar 100%)
+    self.addEventListener('push', (event) => {
+      console.log('[SW] Push Nativo recebido:', event);
       
-      const notificationTitle = payload.notification?.title || 'Novo Agendamento';
-      const notificationOptions = {
-        body: payload.notification?.body || 'Teste de notificação simples.',
+      let data = {};
+      try {
+        data = event.data ? event.data.json() : {};
+      } catch (e) {
+        data = { notification: { title: 'Nova Mensagem', body: event.data ? event.data.text() : '' } };
+      }
+
+      console.log('[SW] Dados processados do Push:', data);
+
+      const notification = data.notification || (data.data && data.data.notification ? JSON.parse(data.data.notification) : data.data) || {};
+      const title = notification.title || data.title || 'Novo Agendamento';
+      const body = notification.body || data.body || 'Você tem uma nova atualização.';
+
+      const options = {
+        body: body,
+        icon: '/icons/icon-192x192.png',
+        badge: '/icons/icon-192x192.png',
         vibrate: [100, 50, 100],
-        data: payload.data,
+        data: data.data || data,
         tag: 'push-notification',
         renotify: true
       };
 
-      self.registration.showNotification(notificationTitle, notificationOptions)
-        .then(() => console.log('[SW] Notificação exibida com sucesso'))
-        .catch(err => console.error('[SW] Erro ao exibir notificação:', err));
+      event.waitUntil(
+        self.registration.showNotification(title, options)
+      );
+    });
+
+    // Mantendo o listener do Firebase para compatibilidade e logs extras
+    messaging.onBackgroundMessage((payload) => {
+      console.log('[SW/Firebase] onBackgroundMessage disparado:', payload);
+      // Aqui não chamamos showNotification de novo para não duplicar, 
+      // o evento 'push' acima já cuidou disso com mais prioridade.
     });
 
     // Lógica de Cache PWA
