@@ -22,7 +22,14 @@ export const requestNotificationPermission = async () => {
   try {
     const permission = await Notification.requestPermission();
     if (permission === "granted") {
-      // Registra e espera o Service Worker estar pronto
+      const registrations = await navigator.serviceWorker.getRegistrations();
+      for (const reg of registrations) {
+        if (reg.active?.scriptURL && !reg.active.scriptURL.includes('/sw.js')) {
+          console.log('🗑️ Removendo Service Worker duplicado:', reg.active.scriptURL);
+          await reg.unregister();
+        }
+      }
+
       await navigator.serviceWorker.register('/sw.js', {
         scope: '/'
       });

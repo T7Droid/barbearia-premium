@@ -43,11 +43,13 @@ export async function GET() {
           const notification = data.notification || (data.data && data.data.notification ? JSON.parse(data.data.notification) : data.data) || {};
           const title = notification.title || data.title || 'Novo Agendamento';
           const body = notification.body || data.body || 'Você tem uma nova atualização.';
+          const image = notification.image || data.image || data.data?.image;
 
           const options = {
             body: body,
             icon: '/icons/icon-192x192.png',
             badge: '/icons/icon-192x192.png',
+            image: image,
             vibrate: [100, 50, 100],
             data: data.data || data, // Guardar os dados para usar no clique
             tag: 'push-notification',
@@ -64,14 +66,20 @@ export async function GET() {
       console.log('[SW/Firebase] onBackgroundMessage disparado (apenas log):', payload);
     });
 
-    // Lógica de Cache PWA
+    // Lógica de Cache PWA e Atualização Forçada
     const CACHE_NAME = 'kingbarber-v1';
+    
     self.addEventListener('install', (event) => {
+      self.skipWaiting();
       event.waitUntil(
         caches.open(CACHE_NAME).then((cache) => {
           return cache.addAll(['/']);
         })
       );
+    });
+
+    self.addEventListener('activate', (event) => {
+      event.waitUntil(clients.claim());
     });
 
     self.addEventListener('fetch', (event) => {
@@ -86,21 +94,29 @@ export async function GET() {
     self.addEventListener('notificationclick', (event) => {
       event.notification.close();
       const data = event.notification.data;
+      console.log('[SW] Clique detectado. Dados:', data);
       
-      // O slug pode vir direto no data ou dentro de notification.data dependendo de como o FCM envia
-      const slug = data?.slug || data?.notification?.data?.slug;
-      const urlToOpen = slug ? \`/\${slug}/meu-perfil/historico\` : '/home';
+      // Busca exaustiva pelo slug em diferentes formatos de payload FCM
+      const slug = data?.slug || 
+                   data?.data?.slug || 
+                   data?.notification?.slug || 
+                   data?.notification?.data?.slug ||
+                   (typeof data === 'string' && data.includes('slug') ? JSON.parse(data).slug : null);
+
+      console.log('[SW] Slug extraído para redirecionamento:', slug);
+      
+      const urlToOpen = slug ? \`/\${slug}/meu-perfil/historico\` : '/';
 
       event.waitUntil(
         clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windowClients) => {
-          // Se já houver uma aba aberta com essa URL, foca nela
+          // Se já houver uma aba aberta com essa URL (ou parte dela), foca nela
           for (let i = 0; i < windowClients.length; i++) {
             const client = windowClients[i];
             if (client.url.includes(urlToOpen) && 'focus' in client) {
               return client.focus();
             }
           }
-          // Se não, abre uma nova aba
+          // Se não, abre uma nova aba/janela no contexto do PWA
           if (clients.openWindow) {
             return clients.openWindow(urlToOpen);
           }
