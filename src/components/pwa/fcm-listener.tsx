@@ -37,20 +37,17 @@ export function FCMListener() {
 
       toast({
         title: title,
-        description: (
-          <div className="flex flex-col gap-1">
-            <span>{body}</span>
-          </div>
-        ),
+        description: body,
         action: (
           <ToastAction 
             altText="Ver Agendamentos" 
             onClick={() => router.push(targetUrl)}
-            className="bg-primary text-primary-foreground hover:bg-primary/90"
+            className="bg-primary text-primary-foreground hover:bg-primary/90 w-full border-none h-10 mt-2"
           >
             Ver Meus Agendamentos
           </ToastAction>
         ),
+        className: "flex-col items-start gap-2 p-5",
       });
     });
 

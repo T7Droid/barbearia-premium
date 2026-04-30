@@ -26,25 +26,17 @@ export class NotificationService {
     if (!app || !token) return false;
 
     try {
+      // Usamos apenas 'data' para evitar que o navegador mostre uma notificação automática
+      // e o Service Worker mostre outra (duplicidade). No PWA, o SW cuida de tudo.
       const message = {
-        notification: {
+        data: {
+          ...data,
           title,
           body,
         },
-        data: data || {},
         token: token,
         android: {
           priority: "high" as const,
-          notification: {
-            sound: "default",
-          },
-        },
-        apns: {
-          payload: {
-            aps: {
-              sound: "default",
-            },
-          },
         },
       };
 
