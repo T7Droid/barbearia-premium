@@ -13,6 +13,7 @@ export default function SubscriptionExpiredPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [checking, setChecking] = useState(true);
+  const [currentPlanId, setCurrentPlanId] = useState<string>("basico");
 
   useEffect(() => {
     const checkStatus = async () => {
@@ -21,6 +22,13 @@ export default function SubscriptionExpiredPage() {
           headers: { "x-tenant-slug": tenant.slug }
         });
         const data = await res.json();
+        
+        // O Stripe usa o slug (basico, escala, etc) para identificar o preço
+        // Normalizamos para minúsculo para garantir compatibilidade
+        if (data.plan?.slug) {
+          setCurrentPlanId(data.plan.slug.toLowerCase().trim());
+        }
+        
         if (data.isSubscriptionActive) {
           router.push(`/${tenant.slug}/admin`);
         }
@@ -38,6 +46,13 @@ export default function SubscriptionExpiredPage() {
 
   const handlePay = async () => {
     setLoading(true);
+    
+    // Lista de planos válidos para conferência
+    const validPlans = ["basico", "profissional", "premium", "escala"];
+    const finalPlanId = validPlans.includes(currentPlanId) ? currentPlanId : "basico";
+
+    console.log("Iniciando checkout para o plano:", finalPlanId);
+
     try {
       const res = await fetch("/api/subscription/checkout", {
         method: "POST",
@@ -45,14 +60,18 @@ export default function SubscriptionExpiredPage() {
           "Content-Type": "application/json",
           "x-tenant-slug": tenant.slug
         },
-        body: JSON.stringify({ planId: "basico" })
+        body: JSON.stringify({ planId: finalPlanId })
       });
+      
       const data = await res.json();
+      
       if (data.url) {
         window.location.href = data.url;
+      } else {
+        throw new Error(`${data.error} (PlanID: ${finalPlanId})`);
       }
-    } catch (e) {
-      // toast error
+    } catch (e: any) {
+      alert(e.message || "Não foi possível iniciar o pagamento. Tente novamente ou contate o suporte.");
     } finally {
       setLoading(false);
     }
@@ -81,7 +100,7 @@ export default function SubscriptionExpiredPage() {
           </div>
           <CardTitle className="text-2xl font-serif">Acesso Suspenso</CardTitle>
           <CardDescription>
-            A assinatura da sua barbearia (**{tenant?.name}**) está vencida ou não foi identificada.
+            A assinatura da sua barbearia <strong className="font-bold text-primary">{tenant?.name}</strong> está vencida ou não foi identificada.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
@@ -109,7 +128,7 @@ export default function SubscriptionExpiredPage() {
           </div>
 
           <p className="text-[10px] text-center text-muted-foreground uppercase tracking-widest font-bold">
-            Dúvidas? Entre em contato com o suporte KingBarber.
+            Dúvidas? Entre em contato com o suporte KingBarbers.
           </p>
         </CardContent>
       </Card>

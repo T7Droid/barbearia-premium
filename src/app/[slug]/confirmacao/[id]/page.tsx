@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { CheckCircle2, Calendar, Clock, MapPin, Share2, Wallet, Scissors, ExternalLink, Download, Award, CalendarPlus, UserPlus, ArrowRight } from "lucide-react";
+import { CheckCircle2, Calendar, Clock, MapPin, Share2, Wallet, Scissors, ExternalLink, Download, Award, CalendarPlus, UserPlus, ArrowRight, Printer, MessageCircle } from "lucide-react";
 import { useGetAppointment } from "@workspace/api-client-react";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
@@ -23,6 +23,35 @@ export default function ConfirmationPage(props: { params: Promise<{ slug: string
   const tenant = useTenant();
   const { toast } = useToast();
   const router = useRouter();
+
+  const handleShareWhatsApp = (appointment: any, displayDate: string, timeValue: string, settings: any) => {
+    const services = appointment.servicesJson && Array.isArray(appointment.servicesJson)
+      ? appointment.servicesJson.map((s: any) => s.name).join(", ")
+      : (appointment.serviceName || appointment.service_name);
+
+    const address = appointment.unit
+      ? `${appointment.unit.address}${appointment.unit.number ? `, ${appointment.unit.number}` : ""} - ${appointment.unit.city}`
+      : settings?.address;
+
+    const messageText = `*Agendamento Confirmado!* \n\n` +
+      `*Barbearia:* ${settings?.shopName || tenant.name}\n` +
+      `*Serviço:* ${services}\n` +
+      `*Data:* ${displayDate}\n` +
+      `*Horário:* ${timeValue}\n` +
+      `*Profissional:* ${appointment.barberName || appointment.barber_name}\n` +
+      `*Unidade:* ${appointment.unit?.name || "Matriz"}\n` +
+      `*Endereço:* ${address}\n\n` +
+      `*Código:* #${appointment.id.toString().padStart(6, '0')}\n\n` +
+      `_Por favor, chegue com 5 minutos de antecedência._`;
+
+    // Usando uma técnica de substituição para garantir que o emoji sobreviva à codificação
+    const encodedMessage = encodeURIComponent(messageText).replace(/%F0%9F%92%88/g, '%F0%9F%92%88');
+    window.open(`https://wa.me/?text=${encodedMessage}`, '_blank');
+  };
+
+  const handlePrint = () => {
+    window.print();
+  };
 
   // O hook useGetAppointment agora aceita string (UUID) ou number
   const { data: apiAppointment, isLoading } = useGetAppointment(idParam as any, {
@@ -280,7 +309,19 @@ export default function ConfirmationPage(props: { params: Promise<{ slug: string
             </Card>
           )}
 
-          <div className="flex flex-col sm:flex-row justify-center gap-4 mt-10">
+          <div className="flex flex-col sm:flex-row justify-center gap-4 mt-10 no-print">
+            <Button
+              onClick={() => handleShareWhatsApp(appointment, displayDate, timeValue, settings)}
+              variant="outline"
+              className="gap-2 border-green-500/50 text-green-600 hover:bg-green-50">
+              <MessageCircle className="w-4 h-4" /> Enviar por WhatsApp
+            </Button>
+            <Button
+              onClick={handlePrint}
+              variant="outline"
+              className="gap-2 border-primary/50 text-primary">
+              <Printer className="w-4 h-4" /> Salvar Comprovante
+            </Button>
             <Button
               onClick={() => downloadICS(appointment)}
               variant="outline"
@@ -290,7 +331,7 @@ export default function ConfirmationPage(props: { params: Promise<{ slug: string
             {authStatus === "authenticated" && (
               <Button asChild variant="outline" className="gap-2">
                 <Link href={getLink("/meu-perfil/historico")}>
-                  <Clock className="w-4 h-4" /> Ver Meus Horários
+                  <Clock className="w-4 h-4" /> Meus Horários
                 </Link>
               </Button>
             )}
@@ -298,6 +339,26 @@ export default function ConfirmationPage(props: { params: Promise<{ slug: string
               <Link href={getLink("/")}>Voltar para o Início</Link>
             </Button>
           </div>
+
+          <style jsx global>{`
+            @media print {
+              .no-print, footer, header, nav, button {
+                display: none !important;
+              }
+              body {
+                background: white !important;
+                color: black !important;
+              }
+              .bg-card {
+                border: 1px solid #eee !important;
+                box-shadow: none !important;
+                margin-top: 20px !important;
+              }
+              .text-primary {
+                color: #C9A84C !important;
+              }
+            }
+          `}</style>
         </div>
       </div>
     </Layout>

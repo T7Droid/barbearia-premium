@@ -20,7 +20,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Calendar, Clock, History as HistoryIcon, RefreshCw, Scissors, AlertCircle, Loader2, XCircle, DollarSign, CheckCircle2, Wallet } from "lucide-react";
+import { Calendar, Clock, History as HistoryIcon, RefreshCw, Scissors, AlertCircle, Loader2, XCircle, DollarSign, CheckCircle2, Wallet, MessageCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import Link from "next/link";
 import { format, isBefore, addDays, parseISO } from "date-fns";
@@ -69,7 +69,7 @@ export default function AppointmentHistory() {
     if (!tenant.slug) return;
 
     const headers = { "x-tenant-slug": tenant.slug };
-    
+
     const loadData = async () => {
       try {
         const [appsRes, settingsRes, authRes] = await Promise.all([
@@ -80,7 +80,7 @@ export default function AppointmentHistory() {
 
         const authData = await authRes.json();
         const settingsData = await settingsRes.json();
-        
+
         // 1. Lidar com Autenticação
         if (authData.authenticated) {
           DemoStore.saveUser(authData.user);
@@ -126,7 +126,7 @@ export default function AppointmentHistory() {
           }
 
           const isAlreadyInApi = apiApps.some(api => String(api.id) === String(saved.id));
-          
+
           if (isAlreadyInApi) {
             // Se já está no banco e estamos logados, removemos da cópia local para evitar lixo
             if (isAuthenticated) {
@@ -210,6 +210,32 @@ export default function AppointmentHistory() {
     } finally {
       setCancellingId(null);
     }
+  };
+
+  const handleShare = async (app: any) => {
+    const services = getServiceNames(app);
+    const date = (app.appointmentDate || app.appointment_date)?.split("-").reverse().join("/");
+    const time = app.appointmentTime || app.appointment_time;
+    const barber = app.barberName || app.barber_name || "N/D";
+    const unit = app.unitName || app.unit_name || "N/D";
+    const price = getFormattedPriceDetails(app);
+    const paymentStatus = app.isPaid ? "Pago" : "Pagar no Local";
+
+    const barberIcon = String.fromCodePoint(0x1F488);
+    const messageText = `*Agendamento Confirmado!* \n\n` +
+      `*Barbearia:* 💈 ${settings?.shopName || tenant.name}\n` +
+      `*Serviço:* ${services}\n` +
+      `*Valor:* ${price}\n` +
+      `*Pagamento:* ${paymentStatus}\n` +
+      `*Data:* ${date}\n` +
+      `*Horário:* ${time}\n` +
+      `*Profissional:* ${barber}\n` +
+      `*Unidade:* ${unit}\n\n` +
+      `*Código:* #${app.id.toString().padStart(6, '0')}\n\n` +
+      `_Gerado via Painel do Cliente_`;
+
+    const encodedMessage = encodeURIComponent(messageText);
+    window.open(`https://wa.me/?text=${encodedMessage}`, '_blank');
   };
 
   const getStatusBadge = (status: string) => {
@@ -310,11 +336,11 @@ export default function AppointmentHistory() {
                       <TableCell className="text-foreground">
                         <div className="flex flex-col">
                           <span className="flex items-center gap-1.5">
-                            <Calendar className="w-3 h-3 text-muted-foreground" /> 
+                            <Calendar className="w-3 h-3 text-muted-foreground" />
                             {(app.appointmentDate || app.appointment_date)?.split("-").reverse().join("/") || "Data N/D"}
                           </span>
                           <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                            <Clock className="w-3 h-3" /> 
+                            <Clock className="w-3 h-3" />
                             {app.appointmentTime || app.appointment_time || "Horário N/D"}
                           </span>
                         </div>
@@ -323,18 +349,18 @@ export default function AppointmentHistory() {
                         {getFormattedPriceDetails(app)}
                       </TableCell>
                       <TableCell>
-                         {app.isPaid ? (
-                           <div className="flex items-center gap-1.5 text-green-500 font-medium text-xs">
-                             <CheckCircle2 className="w-3.5 h-3.5" />
-                             <span>Pago</span>
-                           </div>
-                         ) : (
-                           <div className="flex items-center gap-1.5 text-amber-500 font-medium text-xs">
-                             <Wallet className="w-3.5 h-3.5" />
-                             <span>No Local</span>
-                           </div>
-                         )}
-                       </TableCell>
+                        {app.isPaid ? (
+                          <div className="flex items-center gap-1.5 text-green-500 font-medium text-xs">
+                            <CheckCircle2 className="w-3.5 h-3.5" />
+                            <span>Pago</span>
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-1.5 text-amber-500 font-medium text-xs">
+                            <Wallet className="w-3.5 h-3.5" />
+                            <span>No Local</span>
+                          </div>
+                        )}
+                      </TableCell>
                       <TableCell>{getStatusBadge(app.status)}</TableCell>
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-2">
@@ -365,6 +391,16 @@ export default function AppointmentHistory() {
                           ) : app.status !== "cancelled" ? (
                             <span className="text-[10px] text-muted-foreground italic">Prazo encerrado</span>
                           ) : null}
+
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="text-green-600 hover:bg-green-50 h-8 w-8 p-0"
+                            onClick={() => handleShare(app)}
+                            title="Enviar agendamento por WhatsApp"
+                          >
+                            <MessageCircle className="w-4 h-4" />
+                          </Button>
                         </div>
                       </TableCell>
                     </TableRow>

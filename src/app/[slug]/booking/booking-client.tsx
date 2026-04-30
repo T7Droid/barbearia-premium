@@ -816,7 +816,11 @@ function BookingContent() {
                   <CardDescription className="text-center text-lg mt-2 px-4">
                     {closureReason === "settings" && "Não estamos aceitando novos agendamentos no momento de acordo com nosso horário de funcionamento."}
                     {closureReason === "barbers" && "No momento não temos profissionais disponíveis para agendamento online."}
-                    {closureReason === "subscription_expired" && "A barbearia está com o sistema de agendamento temporariamente suspenso. Por favor, tente novamente mais tarde."}
+                    {closureReason === "subscription_expired" && (
+                      <>
+                        A barbearia <strong className="font-bold text-primary">{tenant.name}</strong> está com o sistema de agendamento temporariamente suspenso. Por favor, tente novamente mais tarde.
+                      </>
+                    )}
                     {closureReason === "limit_reached" && "Desculpe! Atingimos o limite máximo de agendamentos para este mês e não podemos aceitar novas reservas no momento."}
                   </CardDescription>
                 </CardHeader>
