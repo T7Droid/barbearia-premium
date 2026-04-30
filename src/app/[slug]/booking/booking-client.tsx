@@ -744,7 +744,8 @@ function BookingContent() {
                     (appointment as any)?.appointmentId;
 
       if (rawId) {
-        router.push(getLink(`/confirmacao/${rawId}`));
+        const finalUuid = (appointment as any)?.uuid || (appointment as any)?.data?.uuid || rawId;
+        router.push(getLink(`/confirmacao/${finalUuid}`));
       } else {
         console.warn("Agendamento confirmado, mas ID não identificado no payload. Verifique o log de DEBUG acima.", appointment);
         router.push(getLink("/meu-perfil/historico"));

@@ -19,15 +19,16 @@ import { useTenant } from "@/hooks/use-tenant";
 
 export default function ConfirmationPage(props: { params: Promise<{ slug: string, id: string }> }) {
   const params = use(props.params);
-  const id = parseInt(params.id);
+  const idParam = params.id;
   const tenant = useTenant();
   const { toast } = useToast();
   const router = useRouter();
 
-  const { data: apiAppointment, isLoading } = useGetAppointment(id, {
+  // O hook useGetAppointment agora aceita string (UUID) ou number
+  const { data: apiAppointment, isLoading } = useGetAppointment(idParam as any, {
     query: {
-      enabled: !!id && id > 0,
-      queryKey: ["appointment", id]
+      enabled: !!idParam,
+      queryKey: ["appointment", idParam]
     } as any
   });
 
@@ -40,7 +41,7 @@ export default function ConfirmationPage(props: { params: Promise<{ slug: string
     fetch("/api/settings", { headers })
       .then(res => res.json())
       .then(data => setSettings(data))
-      .catch(() => {});
+      .catch(() => { });
   }, [tenant]);
 
   useEffect(() => {
@@ -66,77 +67,13 @@ export default function ConfirmationPage(props: { params: Promise<{ slug: string
   useEffect(() => {
     if (!isLoading && !apiAppointment) {
       const appointments = DemoStore.getAppointments();
-      const found = appointments.find((a: any) => a.id === id);
+      // Tenta achar por UUID primeiro, depois por ID numérico
+      const found = appointments.find((a: any) => a.uuid === idParam || String(a.id) === idParam);
       if (found) setFallbackAppointment(found);
     }
-  }, [id, apiAppointment, isLoading]);
+  }, [idParam, apiAppointment, isLoading]);
 
   const appointment = apiAppointment || fallbackAppointment;
-
-  const handleDownloadVCard = () => {
-    if (!settings) return;
-    
-    const vcard = `BEGIN:VCARD
-VERSION:3.0
-FN:${settings.shopName || 'King Barber'}
-TEL;TYPE=WORK,VOICE:${settings.phone || ''}
-URL:${window.location.origin}/${tenant.slug}
-END:VCARD`;
-
-    const blob = new Blob([vcard], { type: 'text/vcard' });
-    const url = window.URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.setAttribute('download', 'barbearia.vcf');
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    window.URL.revokeObjectURL(url);
-  }
-
-  const handleAddToCalendar = () => {
-    const dateStr = appointment.appointment_date || appointment.appointmentDate;
-    const timeStr = appointment.appointment_time || appointment.appointmentTime;
-    const serviceName = appointment.service_name || appointment.serviceName;
-    const shopName = settings?.shopName || tenant.name || 'King Barber';
-    const address = appointment.unit?.address || settings?.address || '';
-
-    if (!dateStr || !timeStr) return;
-
-    try {
-      const startDateTime = new Date(`${dateStr}T${timeStr}`);
-      const formatICSDate = (date: Date) => {
-        return date.toISOString().replace(/-|:|\.\d+/g, '');
-      };
-
-      const endDateTime = new Date(startDateTime.getTime() + (settings?.slot_interval || 45) * 60000);
-
-      const icsContent = [
-        'BEGIN:VCALENDAR',
-        'VERSION:2.0',
-        'BEGIN:VEVENT',
-        `DTSTART:${formatICSDate(startDateTime)}`,
-        `DTEND:${formatICSDate(endDateTime)}`,
-        `SUMMARY:Agendamento: ${serviceName}`,
-        `LOCATION:${address}`,
-        `DESCRIPTION:Agendamento na ${shopName}`,
-        'END:VEVENT',
-        'END:VCALENDAR'
-      ].join('\n');
-
-      const blob = new Blob([icsContent], { type: 'text/calendar;charset=utf-8' });
-      const url = window.URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.setAttribute('download', 'agendamento.ics');
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      window.URL.revokeObjectURL(url);
-    } catch (e) {
-      toast({ title: 'Erro', description: 'Não foi possível gerar o calendário.' });
-    }
-  };
 
   if (isLoading) {
     return (
@@ -160,7 +97,7 @@ END:VCARD`;
               <CheckCircle2 className="w-16 h-16 text-muted-foreground/30 mx-auto mb-6" />
               <h2 className="text-2xl font-serif font-bold mb-2">Ops! Alguma coisa mudou.</h2>
               <p className="text-muted-foreground mb-8">
-                Não conseguimos encontrar os detalhes desse agendamento específico agora. 
+                Não conseguimos encontrar os detalhes desse agendamento específico agora.
                 Mas não se preocupe, seu horário deve estar garantido!
               </p>
               <Button asChild className="w-full">
@@ -201,177 +138,167 @@ END:VCARD`;
   const dateValue = appointment.appointmentDate || appointment.appointment_date || "";
   const timeValue = appointment.appointmentTime || appointment.appointment_time || "";
   const displayDate = dateValue ? dateValue.split('-').reverse().join('/') : "N/D";
-  
+
   return (
     <Layout>
       <div className="container mx-auto px-4 py-16 max-w-3xl flex flex-col items-center">
-        {isLoading ? (
-          <div className="w-full max-w-md space-y-6">
-            <div className="w-24 h-24 rounded-full mx-auto bg-muted animate-pulse" />
-            <div className="h-10 w-3/4 mx-auto bg-muted animate-pulse" />
-            <div className="h-64 w-full rounded-xl bg-muted animate-pulse" />
-          </div>
-        ) : !appointment ? (
-          <div className="text-center space-y-4">
-            <h1 className="text-2xl font-serif text-destructive">Agendamento não encontrado</h1>
-            <p className="text-muted-foreground">Não foi possível localizar as informações deste agendamento.</p>
-            <Button asChild><Link href={getLink("/")}>Voltar para o Início</Link></Button>
-          </div>
-        ) : (
-          <div className="w-full animate-in zoom-in-95 duration-500">
-            <div className="text-center mb-10">
-              <div className="w-20 h-20 bg-primary/20 rounded-full flex items-center justify-center mx-auto mb-6">
-                <CheckCircle2 className="w-10 h-10 text-primary" />
-              </div>
-              <h1 className="text-3xl md:text-4xl font-serif font-bold mb-4 text-foreground">
-                {(appointment as any).isReschedule || appointment.is_reschedule ? "Reagendamento Confirmado!" : "Agendamento Confirmado!"}
-              </h1>
-              <p className="text-muted-foreground text-lg">
-                Obrigado, {appointment.customerName || appointment.customer_name}. {(appointment as any).isReschedule || appointment.is_reschedule ? "Sua nova data foi reservada com sucesso." : "Seu horário foi reservado com sucesso."}
-              </p>
+        <div className="w-full animate-in zoom-in-95 duration-500">
+          <div className="text-center mb-10">
+            <div className="w-20 h-20 bg-primary/20 rounded-full flex items-center justify-center mx-auto mb-6">
+              <CheckCircle2 className="w-10 h-10 text-primary" />
             </div>
+            <h1 className="text-3xl md:text-4xl font-serif font-bold mb-4 text-foreground">
+              {(appointment as any).isReschedule || appointment.is_reschedule ? "Reagendamento Confirmado!" : "Agendamento Confirmado!"}
+            </h1>
+            <p className="text-muted-foreground text-lg">
+              Obrigado, {appointment.customerName || appointment.customer_name}. {(appointment as any).isReschedule || appointment.is_reschedule ? "Sua nova data foi reservada com sucesso." : "Seu horário foi reservado com sucesso."}
+            </p>
+          </div>
 
-            <div className="bg-card border border-border/50 rounded-xl p-8 shadow-2xl relative overflow-hidden">
-              <div className="absolute top-0 left-0 w-2 h-full bg-primary" />
+          <div className="bg-card border border-border/50 rounded-xl p-8 shadow-2xl relative overflow-hidden">
+            <div className="absolute top-0 left-0 w-2 h-full bg-primary" />
 
-              <div className="grid gap-8 md:grid-cols-2">
-                <div className="space-y-6">
-                  <div>
-                    <p className="text-sm text-muted-foreground mb-1">Serviço(s)</p>
-                    <div className="space-y-1">
-                      {appointment.servicesJson && Array.isArray(appointment.servicesJson) ? (
-                        appointment.servicesJson.map((s: any, idx: number) => (
-                          <div key={idx} className="flex justify-between items-center group">
-                            <p className="text-xl font-medium text-foreground">{s.name}</p>
-                            <span className="text-sm text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity">
-                              {formatCurrencyFromCents(s.price)}
-                            </span>
-                          </div>
-                        ))
-                      ) : (
-                        <p className="text-xl font-medium text-foreground">{appointment.serviceName || appointment.service_name}</p>
-                      )}
-                    </div>
-                  </div>
-
-                  <div>
-                    <p className="text-sm text-muted-foreground mb-1">Data e Horário</p>
-                    <div className="flex items-center gap-4">
-                      <div className="flex items-center gap-2 text-lg text-foreground">
-                        <Calendar className="w-5 h-5 text-primary" />
-                        {displayDate}
-                      </div>
-                      <div className="flex items-center gap-2 text-lg text-foreground">
-                        <Clock className="w-5 h-5 text-primary" />
-                        {timeValue}
-                      </div>
-                    </div>
-                  </div>
-
-                  <div>
-                    <p className="text-sm text-muted-foreground mb-1 text-foreground">Código da Reserva</p>
-                    <p className="font-mono text-muted-foreground">#{appointment.id.toString().padStart(6, '0')}</p>
-                  </div>
-
-                  <div className="border-t border-border/50 pt-4 mt-2">
-                    <p className="text-sm text-muted-foreground mb-1">Status do Pagamento</p>
-                    {(appointment.isPaid || appointment.is_paid) ? (
-                      <div className="flex items-center gap-2 text-green-600 font-bold uppercase text-xs">
-                        <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-                        Pago e Confirmado
-                      </div>
+            <div className="grid gap-8 md:grid-cols-2">
+              <div className="space-y-6">
+                <div>
+                  <p className="text-sm text-muted-foreground mb-1">Serviço(s)</p>
+                  <div className="space-y-1">
+                    {appointment.servicesJson && Array.isArray(appointment.servicesJson) ? (
+                      appointment.servicesJson.map((s: any, idx: number) => (
+                        <div key={idx} className="flex justify-between items-center group">
+                          <p className="text-xl font-medium text-foreground">{s.name}</p>
+                          <span className="text-sm text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity">
+                            {formatCurrencyFromCents(s.price)}
+                          </span>
+                        </div>
+                      ))
                     ) : (
-                      <div className="flex items-center gap-2 text-amber-500 font-bold uppercase text-xs">
-                        <div className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
-                        Pagar no Local
-                      </div>
+                      <p className="text-xl font-medium text-foreground">{appointment.serviceName || appointment.service_name}</p>
                     )}
                   </div>
                 </div>
 
-                <div className="bg-background rounded-lg p-6 border border-border flex flex-col gap-6">
-                  <div className="flex items-start gap-3">
-                    <CheckCircle2 className="w-5 h-5 text-primary shrink-0 mt-1" />
-                    <div>
-                      <p className="text-xs text-muted-foreground uppercase tracking-widest font-bold">Barbearia</p>
-                      <p className="font-serif text-lg font-bold text-foreground">{settings?.shopName || tenant.name || "King Barber"}</p>
+                <div>
+                  <p className="text-sm text-muted-foreground mb-1">Data e Horário</p>
+                  <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-2 text-lg text-foreground">
+                      <Calendar className="w-5 h-5 text-primary" />
+                      {displayDate}
+                    </div>
+                    <div className="flex items-center gap-2 text-lg text-foreground">
+                      <Clock className="w-5 h-5 text-primary" />
+                      {timeValue}
                     </div>
                   </div>
+                </div>
 
-                  <div className="flex items-start gap-3">
-                    <MapPin className="w-5 h-5 text-primary shrink-0 mt-1" />
-                    <div>
-                      <p className="text-xs text-muted-foreground uppercase tracking-widest font-bold">Unidade</p>
-                      <p className="font-medium text-foreground">{appointment.unit?.name || "Unidade Centro"}</p>
-                      <p className="text-sm text-muted-foreground mt-0.5 leading-relaxed">
-                        {appointment.unit 
-                          ? `${appointment.unit.address}${appointment.unit.number ? `, ${appointment.unit.number}` : ""} - ${appointment.unit.city || ""}` 
-                          : settings?.address || "Endereço não informado"}
-                      </p>
-                    </div>
-                  </div>
-                  
-                  <div className="flex items-start gap-3">
-                    <Award className="w-5 h-5 text-primary shrink-0 mt-1" />
-                    <div>
-                      <p className="text-xs text-muted-foreground uppercase tracking-widest font-bold">Profissional</p>
-                      <p className="font-medium text-foreground">{appointment.barberName || appointment.barber_name || "Qualquer Especialista"}</p>
-                    </div>
-                  </div>
+                <div>
+                  <p className="text-sm text-muted-foreground mb-1 text-foreground">Código da Reserva</p>
+                  <p className="font-mono text-muted-foreground">#{appointment.id.toString().padStart(6, '0')}</p>
+                </div>
 
-                  <div className="border-t border-border/50 pt-4 mt-2">
-                    <p className="text-sm text-muted-foreground text-center italic">
-                      {((appointment as any).isReschedule || appointment.is_reschedule) && (appointment.isPaid || appointment.is_paid)
-                        ? "Como esta é uma remarcação de um serviço já pago, seu crédito foi mantido."
-                        : "Por favor, chegue com 5 minutos de antecedência."}
+                <div className="border-t border-border/50 pt-4 mt-2">
+                  <p className="text-sm text-muted-foreground mb-1">Status do Pagamento</p>
+                  {(appointment.isPaid || appointment.is_paid) ? (
+                    <div className="flex items-center gap-2 text-green-600 font-bold uppercase text-xs">
+                      <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+                      Pago e Confirmado
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2 text-amber-500 font-bold uppercase text-xs">
+                      <div className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
+                      Pagar no Local
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="bg-background rounded-lg p-6 border border-border flex flex-col gap-6">
+                <div className="flex items-start gap-3">
+                  <CheckCircle2 className="w-5 h-5 text-primary shrink-0 mt-1" />
+                  <div>
+                    <p className="text-xs text-muted-foreground uppercase tracking-widest font-bold">Barbearia</p>
+                    <p className="font-serif text-lg font-bold text-foreground">{settings?.shopName || tenant.name || "King Barber"}</p>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-3">
+                  <MapPin className="w-5 h-5 text-primary shrink-0 mt-1" />
+                  <div>
+                    <p className="text-xs text-muted-foreground uppercase tracking-widest font-bold">Unidade</p>
+                    <p className="font-medium text-foreground">{appointment.unit?.name || "Unidade Centro"}</p>
+                    <p className="text-sm text-muted-foreground mt-0.5 leading-relaxed">
+                      {appointment.unit
+                        ? `${appointment.unit.address}${appointment.unit.number ? `, ${appointment.unit.number}` : ""} - ${appointment.unit.city || ""}`
+                        : settings?.address || "Endereço não informado"}
                     </p>
                   </div>
                 </div>
+
+                <div className="flex items-start gap-3">
+                  <Award className="w-5 h-5 text-primary shrink-0 mt-1" />
+                  <div>
+                    <p className="text-xs text-muted-foreground uppercase tracking-widest font-bold">Profissional</p>
+                    <p className="font-medium text-foreground">{appointment.barberName || appointment.barber_name || "Qualquer Especialista"}</p>
+                  </div>
+                </div>
+
+                <div className="border-t border-border/50 pt-4 mt-2">
+                  <p className="text-sm text-muted-foreground text-center italic">
+                    {((appointment as any).isReschedule || appointment.is_reschedule) && (appointment.isPaid || appointment.is_paid)
+                      ? "Como esta é uma remarcação de um serviço já pago, seu crédito foi mantido."
+                      : "Por favor, chegue com 5 minutos de antecedência."}
+                  </p>
+                </div>
               </div>
             </div>
-
-            {!isLoading && authStatus === "unauthenticated" && (
-              <Card className="mt-10 bg-primary/5 border-primary/20 shadow-lg overflow-hidden relative">
-                <div className="absolute top-0 right-0 p-4 opacity-10">
-                  <Share2 className="w-24 h-24 text-primary" />
-                </div>
-                <CardHeader>
-                  <CardTitle className="text-xl flex items-center gap-2">
-                    <Award className="w-5 h-5 text-primary" /> Salvar meus dados?
-                  </CardTitle>
-                  <CardDescription>Crie sua conta agora e comece a ganhar pontos de fidelidade!</CardDescription>
-                </CardHeader>
-                <CardContent className="flex flex-col sm:flex-row gap-4 items-center">
-                  <Button onClick={handleCreateAccount} className="w-full sm:w-auto gap-2" variant="default">
-                    Criar minha conta
-                  </Button>
-                  <p className="text-xs text-muted-foreground">
-                    Próximos agendamentos em apenas 2 cliques.
-                  </p>
-                </CardContent>
-              </Card>
-            )}
-
-            <div className="flex flex-col sm:flex-row justify-center gap-4 mt-10">
-              <Button
-                onClick={() => downloadICS(appointment)}
-                variant="outline"
-                className="gap-2">
-                <Download className="w-4 h-4" /> Adicionar ao Calendário
-              </Button>
-              {authStatus === "authenticated" && (
-                <Button asChild variant="outline" className="gap-2">
-                  <Link href={getLink("/meu-perfil/historico")}>
-                    <Clock className="w-4 h-4" /> Ver Meus Horários
-                  </Link>
-                </Button>
-              )}
-              <Button asChild>
-                <Link href={getLink("/")}>Voltar para o Início</Link>
-              </Button>
-            </div>
           </div>
-        )}
+
+          {!isLoading && authStatus === "unauthenticated" && (
+            <Card className="mt-10 bg-primary/5 border-primary/20 shadow-lg overflow-hidden relative">
+              <div className="absolute top-0 right-0 p-4 opacity-10">
+                <Share2 className="w-24 h-24 text-primary" />
+              </div>
+              <CardHeader>
+                <CardTitle className="text-xl flex items-center gap-2">
+                  <Award className="w-5 h-5 text-primary" /> Salvar meus dados?
+                </CardTitle>
+                {settings?.showLoyaltyProgram == "true" ? (
+                  <CardDescription>Crie sua conta agora e comece a ganhar pontos de fidelidade!</CardDescription>
+                ) : (
+                  <CardDescription>Crie sua conta agora para agendar serviços de forma <span className="font-bold text-foreground">mais rápida</span> e ter acesso ao seu <span className="font-bold text-foreground">painel pessoal</span> para acompanhar seus agendamentos.</CardDescription>
+                )}
+              </CardHeader>
+              <CardContent className="flex flex-col sm:flex-row gap-4 items-center">
+                <Button onClick={handleCreateAccount} className="w-full sm:w-auto gap-2" variant="default">
+                  Criar minha conta
+                </Button>
+                <p className="text-xs text-muted-foreground">
+                  Próximos agendamentos em apenas alguns cliques.
+                </p>
+              </CardContent>
+            </Card>
+          )}
+
+          <div className="flex flex-col sm:flex-row justify-center gap-4 mt-10">
+            <Button
+              onClick={() => downloadICS(appointment)}
+              variant="outline"
+              className="gap-2">
+              <Download className="w-4 h-4" /> Adicionar ao Calendário
+            </Button>
+            {authStatus === "authenticated" && (
+              <Button asChild variant="outline" className="gap-2">
+                <Link href={getLink("/meu-perfil/historico")}>
+                  <Clock className="w-4 h-4" /> Ver Meus Horários
+                </Link>
+              </Button>
+            )}
+            <Button asChild>
+              <Link href={getLink("/")}>Voltar para o Início</Link>
+            </Button>
+          </div>
+        </div>
       </div>
     </Layout>
   );
@@ -380,11 +307,11 @@ END:VCARD`;
 function generateICS(appointment: any, settings: any) {
   const dateStr = appointment.appointmentDate || appointment.appointment_date;
   const timeStr = appointment.appointmentTime || appointment.appointment_time;
-  
+
   if (!dateStr || !timeStr) return "";
-  
+
   const startDate = new Date(`${dateStr}T${timeStr}`);
-  
+
   // Calcular duração total baseada nos serviços (JSONB) ou fallback para slot_interval
   let duration = settings?.slot_interval || 45;
   if (appointment.servicesJson && Array.isArray(appointment.servicesJson)) {
@@ -392,7 +319,7 @@ function generateICS(appointment: any, settings: any) {
   } else if (appointment.service_duration || appointment.serviceDuration) {
     duration = appointment.service_duration || appointment.serviceDuration;
   }
-  
+
   const endDate = new Date(startDate.getTime() + duration * 60 * 1000);
 
   const formatDate = (date: Date) => {

@@ -6,14 +6,17 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const resolvedParams = await params;
-  const id = parseInt(resolvedParams.id);
-
-  if (isNaN(id)) {
-    return NextResponse.json({ error: "ID inválido" }, { status: 400 });
-  }
+  const idParam = resolvedParams.id;
+  const id = parseInt(idParam);
 
   try {
-    const appointment = await AppointmentService.getById(id);
+    let appointment;
+    
+    if (!isNaN(id) && id.toString() === idParam) {
+      appointment = await AppointmentService.getById(id);
+    } else {
+      appointment = await AppointmentService.getByUuid(idParam);
+    }
     
     if (!appointment) {
       return NextResponse.json({ error: "Agendamento não encontrado" }, { status: 404 });
@@ -21,6 +24,7 @@ export async function GET(
 
     return NextResponse.json(appointment);
   } catch (error) {
+    console.error("GET /api/appointments/[id] Error:", error);
     return NextResponse.json({ error: "Erro interno ao buscar agendamento" }, { status: 500 });
   }
 }

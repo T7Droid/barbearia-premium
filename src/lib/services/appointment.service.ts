@@ -38,6 +38,7 @@ export interface Appointment {
     city?: string;
     state?: string;
   };
+  uuid?: string;
   createdAt: string;
 }
 
@@ -110,6 +111,7 @@ export class AppointmentService {
         state: data.units.state
       } : undefined,
       tenantId: data.tenant_id,
+      uuid: data.uuid,
       createdAt: data.created_at,
     };
   }
@@ -179,6 +181,21 @@ export class AppointmentService {
       .from("appointments")
       .select("*, units(*)")
       .eq("id", id)
+      .single();
+
+    if (error) return null;
+    return this.mapFromSupabase(data);
+  }
+
+  static async getByUuid(uuid: string): Promise<Appointment | null> {
+    if (!config.supabase.isConfigured || !supabaseAdmin) {
+      throw new Error("Supabase Admin is required for backend lookups.");
+    }
+
+    const { data, error } = await supabaseAdmin!
+      .from("appointments")
+      .select("*, units(*)")
+      .eq("uuid", uuid)
       .single();
 
     if (error) return null;

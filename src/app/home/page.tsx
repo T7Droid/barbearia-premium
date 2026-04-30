@@ -81,10 +81,10 @@ export default function RootPage() {
             </div>
           </div>
 
-          <div className="mt-12 flex flex-col items-center text-center gap-4 py-4 max-w-2xl mx-auto">
+          <div className="mt-12 flex flex-col items-center text-center gap-4 py-16 max-w-2xl mx-auto">
             <div>
-              <h4 className="text-xl font-bold font-sans">Transforme em negócio profissional</h4>
-              <p className="text-muted-foreground mt-2 text-sm md:text-base font-sans">Tenha organização, automação e tempo livre para focar no que realmente importa: <strong>atender bem seus clientes e crescer.</strong></p>
+              <h4 className="text-xl font-bold">Transforme em negócio profissional</h4>
+              <p className="text-muted-foreground mt-2 text-sm md:text-base">Tenha organização, automação e tempo livre para focar no que realmente importa: <strong>atender bem seus clientes e crescer.</strong></p>
             </div>
           </div>
         </div>
@@ -96,7 +96,7 @@ export default function RootPage() {
             <p className="text-muted-foreground text-lg max-w-2xl mx-auto">Escolha a melhor opção para o momento da sua barbearia. Sem taxas de adesão ou fidelidade.</p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 items-stretch">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 py-14 gap-6 items-stretch">
             {/* Plano Básico */}
             <div className="bg-card border border-border/50 p-8 rounded-3xl flex flex-col hover:border-primary/30 transition-all shadow-sm">
               <div className="mb-6 text-center">
@@ -369,7 +369,7 @@ export default function RootPage() {
         <img 
           src="/imagem_marketing.png" 
           alt="Marketing King Barber" 
-          className="mt-8 max-w-md w-full"
+          className="mt-8 max-w-md w-full py-12"
         />
 
       </div>

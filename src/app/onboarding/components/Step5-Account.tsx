@@ -36,9 +36,40 @@ export function Step5Account({ onFinish, isSubmitting }: Step5AccountProps) {
     }
   }, [data.planId, data.barber.name, data.barber.email, data.account.fullName, data.account.email, updateData]);
 
-  const passwordRegex = /^(?=.*[a-zA-Z])(?=.*[0-9]).{6,}$/;
-  const isPasswordSecure = passwordRegex.test(data.account.password || "");
-  const passwordsMatch = data.account.password === confirmPassword;
+  const passwordRegex = /^(?=.*[a-zA-Z])(?=.*[0-9]).{8,}$/;
+  const password = data.account.password || "";
+  
+  // Funções de validação de padrões
+  const hasSequences = (str: string) => {
+    const lowerStr = str.toLowerCase();
+    for (let i = 0; i < lowerStr.length - 2; i++) {
+      const char1 = lowerStr.charCodeAt(i);
+      const char2 = lowerStr.charCodeAt(i + 1);
+      const char3 = lowerStr.charCodeAt(i + 2);
+      // Sequência crescente (123, abc) ou decrescente (321, cba)
+      if ((char1 + 1 === char2 && char2 + 1 === char3) || (char1 - 1 === char2 && char2 - 1 === char3)) {
+        return true;
+      }
+    }
+    return false;
+  };
+
+  const hasRepeatedChars = (str: string) => {
+    return /(.)\1\1/.test(str); // Detecta 3 ou mais caracteres repetidos (ex: 111, aaa)
+  };
+
+  const getPasswordError = () => {
+    if (!password) return "";
+    if (password.length < 8) return "Mínimo de 8 caracteres.";
+    if (!/(?=.*[a-zA-Z])(?=.*[0-9])/.test(password)) return "Deve conter letras e números.";
+    if (hasSequences(password)) return "Evite sequências simples (ex: 123, abc).";
+    if (hasRepeatedChars(password)) return "Evite repetir caracteres (ex: 111).";
+    return "";
+  };
+
+  const passwordError = getPasswordError();
+  const isPasswordSecure = passwordRegex.test(password) && !hasSequences(password) && !hasRepeatedChars(password);
+  const passwordsMatch = password === confirmPassword;
 
   const isFormValid = 
     data.account.fullName.trim().length > 3 &&
@@ -127,10 +158,10 @@ export function Step5Account({ onFinish, isSubmitting }: Step5AccountProps) {
               <Input 
                 id="password"
                 type={showPassword ? "text" : "password"}
-                className={`pl-9 pr-10 h-11 ${data.account.password && !isPasswordSecure ? 'border-amber-500 bg-amber-500/5' : 'border-primary/20'}`}
-                value={data.account.password || ""}
+                className={`pl-9 pr-10 h-11 ${password && passwordError ? 'border-red-500 bg-red-500/5' : 'border-primary/20'}`}
+                value={password}
                 onChange={(e) => updateData({ account: { ...data.account, password: e.target.value } })}
-                placeholder="Mínimo 6 caracteres"
+                placeholder="Mínimo 8 caracteres"
                 required
               />
               <button
@@ -141,9 +172,15 @@ export function Step5Account({ onFinish, isSubmitting }: Step5AccountProps) {
                 {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
               </button>
             </div>
-            <p className={`text-[10px] ${data.account.password && !isPasswordSecure ? 'text-amber-600 font-bold' : 'text-muted-foreground'}`}>
-              Deve conter no mínimo 6 caracteres, letras e números.
-            </p>
+            {password && passwordError ? (
+              <p className="text-[10px] text-red-600 font-bold animate-in fade-in slide-in-from-top-1">
+                {passwordError}
+              </p>
+            ) : (
+              <p className="text-[10px] text-muted-foreground">
+                Deve conter no mínimo 8 caracteres, letras e números.
+              </p>
+            )}
           </div>
 
           <div className="space-y-2">
@@ -198,18 +235,18 @@ export function Step5Account({ onFinish, isSubmitting }: Step5AccountProps) {
         </div>
       </div>
 
-      <div className="flex gap-4 pt-4 border-t">
+      <div className="flex flex-col-reverse md:flex-row gap-4 pt-4 border-t">
         <Button 
           type="button" 
           variant="ghost" 
           disabled={isSubmitting} 
           onClick={() => setStep(4)} 
-          className="gap-2"
+          className="gap-2 w-full md:w-auto h-12 md:h-auto"
         >
           <ArrowLeft className="w-4 h-4" /> Voltar
         </Button>
         <Button 
-          className="flex-1 bg-primary hover:bg-primary/90 text-xl py-8 font-bold shadow-lg shadow-primary/20"
+          className="flex-1 bg-primary hover:bg-primary/90 text-lg md:text-xl py-6 md:py-8 font-bold shadow-lg shadow-primary/20"
           disabled={!isFormValid || isSubmitting}
           onClick={onFinish}
         >
@@ -219,7 +256,10 @@ export function Step5Account({ onFinish, isSubmitting }: Step5AccountProps) {
               <span>Processando...</span>
             </div>
           ) : (
-            "Finalizar e Criar Minha Barbearia"
+            <>
+              <span className="hidden md:inline">Finalizar e Criar Minha Barbearia</span>
+              <span className="md:hidden">Finalizar e Criar Barbearia</span>
+            </>
           )}
         </Button>
       </div>
