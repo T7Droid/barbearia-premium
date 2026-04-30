@@ -13,6 +13,7 @@ import { DemoStore } from "@/lib/persistence/demo-store";
 import { useRouter } from "next/navigation";
 import { useTenant } from "@/hooks/use-tenant";
 import { useUserStore } from "@/lib/store/user-store";
+import { requestNotificationPermission } from "@/lib/firebase";
 
 export default function ClientSettingsPage() {
   const { toast } = useToast();
@@ -263,7 +264,16 @@ export default function ClientSettingsPage() {
                 checked={profile.pushNotificationsEnabled}
                 onCheckedChange={async (val) => {
                   if (val) {
-                    const { requestNotificationPermission } = await import("@/lib/firebase");
+                    // Verificar se já foi negado permanentemente no navegador
+                    if (typeof window !== "undefined" && "Notification" in window && Notification.permission === "denied") {
+                      toast({
+                        title: "Acesso Bloqueado",
+                        description: "Para ativar, você precisa ir nas configurações do seu navegador (ícone de cadeado na barra de endereços) e permitir as notificações.",
+                        variant: "destructive"
+                      });
+                      return;
+                    }
+
                     const token = await requestNotificationPermission();
                     if (token) {
                       setProfile({ 
@@ -272,11 +282,14 @@ export default function ClientSettingsPage() {
                         fcmToken: token 
                       });
                     } else {
-                      toast({
-                        title: "Permissão Negada",
-                        description: "Para receber notificações, você precisa permitir o acesso no seu navegador.",
-                        variant: "destructive"
-                      });
+                      // Se chegou aqui e não é 'denied', o usuário pode ter apenas fechado o diálogo ou houve erro técnico
+                      if (Notification.permission !== "granted") {
+                        toast({
+                          title: "Permissão Necessária",
+                          description: "Você precisa permitir as notificações no diálogo que aparece no navegador.",
+                          variant: "destructive"
+                        });
+                      }
                     }
                   } else {
                     setProfile({ ...profile, pushNotificationsEnabled: false });

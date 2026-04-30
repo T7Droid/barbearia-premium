@@ -22,9 +22,11 @@ export const requestNotificationPermission = async () => {
   try {
     const permission = await Notification.requestPermission();
     if (permission === "granted") {
-      const registration = await navigator.serviceWorker.register('/sw.js', {
+      // Registra e espera o Service Worker estar pronto
+      await navigator.serviceWorker.register('/sw.js', {
         scope: '/'
       });
+      const registration = await navigator.serviceWorker.ready;
       
       const token = await getToken(messaging, {
         vapidKey: process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY,

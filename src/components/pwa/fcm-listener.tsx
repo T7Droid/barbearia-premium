@@ -57,5 +57,5 @@ export function FCMListener() {
     return () => unsubscribe();
   }, [messaging, toast, router, tenant?.slug]);
 
-  return null; // Este componente não renderiza nada visualmente
+  return null;
 }
