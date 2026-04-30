@@ -10,12 +10,20 @@ const getFirebaseAdmin = () => {
   }
 
   try {
-    const serviceAccount = JSON.parse(serviceAccountVar);
+    // Remove aspas simples que podem vir do .env e limpa espaços
+    const cleanJson = serviceAccountVar.trim().replace(/^'|'$/g, '');
+    const serviceAccount = JSON.parse(cleanJson);
+    
+    // O Firebase Admin exige quebras de linha reais (\n) na chave privada
+    if (serviceAccount.private_key) {
+      serviceAccount.private_key = serviceAccount.private_key.replace(/\\n/g, '\n');
+    }
+
     return admin.initializeApp({
       credential: admin.credential.cert(serviceAccount),
     });
-  } catch (error) {
-    console.error("[NotificationService] Error initializing Firebase Admin:", error);
+  } catch (error: any) {
+    console.error("[NotificationService] Erro ao inicializar Firebase Admin:", error.message);
     return null;
   }
 };
@@ -43,9 +51,9 @@ export class NotificationService {
       const response = await admin.messaging().send(message);
       console.log(`[NotificationService] Push sent successfully: ${response}`);
       return true;
-    } catch (error) {
-      console.error("[NotificationService] Error sending push:", error);
-      return false;
+    } catch (error: any) {
+      console.error("[NotificationService] Erro ao enviar push:", error.message);
+      throw error;
     }
   }
 }
