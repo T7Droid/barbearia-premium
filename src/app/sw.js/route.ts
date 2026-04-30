@@ -17,7 +17,6 @@ export async function GET() {
     firebase.initializeApp(firebaseConfig);
     const messaging = firebase.messaging();
 
-    // Evento Push Nativo (O segredo para o Android/PWA funcionar 100%)
     self.addEventListener('push', (event) => {
       console.log('[SW] Push Nativo recebido:', event);
       
