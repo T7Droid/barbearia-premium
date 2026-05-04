@@ -143,7 +143,21 @@ export function Step5Account({ onFinish, isSubmitting }: Step5AccountProps) {
                 id="phone"
                 className="pl-9 h-12"
                 value={data.account.phone}
-                onChange={(e) => updateData({ account: { ...data.account, phone: e.target.value } })}
+                onChange={(e) => {
+                  const val = e.target.value.replace(/\D/g, "");
+                  let formatted = val;
+                  if (val.length > 0) {
+                    formatted = `(${val.substring(0, 2)}`;
+                    if (val.length > 2) {
+                      formatted += `) ${val.substring(2, 7)}`;
+                    }
+                    if (val.length > 7) {
+                      formatted += `-${val.substring(7, 11)}`;
+                    }
+                  }
+                  updateData({ account: { ...data.account, phone: formatted } });
+                }}
+                maxLength={15}
                 placeholder="(00) 00000-0000"
                 required
               />

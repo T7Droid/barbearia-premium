@@ -145,8 +145,7 @@ export default function ClientSettingsPage() {
     );
   }
 
-  return (
-    <Layout>
+    <div className="min-h-screen bg-background">
       <div className="container mx-auto px-4 py-12 max-w-3xl">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-10 gap-4">
           <div>
@@ -322,6 +321,10 @@ export default function ClientSettingsPage() {
                 Seus dados são protegidos e utilizados apenas para a gestão de seus agendamentos na unidade {tenant?.name}.
               </p>
             </div>
+          </div>
+        </div>
+      </div>
+    </div>     </div>
           </div>
         </div>
       </div>

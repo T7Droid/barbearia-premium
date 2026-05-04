@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Layout } from "@/components/layout";
+
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
@@ -278,16 +278,16 @@ export default function BarberDashboard() {
 
   if (isLoading) {
     return (
-      <Layout>
+      <div className="min-h-screen bg-background">
         <div className="flex items-center justify-center min-h-[60vh]">
           <Loader2 className="w-8 h-8 animate-spin text-primary" />
         </div>
-      </Layout>
+      </div>
     );
   }
 
   return (
-    <Layout>
+    <div className="min-h-screen bg-background">
       <div className="container mx-auto px-4 py-8 max-w-7xl">
         {!hasProfile && user?.role === 'admin' ? (
           <div className="min-h-[70vh] flex items-center justify-center">
@@ -594,6 +594,6 @@ export default function BarberDashboard() {
           </>
         )}
       </div>
-    </Layout>
+    </div>
   );
 }

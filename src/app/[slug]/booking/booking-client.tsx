@@ -838,7 +838,7 @@ function BookingContent() {
                   </p>
                   <div className="flex flex-col sm:flex-row gap-4 w-full max-w-sm">
                     <Button variant="outline" asChild className="flex-1 h-12">
-                      <Link href="/">Voltar ao Início</Link>
+                      <Link href={`/${tenant.slug}`}>Voltar ao Início</Link>
                     </Button>
                     {settings?.adminPhone && (
                       <Button asChild className="flex-1 h-12 bg-[#25D366] hover:bg-[#128C7E] text-white gap-2 shadow-lg shadow-green-500/20">

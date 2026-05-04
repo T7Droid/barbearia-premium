@@ -16,15 +16,26 @@ export default function SubscriptionExpiredPage() {
   const [currentPlanId, setCurrentPlanId] = useState<string>("basico");
 
   useEffect(() => {
+    // Proteção para BFCache: Se o usuário voltar do Stripe, resetamos o loading do botão
+    const handlePageShow = (event: PageTransitionEvent) => {
+      if (event.persisted || event) {
+        setLoading(false);
+      }
+    };
+    window.addEventListener("pageshow", handlePageShow);
+
     const checkStatus = async () => {
+      if (!tenant?.slug) {
+        setChecking(false);
+        return;
+      }
+
       try {
         const res = await fetch("/api/settings", {
           headers: { "x-tenant-slug": tenant.slug }
         });
         const data = await res.json();
         
-        // O Stripe usa o slug (basico, escala, etc) para identificar o preço
-        // Normalizamos para minúsculo para garantir compatibilidade
         if (data.plan?.slug) {
           setCurrentPlanId(data.plan.slug.toLowerCase().trim());
         }
@@ -33,16 +44,16 @@ export default function SubscriptionExpiredPage() {
           router.push(`/${tenant.slug}/admin`);
         }
       } catch (e) {
-        // ignore
+        console.error("Erro ao checar status:", e);
       } finally {
         setChecking(false);
       }
     };
 
-    if (tenant?.slug) {
-      checkStatus();
-    }
-  }, [tenant, router]);
+    checkStatus();
+
+    return () => window.removeEventListener("pageshow", handlePageShow);
+  }, [tenant?.slug, router]);
 
   const handlePay = async () => {
     setLoading(true);

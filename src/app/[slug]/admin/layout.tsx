@@ -13,12 +13,21 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const tenant = useTenant();
   const initialUser = userStore.getState().user;
   const [isAuthorized, setIsAuthorized] = useState(initialUser?.role === "admin");
-  const [isLoading, setIsLoading] = useState(!isAuthorized);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSubscriptionActive, setIsSubscriptionActive] = useState<boolean | null>(null);
 
   useEffect(() => {
     const controller = new AbortController();
     const adminLoginPath = `/${tenant.slug}/admin/login`;
     const adminRootPath = `/${tenant.slug}/admin`;
+
+    // Proteção para BFCache: Se o usuário voltar do Stripe, resetamos o loading
+    const handlePageShow = (event: PageTransitionEvent) => {
+      if (event.persisted || event) {
+        setIsLoading(false);
+      }
+    };
+    window.addEventListener("pageshow", handlePageShow);
 
     const checkAuth = async () => {
       const timeoutId = setTimeout(() => controller.abort(), 10000);
@@ -37,6 +46,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         if (data.authenticated && data.user?.role === "admin") {
           setIsAuthorized(true);
           userStore.setUser(data.user);
+          setIsSubscriptionActive(data.isSubscriptionActive !== false);
 
           const isExpiredPath = pathname.endsWith("/assinatura-vencida");
 
@@ -45,8 +55,12 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             return;
           }
 
-          if (pathname === adminLoginPath && data.isSubscriptionActive !== false) {
-            router.push(adminRootPath);
+          if (pathname === adminLoginPath) {
+            if (data.isSubscriptionActive === false) {
+              router.push(`/${tenant.slug}/admin/assinatura-vencida`);
+            } else {
+              router.push(adminRootPath);
+            }
           }
         } else {
           setIsAuthorized(false);
@@ -76,9 +90,11 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
     return () => {
       controller.abort();
+      window.removeEventListener("pageshow", handlePageShow);
     };
   }, [pathname, router, tenant.slug]);
 
+  // 1. Enquanto estiver checando (sessão ou assinatura), mostra o loader global
   if (isLoading) {
     return (
       <div className="container mx-auto px-4 py-12 flex flex-col items-center justify-center bg-background">
@@ -88,8 +104,20 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     );
   }
 
+  const isExpiredPath = pathname.endsWith("/assinatura-vencida");
   const adminLoginPath = `/${tenant.slug}/admin/login`;
-  if (pathname === adminLoginPath || isAuthorized) {
+
+  // 2. Se for a página de login, permitimos renderizar para o admin deslogado
+  if (pathname === adminLoginPath) {
+    return <Layout>{children}</Layout>;
+  }
+
+  // 3. BLOQUEIO CRÍTICO: Só renderiza os filhos se:
+  // - O usuário for admin autorizado
+  // - E a assinatura NÃO estiver inativa (ou se já estiver na página de aviso de vencimento)
+  const canRender = isAuthorized && (isSubscriptionActive !== false || isExpiredPath);
+
+  if (canRender) {
     return (
       <Layout>
         {children}
@@ -97,5 +125,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     );
   }
 
+  // 4. Fallback de segurança: Se caiu aqui e não é autorizado, o useEffect já disparou o redirect
   return null;
 }

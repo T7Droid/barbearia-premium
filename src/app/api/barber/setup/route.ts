@@ -90,7 +90,7 @@ export async function POST(request: NextRequest) {
       .select("id")
       .eq("tenant_id", tenant.id)
       .limit(10);
-      
+
     if (services && services.length > 0) {
       const svcAssociations = services.map(s => ({
         barber_id: barber.id,

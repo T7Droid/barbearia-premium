@@ -8,31 +8,44 @@ export class AuthService {
     const { data: { user }, error } = await supabase!.auth.getUser(token);
     if (error || !user) return null;
 
-    // Primeiro buscamos o perfil sem o filtro restrito de tenant para entender o papel do usuário
+    // Lógica de papel (Role) Multi-Tenant:
+    let userRole = "client";
+
+    console.log(`[AuthService] Determining role for ${user.email} at tenant ${tenantId}.`);
+
+    // 1. Verificamos se há um cargo específico para este tenant na nova tabela
+    if (tenantId) {
+      const isUsingServiceRole = !!process.env.SUPABASE_SERVICE_ROLE_KEY;
+      console.log(`[AuthService] Using Service Role: ${isUsingServiceRole}`);
+
+      const { data: membership, error: memError } = await supabaseAdmin!
+        .from("tenant_memberships")
+        .select("role")
+        .eq("user_id", user.id)
+        .eq("tenant_id", tenantId)
+        .single();
+      
+      if (memError) {
+        console.error(`[AuthService] Error fetching membership:`, memError);
+      }
+
+      if (membership) {
+        console.log(`[AuthService] Membership found:`, membership.role);
+        userRole = membership.role;
+      } else if (isAdminEmail(user.email)) {
+        userRole = "admin";
+      }
+    } else if (isAdminEmail(user.email)) {
+      userRole = "admin";
+    }
+
+    console.log(`[AuthService] Final calculated role for ${tenantId}: ${userRole}`);
+
     const { data: profile } = await supabaseAdmin!
       .from("profiles")
       .select("*")
       .eq("id", user.id)
       .single();
-    
-    // Lógica de papel (Role):
-    // 1. Se for o e-mail master ou o e-mail do usuário atual, é admin.
-    // 2. Se o perfil diz que é admin, permitimos (assumindo que admins podem ser globais ou gerir múltiplos tenants).
-    // 3. Se o perfil diz que é barber, permitimos.
-    // 4. Caso contrário, verificamos se o tenant_id bate.
-    let userRole = "client";
-    
-    console.log(`[AuthService] Determining role for ${user.email}. Profile role: ${profile?.role}`);
-
-    if (isAdminEmail(user.email) || profile?.role === "admin") {
-      userRole = "admin";
-    } else if (profile?.role === "barber") {
-      userRole = "barber";
-    } else if (profile && tenantId && profile.tenant_id === tenantId) {
-      userRole = profile.role || "client";
-    }
-
-    console.log(`[AuthService] Final calculated role: ${userRole}`);
 
     return {
       id: user.id,
@@ -41,7 +54,7 @@ export class AuthService {
       role: userRole,
       points: profile?.points || 0,
       phone: profile?.phone || "",
-      tenantId: profile?.tenant_id || tenantId,
+      tenantId: tenantId,
       notificationsEnabled: profile?.notifications_enabled ?? false,
       pushNotificationsEnabled: profile?.push_notifications_enabled ?? false,
       rescheduleCount: profile?.reschedule_count || 0,
@@ -98,8 +111,7 @@ export class AuthService {
         phone: updates.phone,
         notifications_enabled: updates.notificationsEnabled,
         push_notifications_enabled: updates.pushNotificationsEnabled,
-        fcm_token: updates.fcmToken,
-        role: updates.role // Permitir atualização de role se explicitamente enviado (para admin ops)
+        fcm_token: updates.fcmToken
       })
       .eq("id", user.id);
 

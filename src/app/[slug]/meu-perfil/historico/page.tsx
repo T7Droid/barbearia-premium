@@ -253,16 +253,16 @@ export default function AppointmentHistory() {
 
   if (loading) {
     return (
-      <Layout>
+      <div className="min-h-screen bg-background">
         <div className="container mx-auto px-4 py-24 flex items-center justify-center">
           <Loader2 className="w-8 h-8 animate-spin text-primary" />
         </div>
-      </Layout>
+      </div>
     );
   }
 
   return (
-    <Layout>
+    <div className="min-h-screen bg-background">
       <div className="container mx-auto px-4 py-12 max-w-5xl">
         <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
           <div>
@@ -424,6 +424,6 @@ export default function AppointmentHistory() {
           </div>
         </div>
       </div>
-    </Layout>
+    </div>
   );
 }

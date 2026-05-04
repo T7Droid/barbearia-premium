@@ -112,20 +112,21 @@ export async function proxy(request: NextRequest) {
       const { data: { user } } = await supabase.auth.getUser(token);
 
       if (user) {
-        // Primeiro buscamos o perfil sem o filtro restrito de tenant
-        const { data: profile } = await supabase
-          .from("profiles")
-          .select("role, tenant_id")
-          .eq("id", user.id)
+        // Buscar o cargo na tabela de vínculos (nova lógica multi-tenant)
+        const { data: membership } = await supabase
+          .from("tenant_memberships")
+          .select("role")
+          .eq("user_id", user.id)
+          .eq("tenant_id", tenant.id)
           .single();
 
-        // Usando a mesma lógica centralizada para identificar admins
         const { isAdminEmail } = await import("./lib/config/auth-config");
         let role = "client";
-        if (isAdminEmail(user.email) || profile?.role === "admin") {
+        
+        if (isAdminEmail(user.email)) {
           role = "admin";
-        } else if (profile && tenant.id && profile.tenant_id === tenant.id) {
-          role = profile.role || "client";
+        } else if (membership) {
+          role = membership.role || "client";
         }
 
         if (isTenantAuthPath) {

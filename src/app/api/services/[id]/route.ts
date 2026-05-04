@@ -2,8 +2,13 @@ import { NextRequest, NextResponse } from "next/server";
 import { ServiceService } from "@/lib/services/service.service";
 import { AuthService } from "@/lib/services/auth.service";
 
+import { TenantContext } from "@/lib/services/tenant-context";
+
 async function checkAdmin(request: NextRequest) {
-  const result = await AuthService.verifySession(request);
+  const tenant = await TenantContext.getTenant(request);
+  if (!tenant) return false;
+  
+  const result = await AuthService.verifySession(request, tenant.id);
   return result.authenticated && result.user?.role === "admin";
 }
 

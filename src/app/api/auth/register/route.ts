@@ -33,6 +33,8 @@ export async function POST(request: NextRequest) {
           data: {
             full_name: name,
             phone: phone || "",
+            notifications_enabled: false,
+            push_notifications_enabled: false,
           }
         }
       });
@@ -56,7 +58,6 @@ export async function POST(request: NextRequest) {
           full_name: name,
           email: email, // Persistir o e-mail no perfil
           phone: phone || "",
-          role: "client",
           points: initialPoints,
           notifications_enabled: false,
           push_notifications_enabled: false,

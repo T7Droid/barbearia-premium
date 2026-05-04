@@ -155,10 +155,15 @@ export async function POST(request: NextRequest) {
         await supabaseAdmin.from("profiles").upsert({
           id: userId,
           full_name: name,
-          email: loginData.email,
-          role: "barber",
-          tenant_id: tenant.id
+          email: loginData.email
         });
+
+        // Criar vínculo de acesso na nova tabela
+        await supabaseAdmin.from("tenant_memberships").upsert({
+          user_id: userId,
+          tenant_id: tenant.id,
+          role: "barber"
+        }, { onConflict: 'user_id,tenant_id' });
       }
     }
 

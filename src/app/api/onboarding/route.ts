@@ -192,10 +192,10 @@ export async function POST(req: Request) {
         id: barberUserId,
         full_name: barber.name,
         email: barber.email,
-        role: "barber",
-        tenant_id: createdTenantId,
         accepted_terms: true,
-        accepted_privacy: true
+        accepted_privacy: true,
+        notifications_enabled: false,
+        push_notifications_enabled: false
       }, { onConflict: 'id' });
 
       if (bProfileError) {
@@ -256,16 +256,56 @@ export async function POST(req: Request) {
           full_name: account.fullName,
           email: account.email,
           phone: account.phone,
-          role: "admin",
-          tenant_id: createdTenantId,
           accepted_terms: account.acceptedTerms,
-          accepted_privacy: account.acceptedPrivacy
+          accepted_privacy: account.acceptedPrivacy,
+          notifications_enabled: false,
+          push_notifications_enabled: false
         },
         { onConflict: 'id' }
       );
 
     if (profileError) {
       throw new Error(`Erro ao criar perfil: ${profileError.message}`);
+    }
+
+    // 9. Criar Vínculos de Cargo (Multi-Tenant Memberships)
+    const memberships = [
+      { user_id: createdUserId, tenant_id: createdTenantId, role: "admin" }
+    ];
+
+    // Se o barbeiro for uma pessoa diferente, adicionamos o vínculo dele também
+    if (isBarberDifferent && barberUserId) {
+      memberships.push({
+        user_id: barberUserId,
+        tenant_id: createdTenantId,
+        role: "barber"
+      });
+    }
+
+    const { error: membershipError } = await supabaseAdmin
+      .from("tenant_memberships")
+      .insert(memberships);
+
+    if (membershipError) {
+      throw new Error(`Erro ao criar vínculos de acesso: ${membershipError.message}`);
+    }
+
+    // 10. Criar Assinatura Inicial (Trial de 7 dias) para evitar bloqueio imediato
+    const trialEndsAt = new Date();
+    trialEndsAt.setDate(trialEndsAt.getDate() + 7);
+
+    const { error: subError } = await supabaseAdmin
+      .from("subscriptions")
+      .insert({
+        tenant_id: createdTenantId,
+        status: "trialing",
+        plan_id: data.planId === "basico" ? "basico" : "profissional",
+        expires_at: trialEndsAt.toISOString(),
+      });
+
+    if (subError) {
+      console.warn("Aviso: Erro ao criar assinatura trial:", subError.message);
+      // Não travamos o onboarding por isso, mas logamos
     }
 
     return NextResponse.json({ success: true, slug });

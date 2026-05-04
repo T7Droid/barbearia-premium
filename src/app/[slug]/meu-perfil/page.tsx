@@ -93,21 +93,21 @@ export default function UserProfile() {
 
   if (loading) {
     return (
-      <Layout>
+      <div className="min-h-screen bg-background">
         <div className="min-h-[60vh] flex items-center justify-center">
           <div className="flex flex-col items-center gap-4">
             <Loader2 className="w-12 h-12 text-primary animate-spin" />
             <p className="text-muted-foreground animate-pulse text-sm font-medium">Carregando seus dados...</p>
           </div>
         </div>
-      </Layout>
+      </div>
     );
   }
 
   const getLink = (path: string) => `/${tenant.slug}${path}`;
 
   return (
-    <Layout>
+    <div className="min-h-screen bg-background">
       <div className="container mx-auto px-4 py-8 max-w-5xl">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
           <div>
@@ -218,6 +218,6 @@ export default function UserProfile() {
           </Card>
         </div>
       </div>
-    </Layout>
+    </div>
   );
 }

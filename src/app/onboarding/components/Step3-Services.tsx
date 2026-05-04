@@ -12,8 +12,8 @@ export function Step3Services() {
   const { data, updateData, setStep } = useOnboarding();
   const [newService, setNewService] = useState({
     name: "",
-    price: "",
-    duration: "45",
+    price: "40",
+    duration: "30",
     description: ""
   });
 
@@ -45,7 +45,7 @@ export function Step3Services() {
     };
 
     updateData({ services: [...data.services, serviceToAdd] });
-    setNewService({ name: "", price: "", duration: "45", description: "" });
+    setNewService({ name: "", price: "40", duration: "30", description: "" });
   };
 
   const removeService = (id: string) => {
@@ -82,7 +82,7 @@ export function Step3Services() {
                   className="pl-7"
                   value={newService.price}
                   onChange={(e) => setNewService({ ...newService, price: e.target.value })}
-                  placeholder="0.00"
+                  placeholder="40.00"
                 />
               </div>
             </div>
@@ -95,7 +95,7 @@ export function Step3Services() {
                   className="pl-7"
                   value={newService.duration}
                   onChange={(e) => setNewService({ ...newService, duration: e.target.value })}
-                  placeholder="45"
+                  placeholder="30"
                 />
               </div>
             </div>

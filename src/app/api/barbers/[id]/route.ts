@@ -61,9 +61,7 @@ export async function PUT(
         await supabaseAdmin!.from("profiles").upsert({
           id: userId,
           full_name: name,
-          email: loginData.email,
-          role: "barber",
-          tenant_id: tenant.id
+          email: loginData.email
         });
       }
     }

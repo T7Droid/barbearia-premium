@@ -11,7 +11,7 @@ export async function GET(request: NextRequest) {
 
     const result = await AuthService.verifySession(request, tenant.id) as any;
     
-    if (result.authenticated && result.user?.role === "admin") {
+    if (result.authenticated) {
       const { TenantService } = require("@/lib/services/tenant.service");
       result.isSubscriptionActive = await TenantService.isSubscriptionActive(tenant.id);
     }
