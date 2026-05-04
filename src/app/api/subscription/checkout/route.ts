@@ -34,6 +34,12 @@ export async function POST(request: NextRequest) {
         },
       ],
       mode: "subscription",
+      subscription_data: {
+        metadata: {
+          tenantId: tenant.id,
+          planId: planId,
+        },
+      },
       success_url: `${request.nextUrl.origin}/${tenant.slug}/admin/configuracoes?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${request.nextUrl.origin}/${tenant.slug}/admin/configuracoes`,
       metadata: {
