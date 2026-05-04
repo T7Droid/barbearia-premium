@@ -121,9 +121,25 @@ export async function POST(request: NextRequest) {
       case "customer.subscription.updated":
       case "customer.subscription.deleted": {
         const subscription = event.data.object as any;
-        const tenantId = subscription.metadata?.tenantId;
+        let tenantId = subscription.metadata?.tenantId;
+        const stripeCustomerId = subscription.customer;
 
-        console.log(`[Stripe Webhook] Subscription event ${event.type} for sub: ${subscription.id}, tenant: ${tenantId}`);
+        console.log(`[Stripe Webhook] Subscription event ${event.type} for sub: ${subscription.id}, initial tenant: ${tenantId}`);
+
+        // Fallback: Buscar pelo stripe_customer_id se o metadado estiver vazio (para assinaturas antigas)
+        if (!tenantId && stripeCustomerId) {
+          console.log(`[Stripe Webhook] Missing tenantId in sub metadata, searching DB for customer ${stripeCustomerId}...`);
+          const { data: tenantByCustomer } = await supabaseAdmin!
+            .from("tenants")
+            .select("id")
+            .eq("stripe_customer_id", stripeCustomerId)
+            .single();
+          
+          if (tenantByCustomer) {
+            tenantId = tenantByCustomer.id;
+            console.log(`[Stripe Webhook] Found tenant in DB for update: ${tenantId}`);
+          }
+        }
 
         if (tenantId) {
           const expiresAt = subscription.current_period_end 
@@ -140,7 +156,13 @@ export async function POST(request: NextRequest) {
             })
             .eq("tenant_id", tenantId);
             
-          if (updateError) console.error("[Stripe Webhook] Update Error:", updateError);
+          if (updateError) {
+            console.error("[Stripe Webhook] Update Error:", updateError);
+          } else {
+            console.log(`[Stripe Webhook] SUCCESS: Subscription ${event.type} processed for tenant ${tenantId}`);
+          }
+        } else {
+          console.warn(`[Stripe Webhook] SKIP: Could not identify tenant for sub update ${subscription.id}`);
         }
         break;
       }
