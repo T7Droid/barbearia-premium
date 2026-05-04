@@ -87,6 +87,7 @@ export async function POST(request: NextRequest) {
             status: subscription.status,
             expires_at: expiresAt,
             stripe_subscription_id: stripeSubscriptionId,
+            cancel_at_period_end: subscription.cancel_at_period_end,
             updated_at: new Date().toISOString(),
           };
 
@@ -134,6 +135,7 @@ export async function POST(request: NextRequest) {
             .update({
               status: subscription.status,
               expires_at: expiresAt,
+              cancel_at_period_end: subscription.cancel_at_period_end,
               updated_at: new Date().toISOString(),
             })
             .eq("tenant_id", tenantId);

@@ -335,8 +335,10 @@ export default function SettingsPage() {
             <div className="flex-1">
               <div className="flex flex-wrap items-center gap-2">
                 <CardTitle>Minha Assinatura</CardTitle>
-                <div className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${settings.isSubscriptionActive ? 'bg-green-500/20 text-green-500' : 'bg-red-500/20 text-red-500'}`}>
-                  {settings.isSubscriptionActive ? 'Ativa' : 'Inativa/Vencida'}
+                <div className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${settings.isSubscriptionActive ? (settings.cancelAtPeriodEnd ? 'bg-amber-500/20 text-amber-600' : 'bg-green-500/20 text-green-500') : 'bg-red-500/20 text-red-500'}`}>
+                  {settings.isSubscriptionActive 
+                    ? (settings.cancelAtPeriodEnd ? 'Cancelamento Pendente' : 'Ativa') 
+                    : 'Inativa/Vencida'}
                 </div>
                 {settings.subscriptionStatus === 'trialing' && (
                   <div className="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-amber-500/20 text-amber-600 border border-amber-500/20">
@@ -355,7 +357,9 @@ export default function SettingsPage() {
           <CardContent className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div className="p-3 rounded-lg bg-accent/50 border border-border/40">
-                <p className="text-[10px] text-muted-foreground uppercase font-bold">Próximo Vencimento</p>
+                <p className="text-[10px] text-muted-foreground uppercase font-bold">
+                  {settings.cancelAtPeriodEnd ? 'Expira em' : 'Próximo Vencimento'}
+                </p>
                 <p className="text-lg font-bold text-foreground">
                   {settings.subscriptionExpiresAt ? formatDateBR(settings.subscriptionExpiresAt) : 'N/D'}
                 </p>

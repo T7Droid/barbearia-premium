@@ -61,7 +61,7 @@ export async function GET(request: NextRequest) {
   // Buscar data de expiração da assinatura
   const { data: subData } = await supabaseAdmin!
     .from("subscriptions")
-    .select("expires_at, status")
+    .select("expires_at, status, cancel_at_period_end")
     .eq("tenant_id", tenant.id)
     .order("created_at", { ascending: false })
     .limit(1)
@@ -97,6 +97,7 @@ export async function GET(request: NextRequest) {
     plan: fullTenant?.plans || null,
     isSubscriptionActive: isSubActive,
     subscriptionStatus: subData?.status || "inactive",
+    cancelAtPeriodEnd: subData?.cancel_at_period_end || false,
     appointmentsCount: appointmentsCount || 0,
     subscriptionExpiresAt: subData?.expires_at || null,
     adminPhone: adminPhone,
