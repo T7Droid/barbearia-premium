@@ -5,10 +5,31 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { UserPlus, User, ArrowLeft, Mail } from "lucide-react";
+import { UserPlus, User, ArrowLeft, Mail, AlertCircle } from "lucide-react";
+import { useRef, useEffect } from "react";
 
-export function Step4Barber() {
+interface Step4BarberProps {
+  /** Quando true, foca e seleciona o campo de e-mail ao montar (vindo de erro no step 5) */
+  focusEmail?: boolean;
+  /** Chamado após aplicar o foco, para resetar o flag no componente pai */
+  onEmailFocused?: () => void;
+}
+
+export function Step4Barber({ focusEmail = false, onEmailFocused }: Step4BarberProps) {
   const { data, updateData, setStep } = useOnboarding();
+  const emailInputRef = useRef<HTMLInputElement>(null);
+
+  // Foca o e-mail quando redirecionado do step 5 por conflito de e-mail
+  useEffect(() => {
+    if (focusEmail) {
+      const timer = setTimeout(() => {
+        emailInputRef.current?.focus();
+        emailInputRef.current?.select();
+        onEmailFocused?.();
+      }, 0);
+      return () => clearTimeout(timer);
+    }
+  }, [focusEmail]);
 
   const handleNext = (e: React.FormEvent) => {
     e.preventDefault();
@@ -47,19 +68,29 @@ export function Step4Barber() {
           <Label htmlFor="barberEmail" className="text-base text-foreground font-semibold">E-mail do Profissional</Label>
           <div className="relative">
             <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-            <Input 
+            <Input
+              ref={emailInputRef}
               id="barberEmail"
               type="email"
-              className="h-14 text-lg pl-10"
+              className={`h-14 text-lg pl-10 ${
+                focusEmail ? "border-destructive ring-1 ring-destructive" : ""
+              }`}
               value={data.barber.email}
               onChange={(e) => updateData({ barber: { ...data.barber, email: e.target.value } })}
               placeholder="Ex: profissional@gmail.com"
               required
             />
           </div>
-          <p className="text-xs text-muted-foreground italic">
-            Se você for o próprio barbeiro, use o mesmo e-mail que usará para acessar sua conta.
-          </p>
+          {focusEmail ? (
+            <p className="text-xs text-destructive font-medium flex items-center gap-1 animate-in fade-in slide-in-from-top-1">
+              <AlertCircle className="w-3.5 h-3.5" />
+              Este e-mail já está cadastrado. Use um e-mail diferente.
+            </p>
+          ) : (
+            <p className="text-xs text-muted-foreground italic">
+              Se você for o próprio barbeiro, use o mesmo e-mail que usará para acessar sua conta.
+            </p>
+          )}
         </div>
 
         <div className="space-y-2">

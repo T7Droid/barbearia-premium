@@ -18,27 +18,28 @@ export function Step5Account({ onFinish, isSubmitting }: Step5AccountProps) {
   const [showPassword, setShowPassword] = useState(false);
   const [confirmPassword, setConfirmPassword] = useState("");
 
-  // Sincronização para Plano Básico: Garante que Admin e Barbeiro sejam a mesma pessoa
+  // Plano básico: mantém nome e email do admin em sincronia com o barbeiro (step 4)
   useEffect(() => {
     if (data.planId === "basico") {
-      const hasChanges = data.account.fullName !== data.barber.name || 
-                        data.account.email !== data.barber.email;
-      
+      const hasChanges =
+        data.account.fullName !== data.barber.name ||
+        data.account.email !== data.barber.email;
+
       if (hasChanges) {
         updateData({
           account: {
             ...data.account,
             fullName: data.barber.name,
-            email: data.barber.email
-          }
+            email: data.barber.email,
+          },
         });
       }
     }
-  }, [data.planId, data.barber.name, data.barber.email, data.account.fullName, data.account.email, updateData]);
+  }, [data.planId, data.barber.name, data.barber.email]);
 
   const passwordRegex = /^(?=.*[a-zA-Z])(?=.*[0-9]).{8,}$/;
   const password = data.account.password || "";
-  
+
   // Funções de validação de padrões
   const hasSequences = (str: string) => {
     const lowerStr = str.toLowerCase();
@@ -71,7 +72,7 @@ export function Step5Account({ onFinish, isSubmitting }: Step5AccountProps) {
   const isPasswordSecure = passwordRegex.test(password) && !hasSequences(password) && !hasRepeatedChars(password);
   const passwordsMatch = password === confirmPassword;
 
-  const isFormValid = 
+  const isFormValid =
     data.account.fullName.trim().length > 3 &&
     data.account.email.includes("@") &&
     data.account.phone.length >= 8 &&
@@ -95,7 +96,7 @@ export function Step5Account({ onFinish, isSubmitting }: Step5AccountProps) {
           <Label htmlFor="fullName">Nome Completo do Responsável</Label>
           <div className="relative">
             <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <Input 
+            <Input
               id="fullName"
               className="pl-9 h-12"
               value={data.account.fullName}
@@ -117,7 +118,7 @@ export function Step5Account({ onFinish, isSubmitting }: Step5AccountProps) {
             <Label htmlFor="email">E-mail Administrativo</Label>
             <div className="relative">
               <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <Input 
+              <Input
                 id="email"
                 type="email"
                 className="pl-9 h-12"
@@ -130,7 +131,7 @@ export function Step5Account({ onFinish, isSubmitting }: Step5AccountProps) {
             </div>
             {data.planId === "basico" && (
               <p className="text-[10px] text-primary font-medium italic">
-                E-mail fixado conforme o profissional
+                E-mail fixado conforme o profissional cadastrado na etapa anterior
               </p>
             )}
           </div>
@@ -138,7 +139,7 @@ export function Step5Account({ onFinish, isSubmitting }: Step5AccountProps) {
             <Label htmlFor="phone">WhatsApp (contato)</Label>
             <div className="relative">
               <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <Input 
+              <Input
                 id="phone"
                 className="pl-9 h-12"
                 value={data.account.phone}
@@ -155,7 +156,7 @@ export function Step5Account({ onFinish, isSubmitting }: Step5AccountProps) {
             <Label htmlFor="password">Defina uma Senha</Label>
             <div className="relative">
               <Key className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <Input 
+              <Input
                 id="password"
                 type={showPassword ? "text" : "password"}
                 className={`pl-9 pr-10 h-11 ${password && passwordError ? 'border-red-500 bg-red-500/5' : 'border-primary/20'}`}
@@ -187,7 +188,7 @@ export function Step5Account({ onFinish, isSubmitting }: Step5AccountProps) {
             <Label htmlFor="confirmPassword">Confirme sua Senha</Label>
             <div className="relative">
               <Key className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <Input 
+              <Input
                 id="confirmPassword"
                 type={showPassword ? "text" : "password"}
                 className={`pl-9 h-11 ${confirmPassword && !passwordsMatch ? 'border-red-500 bg-red-500/5' : 'border-primary/20'}`}
@@ -206,9 +207,9 @@ export function Step5Account({ onFinish, isSubmitting }: Step5AccountProps) {
 
       <div className="p-4 bg-primary/5 border border-primary/10 rounded-xl space-y-4">
         <div className="flex items-start gap-3">
-          <Checkbox 
-            id="acceptedTerms" 
-            checked={data.account.acceptedTerms} 
+          <Checkbox
+            id="acceptedTerms"
+            checked={data.account.acceptedTerms}
             onCheckedChange={(checked) => updateData({ account: { ...data.account, acceptedTerms: checked === true } })}
             className="mt-1"
           />
@@ -218,9 +219,9 @@ export function Step5Account({ onFinish, isSubmitting }: Step5AccountProps) {
         </div>
 
         <div className="flex items-start gap-3">
-          <Checkbox 
-            id="acceptedPrivacy" 
-            checked={data.account.acceptedPrivacy} 
+          <Checkbox
+            id="acceptedPrivacy"
+            checked={data.account.acceptedPrivacy}
             onCheckedChange={(checked) => updateData({ account: { ...data.account, acceptedPrivacy: checked === true } })}
             className="mt-1"
           />
@@ -236,16 +237,16 @@ export function Step5Account({ onFinish, isSubmitting }: Step5AccountProps) {
       </div>
 
       <div className="flex flex-col-reverse md:flex-row gap-4 pt-4 border-t">
-        <Button 
-          type="button" 
-          variant="ghost" 
-          disabled={isSubmitting} 
-          onClick={() => setStep(4)} 
+        <Button
+          type="button"
+          variant="ghost"
+          disabled={isSubmitting}
+          onClick={() => setStep(4)}
           className="gap-2 w-full md:w-auto h-12 md:h-auto"
         >
           <ArrowLeft className="w-4 h-4" /> Voltar
         </Button>
-        <Button 
+        <Button
           className="flex-1 bg-primary hover:bg-primary/90 text-lg md:text-xl py-6 md:py-8 font-bold shadow-lg shadow-primary/20"
           disabled={!isFormValid || isSubmitting}
           onClick={onFinish}

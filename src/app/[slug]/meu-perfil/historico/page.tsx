@@ -191,7 +191,6 @@ export default function AppointmentHistory() {
 
       if (res.ok) {
         toast({ title: "Sucesso", description: "Agendamento cancelado com sucesso." });
-        // Recarregar a página ou atualizar o estado local
         window.location.reload();
       } else {
         const error = await res.json();
@@ -219,20 +218,25 @@ export default function AppointmentHistory() {
     const barber = app.barberName || app.barber_name || "N/D";
     const unit = app.unitName || app.unit_name || "N/D";
     const price = getFormattedPriceDetails(app);
-    const paymentStatus = app.isPaid ? "Pago" : "Pagar no Local";
+    const paymentStatus = (app.isPaid || app.is_paid) ? "Pago" : "Pagar no Local";
 
-    const barberIcon = String.fromCodePoint(0x1F488);
-    const messageText = `*Agendamento Confirmado!* \n\n` +
-      `*Barbearia:* 💈 ${settings?.shopName || tenant.name}\n` +
+    const address = app.unit
+      ? `${app.unit.address}${app.unit.number ? `, ${app.unit.number}` : ""} - ${app.unit.city || ""}`
+      : (settings?.address || "");
+
+    const messageText =
+      `*Agendamento Confirmado!* \n\n` +
+      `*Barbearia:* ${settings?.shopName || tenant.name}\n` +
       `*Serviço:* ${services}\n` +
       `*Valor:* ${price}\n` +
       `*Pagamento:* ${paymentStatus}\n` +
       `*Data:* ${date}\n` +
       `*Horário:* ${time}\n` +
       `*Profissional:* ${barber}\n` +
-      `*Unidade:* ${unit}\n\n` +
-      `*Código:* #${app.id.toString().padStart(6, '0')}\n\n` +
-      `_Gerado via Painel do Cliente_`;
+      `*Unidade:* ${unit}\n` +
+      (address ? `*Endereço:* ${address}\n` : "") +
+      `\n*Código:* #${app.id.toString().padStart(6, '0')}\n\n` +
+      `_Por favor, chegue com 5 minutos de antecedência._`;
 
     const encodedMessage = encodeURIComponent(messageText);
     window.open(`https://wa.me/?text=${encodedMessage}`, '_blank');

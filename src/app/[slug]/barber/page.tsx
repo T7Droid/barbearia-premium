@@ -191,6 +191,41 @@ export default function BarberDashboard() {
     return sortOrder === "asc" ? valA.localeCompare(valB) : valB.localeCompare(valA);
   }) : [];
 
+  // ─── Contadores calculados no frontend ───────────────────────────────────
+  // Usamos a data/hora local atual para classificar cada agendamento.
+  // Agendamentos cancelados são excluídos dos três contadores.
+  const todayStr = format(now, "yyyy-MM-dd");           // ex: "2026-05-04"
+  const nowTimeStr = format(now, "HH:mm");              // ex: "10:31"
+
+  const activeAppointments = (todayAppointments || []).filter(
+    (a: any) => a.status !== "cancelled"
+  );
+
+  /** Agendamentos com data == hoje (independente do horário) */
+  const todayCount = activeAppointments.filter(
+    (a: any) => a.appointment_date === todayStr
+  ).length;
+
+  /** Passados: data < hoje  OU  (data == hoje E horário já passou) */
+  const completedCount = activeAppointments.filter((a: any) => {
+    if (a.appointment_date < todayStr) return true;
+    if (a.appointment_date === todayStr) {
+      const t = (a.appointment_time || "00:00").slice(0, 5);
+      return t < nowTimeStr;
+    }
+    return false;
+  }).length;
+
+  /** Futuros: data > hoje  OU  (data == hoje E horário ainda não passou) */
+  const pendingCount = activeAppointments.filter((a: any) => {
+    if (a.appointment_date > todayStr) return true;
+    if (a.appointment_date === todayStr) {
+      const t = (a.appointment_time || "00:00").slice(0, 5);
+      return t >= nowTimeStr;
+    }
+    return false;
+  }).length;
+
   const handleExportPDF = () => {
     if (!sortedAppointments || sortedAppointments.length === 0) return;
 
@@ -363,7 +398,7 @@ export default function BarberDashboard() {
                   <Calendar className="w-4 h-4 text-primary" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">{stats?.todayCount || 0}</div>
+                  <div className="text-2xl font-bold">{todayCount}</div>
                   <p className="text-xs text-muted-foreground mt-1">Agendamentos</p>
                 </CardContent>
               </Card>
@@ -376,7 +411,7 @@ export default function BarberDashboard() {
                   <CheckCircle2 className="w-4 h-4 text-green-500" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">{stats?.completedCount || 0}</div>
+                  <div className="text-2xl font-bold">{completedCount}</div>
                   <p className="text-xs text-muted-foreground mt-1">Finalizados</p>
                 </CardContent>
               </Card>
@@ -389,7 +424,7 @@ export default function BarberDashboard() {
                   <Clock className="w-4 h-4 text-amber-500" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">{stats?.pendingCount || 0}</div>
+                  <div className="text-2xl font-bold">{pendingCount}</div>
                   <p className="text-xs text-muted-foreground mt-1">Aguardando</p>
                 </CardContent>
               </Card>

@@ -56,7 +56,7 @@ export default function AdminServices() {
     name: "",
     description: "",
     price: "",
-    durationMinutes: "45",
+    durationMinutes: "30",
     imageUrl: "",
     unitIds: [] as string[]
   });
@@ -99,7 +99,7 @@ export default function AdminServices() {
         name: service.name,
         description: service.description || "",
         price: ((service.price ?? service.price_cents ?? 0) / 100).toFixed(2),
-        durationMinutes: (service.durationMinutes ?? service.duration_minutes ?? 45).toString(),
+        durationMinutes: (service.durationMinutes ?? service.duration_minutes ?? 30).toString(),
         imageUrl: service.imageUrl || service.image_url || "",
         unitIds: (service.units || []).map((u: any) => String(u.id))
       });
@@ -109,7 +109,7 @@ export default function AdminServices() {
         name: "",
         description: "",
         price: "",
-        durationMinutes: "45",
+        durationMinutes: "30",
         imageUrl: "",
         unitIds: []
       });
@@ -397,7 +397,7 @@ export default function AdminServices() {
                               setFormData({...formData, durationMinutes: val || "0"});
                             }}
                             className="pl-9"
-                            placeholder="45"
+                            placeholder="30"
                           />
                         </div>
                       </div>

@@ -344,7 +344,7 @@ export default function SettingsPage() {
                   </div>
                 )}
               </div>
-              <CardDescription>Gerencie seu plano e pagamentos do KingBarber.</CardDescription>
+              <CardDescription>Gerencie seu plano e pagamentos do KingBarbers.</CardDescription>
             </div>
           </CardHeader>
           <CardContent className="space-y-4">

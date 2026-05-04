@@ -27,11 +27,13 @@ import { PLANS_INFO } from "@/lib/config/plans";
 import { Suspense } from "react";
 
 function OnboardingContent() {
-  const { step, data, updateData } = useOnboarding();
+  const { step, setStep, data, updateData } = useOnboarding();
   const searchParams = useSearchParams();
   const planFromUrl = searchParams.get("plan");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [loadingStepIndex, setLoadingStepIndex] = useState(0);
+  // Plano básico: ao ter conflito de e-mail, volta ao step 4 com o campo em foco
+  const [focusBarberEmail, setFocusBarberEmail] = useState(false);
   const router = useRouter();
   const { toast } = useToast();
 
@@ -104,7 +106,14 @@ function OnboardingContent() {
       let variant: "default" | "destructive" = "default";
 
       if (error.message.includes("already been registered")) {
-        friendlyMessage = "Este e-mail já está sendo usado por uma barbearia em nosso sistema. Deseja fazer login em vez de criar uma nova?";
+        if (data.planId === "basico") {
+          // No plano básico, barbeiro = admin. Volta ao step 4 para corrigir o e-mail.
+          setFocusBarberEmail(true);
+          setStep(4);
+          friendlyMessage = "Este e-mail já está cadastrado. Volte à etapa do profissional e use um e-mail diferente.";
+        } else {
+          friendlyMessage = "Este e-mail já está sendo usado por uma barbearia em nosso sistema. Deseja fazer login em vez de criar uma nova?";
+        }
       } else if (error.message.includes("profiles_pkey")) {
         friendlyMessage = "Já existe um perfil vinculado a este acesso. Parece que um cadastro foi iniciado anteriormente.";
       } else {
@@ -227,7 +236,7 @@ function OnboardingContent() {
               {step === 1 && <Step1Tenant />}
               {step === 2 && <Step2Unit />}
               {step === 3 && <Step3Services />}
-              {step === 4 && <Step4Barber />}
+              {step === 4 && <Step4Barber focusEmail={focusBarberEmail} onEmailFocused={() => setFocusBarberEmail(false)} />}
               {step === 5 && <Step5Account onFinish={handleFinish} isSubmitting={isSubmitting} />}
             </div>
           </CardContent>

@@ -29,23 +29,35 @@ export default function ConfirmationPage(props: { params: Promise<{ slug: string
       ? appointment.servicesJson.map((s: any) => s.name).join(", ")
       : (appointment.serviceName || appointment.service_name);
 
+    // Valor total formatado (com detalhes por serviço se houver múltiplos)
+    const totalCents = appointment.totalPrice || appointment.total_price || appointment.servicePrice || appointment.service_price || 0;
+    const priceFormatted = formatCurrencyFromCents(totalCents);
+    const servicesJson = appointment.servicesJson || appointment.services_json;
+    const priceDetails = servicesJson && Array.isArray(servicesJson) && servicesJson.length > 1
+      ? `${priceFormatted} (${servicesJson.map((s: any) => `${s.name} ${formatCurrencyFromCents(s.price)}`).join("/")})`
+      : priceFormatted;
+
+    const paymentStatus = (appointment.isPaid || appointment.is_paid) ? "Pago" : "Pagar no Local";
+
     const address = appointment.unit
       ? `${appointment.unit.address}${appointment.unit.number ? `, ${appointment.unit.number}` : ""} - ${appointment.unit.city}`
       : settings?.address;
 
-    const messageText = `*Agendamento Confirmado!* \n\n` +
+    const messageText =
+      `*Agendamento Confirmado!* \n\n` +
       `*Barbearia:* ${settings?.shopName || tenant.name}\n` +
       `*Serviço:* ${services}\n` +
+      `*Valor:* ${priceDetails}\n` +
+      `*Pagamento:* ${paymentStatus}\n` +
       `*Data:* ${displayDate}\n` +
       `*Horário:* ${timeValue}\n` +
       `*Profissional:* ${appointment.barberName || appointment.barber_name}\n` +
       `*Unidade:* ${appointment.unit?.name || "Matriz"}\n` +
-      `*Endereço:* ${address}\n\n` +
-      `*Código:* #${appointment.id.toString().padStart(6, '0')}\n\n` +
+      (address ? `*Endereço:* ${address}\n` : "") +
+      `\n*Código:* #${appointment.id.toString().padStart(6, '0')}\n\n` +
       `_Por favor, chegue com 5 minutos de antecedência._`;
 
-    // Usando uma técnica de substituição para garantir que o emoji sobreviva à codificação
-    const encodedMessage = encodeURIComponent(messageText).replace(/%F0%9F%92%88/g, '%F0%9F%92%88');
+    const encodedMessage = encodeURIComponent(messageText);
     window.open(`https://wa.me/?text=${encodedMessage}`, '_blank');
   };
 
@@ -53,7 +65,6 @@ export default function ConfirmationPage(props: { params: Promise<{ slug: string
     window.print();
   };
 
-  // O hook useGetAppointment agora aceita string (UUID) ou number
   const { data: apiAppointment, isLoading } = useGetAppointment(idParam as any, {
     query: {
       enabled: !!idParam,
