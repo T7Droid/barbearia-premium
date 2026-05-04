@@ -1,10 +1,19 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
+import { createClient } from "@supabase/supabase-js";
+
+// Função simples para verificar admin, evitando importações pesadas no middleware
+function isAdminEmail(email?: string): boolean {
+  if (!email) return false;
+  // Fallback para os emails conhecidos se o env não estiver disponível no edge
+  const adminEmails = (process.env.ADMIN_EMAILS || "thyagosilvestre@gmail.com,thyago_silvestre@hotmail.com").split(",");
+  return adminEmails.includes(email.toLowerCase().trim());
+}
 
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // 1. Ignorar arquivos estáticos, webhooks e rotas OAuth do Mercado Pago
+  // 1. Ignorar arquivos estáticos, webhooks e rotas OAuth
   if (
     pathname.includes(".") ||
     pathname.startsWith("/_next") ||
@@ -28,56 +37,34 @@ export async function proxy(request: NextRequest) {
   if (tenantSlugHeader) {
     slug = tenantSlugHeader;
   } else if (pathname.startsWith("/api/")) {
-    // Para APIs, fallbacks via Referer
     if (referer) {
       try {
         const refererUrl = new URL(referer);
         const refererParts = refererUrl.pathname.split("/").filter(Boolean);
-        // O slug é a primeira parte antes de qualquer rota técnica (ex: /default/...)
         if (refererParts.length > 0 &&
           !["api", "admin", "dashboard", "meu-perfil", "login", "cadastro"].includes(refererParts[0])) {
           slug = refererParts[0];
-        } else {
-          console.log(`[Proxy] API call for ${pathname} but Referer '${referer}' has no valid slug parts.`);
         }
-      } catch (e) { }
-    } else {
-      console.log(`[Proxy] API call for ${pathname} WITHOUT Referer and WITHOUT x-tenant-slug header.`);
+      } catch (e) {}
     }
-  } else {
-    // Para páginas, o slug é a primeira parte do path
+  }
+
+  // Fallback: se ainda não temos slug, tentar do path
+  if (!slug && pathParts.length > 0) {
     const firstPart = pathParts[0];
-    const reserved = ["api", "admin", "dashboard", "meu-perfil", "favicon.ico", "images", "login", "cadastro", "onboarding"];
-    if (!reserved.includes(firstPart)) {
+    if (!["api", "admin", "dashboard", "meu-perfil", "login", "cadastro", "onboarding"].includes(firstPart)) {
       slug = firstPart;
     }
   }
 
-  // Se não houver slug, não fazemos nada (deixa o Next resolver a rota ou dar 404)
-  if (!slug) {
-    return NextResponse.next();
-  }
-
-  // 3. Rewrites para páginas globais que podem ser acessadas via slug ([slug]/privacidade)
-  // Isso permite que /default/privacidade funcione mesmo que 'default' não exista no banco,
-  // pois ele renderizará a página global na raiz /privacidade.
-  if (pathParts.length > 1 && (pathParts[1] === "privacidade" || pathParts[1] === "termos")) {
-    const url = new URL(`/${pathParts[1]}`, request.url);
-    const requestHeaders = new Headers(request.headers);
-    requestHeaders.set("x-tenant-slug", slug);
-    return NextResponse.rewrite(url, {
-      request: {
-        headers: requestHeaders,
-      },
-    });
-  }
+  if (!slug) return NextResponse.next();
 
   const requestHeaders = new Headers(request.headers);
   requestHeaders.set("x-tenant-slug", slug);
 
   try {
-    const { createClient } = await import("@supabase/supabase-js");
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
+    // No Middleware usamos a Service Role para bypass de RLS se necessário, ou Anon Key
     const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
@@ -89,22 +76,15 @@ export async function proxy(request: NextRequest) {
       .single();
 
     if (tenantError || !tenant) {
-      console.log(`[Proxy] Tenant '${slug}' not found for Path: ${pathname}. DB Error:`, tenantError?.message);
       return NextResponse.next({ request: { headers: requestHeaders } });
     }
 
-    console.log(`[Proxy] OK: Found ${tenant.name} for Path: ${pathname}`);
-    requestHeaders.set("x-tenant-id", tenant.id);
-
-    // Lógica de proteção de rotas (Admin, Barbeiro, Perfil)
     const isAdminApi = pathname.startsWith("/api/admin") || pathname.startsWith("/api/stats/summary");
-    // Exigimos a barra / no final para não bloquear a rota pública /api/barbers
     const isBarberApi = pathname.startsWith("/api/barber/");
     const isTenantAdminPath = (!pathname.startsWith("/api") && pathname.startsWith(`/${slug}/admin`) && !pathname.endsWith("/admin/login")) || isAdminApi;
     const isTenantBarberPath = (!pathname.startsWith("/api") && pathname.startsWith(`/${slug}/barber`)) || isBarberApi;
     const isTenantProfilePath = (!pathname.startsWith("/api") && pathname.startsWith(`/${slug}/meu-perfil`)) || pathname.startsWith("/api/user/profile");
-    const isTenantAuthPath = !pathname.startsWith("/api") &&
-      (pathname === `/${slug}/login` || pathname === `/${slug}/cadastro`);
+    const isTenantAuthPath = !pathname.startsWith("/api") && (pathname === `/${slug}/login` || pathname === `/${slug}/cadastro`);
 
     const token = request.cookies.get("session_token")?.value;
 
@@ -112,7 +92,7 @@ export async function proxy(request: NextRequest) {
       const { data: { user } } = await supabase.auth.getUser(token);
 
       if (user) {
-        // Buscar o cargo na tabela de vínculos (nova lógica multi-tenant)
+        // Buscar o cargo na tabela de vínculos
         const { data: membership } = await supabase
           .from("tenant_memberships")
           .select("role")
@@ -120,9 +100,7 @@ export async function proxy(request: NextRequest) {
           .eq("tenant_id", tenant.id)
           .single();
 
-        const { isAdminEmail } = await import("./lib/config/auth-config");
         let role = "client";
-        
         if (isAdminEmail(user.email)) {
           role = "admin";
         } else if (membership) {
@@ -132,12 +110,10 @@ export async function proxy(request: NextRequest) {
         if (isTenantAuthPath) {
           const from = request.nextUrl.searchParams.get("from");
           const target = from || (role === "admin" ? `/${slug}/admin` : `/${slug}/meu-perfil`);
-          console.log(`[Proxy] Redirecting authenticated user from ${pathname} to ${target}`);
           return NextResponse.redirect(new URL(target, request.url));
         }
 
         if (isTenantAdminPath && role !== "admin") {
-          console.log(`[Proxy] ACCESS DENIED: User role ${role} tried to access ADMIN path ${pathname}.`);
           if (pathname.startsWith("/api")) {
             return NextResponse.json({ error: "Acesso restrito a administradores" }, { status: 403 });
           }
@@ -145,48 +121,32 @@ export async function proxy(request: NextRequest) {
         }
 
         if (isTenantBarberPath && role !== "barber" && role !== "admin") {
-          console.log(`[Proxy] ACCESS DENIED: User role ${role} tried to access BARBER path ${pathname}.`);
           if (pathname.startsWith("/api")) {
             return NextResponse.json({ error: "Acesso restrito a barbeiros ou administradores" }, { status: 403 });
           }
           return NextResponse.redirect(new URL(`/${slug}/meu-perfil`, request.url));
         }
       } else if (isTenantAdminPath || isTenantBarberPath || isTenantProfilePath) {
-        console.log(`[Proxy] SESSION EXPIRED or INVALID for token. Redirecting ${pathname} to login.`);
         if (pathname.startsWith("/api")) {
           return NextResponse.json({ error: "Sessão expirada ou inválida" }, { status: 401 });
         }
         const loginUrl = new URL(isTenantAdminPath ? `/${slug}/admin/login` : `/${slug}/login`, request.url);
         loginUrl.searchParams.set("from", pathname);
-        const response = NextResponse.redirect(loginUrl);
-        response.cookies.delete("session_token");
-        return response;
+        return NextResponse.redirect(loginUrl);
       }
-    } else if (!token && (isTenantAdminPath || isTenantBarberPath || isTenantProfilePath)) {
-      console.log(`[Proxy] NO TOKEN for protected path ${pathname}. Redirecting to login.`);
-      if (pathname.startsWith("/api")) {
-        return NextResponse.json({ error: "Token de sessão não encontrado" }, { status: 401 });
-      }
-      const loginUrl = new URL(isTenantAdminPath ? `/${slug}/admin/login` : `/${slug}/login`, request.url);
-      loginUrl.searchParams.set("from", pathname);
-      return NextResponse.redirect(loginUrl);
     }
 
-    // Para evitar loops de rewrite e 404s estranhos no App Router,
-    // usamos NEXT se os headers já estiverem prontos e o path já for correto.
-    // O REWRITE é útil se estivermos alterando o path substancialmente.
     return NextResponse.next({
       request: {
         headers: requestHeaders,
       },
     });
-
-  } catch (e) {
-    console.error("[Proxy] Critical error:", e);
-    return NextResponse.next({ request: { headers: requestHeaders } });
+  } catch (error) {
+    console.error("[Proxy Error]", error);
+    return NextResponse.next({
+      request: {
+        headers: requestHeaders,
+      },
+    });
   }
 }
-
-export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"],
-};

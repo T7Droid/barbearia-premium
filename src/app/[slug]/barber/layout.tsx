@@ -58,7 +58,8 @@ export default function BarberLayout({ children }: { children: React.ReactNode }
   }, [pathname, router, tenant.slug]);
 
   const handleLogout = async () => {
-    await supabase?.auth.signOut();
+    if (!supabase) return;
+    await supabase.auth.signOut();
     router.push(`/${tenant.slug}/login`);
   };
 

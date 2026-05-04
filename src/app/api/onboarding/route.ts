@@ -76,9 +76,9 @@ export async function POST(req: Request) {
     }
     createdTenantId = tenantData.id;
 
-    // 2.1 Criar Assinatura Inicial (Trial de 3 dias por padrão)
+    // 2.1 Criar Assinatura Inicial (Trial de 7 dias por padrão)
     const expiresAt = new Date();
-    expiresAt.setDate(expiresAt.getDate() + 3);
+    expiresAt.setDate(expiresAt.getDate() + 7);
 
     const { error: subError } = await supabaseAdmin
       .from("subscriptions")
@@ -288,24 +288,6 @@ export async function POST(req: Request) {
 
     if (membershipError) {
       throw new Error(`Erro ao criar vínculos de acesso: ${membershipError.message}`);
-    }
-
-    // 10. Criar Assinatura Inicial (Trial de 7 dias) para evitar bloqueio imediato
-    const trialEndsAt = new Date();
-    trialEndsAt.setDate(trialEndsAt.getDate() + 7);
-
-    const { error: subError } = await supabaseAdmin
-      .from("subscriptions")
-      .insert({
-        tenant_id: createdTenantId,
-        status: "trialing",
-        plan_id: data.planId === "basico" ? "basico" : "profissional",
-        expires_at: trialEndsAt.toISOString(),
-      });
-
-    if (subError) {
-      console.warn("Aviso: Erro ao criar assinatura trial:", subError.message);
-      // Não travamos o onboarding por isso, mas logamos
     }
 
     return NextResponse.json({ success: true, slug });

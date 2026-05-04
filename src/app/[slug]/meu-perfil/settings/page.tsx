@@ -1,133 +1,98 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Layout } from "@/components/layout";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Switch } from "@/components/ui/switch";
-import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
+import { User, Mail, Phone, Bell, ShieldCheck, Save, Loader2, Settings as SettingsIcon } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, User, Mail, Phone, Bell, Save, ArrowLeft, ShieldCheck } from "lucide-react";
-import { DemoStore } from "@/lib/persistence/demo-store";
-import { useRouter } from "next/navigation";
 import { useTenant } from "@/hooks/use-tenant";
 import { useUserStore } from "@/lib/store/user-store";
+import { supabase } from "@/lib/supabase";
 import { requestNotificationPermission } from "@/lib/firebase";
 
-export default function ClientSettingsPage() {
+export default function SettingsPage() {
   const { toast } = useToast();
-  const router = useRouter();
   const tenant = useTenant();
-  const { user, setUser } = useUserStore();
+  const { user } = useUserStore();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [profile, setProfile] = useState({
-    name: "",
+    fullName: "",
     email: "",
     phone: "",
     notificationsEnabled: false,
     pushNotificationsEnabled: false,
-    fcmToken: "",
+    fcmToken: ""
   });
 
-  const formatPhone = (value: string) => {
-    let raw = value.replace(/\D/g, "");
-    if (raw.length > 11) raw = raw.slice(0, 11);
-
-    if (raw.length === 0) return "";
-    if (raw.length <= 2) return `(${raw}`;
-    if (raw.length <= 6) return `(${raw.slice(0, 2)}) ${raw.slice(2)}`;
-    if (raw.length <= 10) return `(${raw.slice(0, 2)}) ${raw.slice(2, 6)}-${raw.slice(6)}`;
-    return `(${raw.slice(0, 2)}) ${raw.slice(2, 7)}-${raw.slice(7)}`;
-  };
-
   useEffect(() => {
-    fetch("/api/user/profile")
-      .then(async (res) => {
-        if (res.status === 401) {
-          // Tentar recuperar do DemoStore se a API falhar (Mock resetado)
-          const savedUser = DemoStore.getUser();
-          if (savedUser) return savedUser;
+    async function loadProfile() {
+      if (!user?.id) return;
+      
+      try {
+        if (!supabase) throw new Error("Supabase not configured");
+        
+        const { data, error } = await supabase
+          .from("profiles")
+          .select("*")
+          .eq("id", user.id)
+          .single();
 
-          router.push(`/${tenant.slug}/login`);
-          return;
-        }
-        return res.json();
-      })
-      .then(data => {
+        if (error) throw error;
+
         if (data) {
           setProfile({
-            name: data.name || "",
+            fullName: data.full_name || "",
             email: data.email || "",
-            phone: data.phone ? formatPhone(data.phone) : "",
-            notificationsEnabled: data.notificationsEnabled ?? false,
-            pushNotificationsEnabled: data.pushNotificationsEnabled ?? false,
-            fcmToken: data.fcmToken || "",
-          });
-          // Garantir que o Store Reativo e DemoStore estão sincronizados
-          setUser(data);
-          DemoStore.saveUser(data);
-        }
-        setLoading(false);
-      })
-      .catch(() => {
-        const savedUser = DemoStore.getUser();
-        if (savedUser) {
-          setProfile({
-            name: savedUser.name || "",
-            email: savedUser.email || "",
-            phone: savedUser.phone ? formatPhone(savedUser.phone) : "",
-            notificationsEnabled: savedUser.notificationsEnabled ?? false,
-            pushNotificationsEnabled: savedUser.pushNotificationsEnabled ?? false,
-            fcmToken: savedUser.fcmToken || "",
+            phone: data.phone || "",
+            notificationsEnabled: data.notifications_enabled ?? false,
+            pushNotificationsEnabled: data.push_notifications_enabled ?? false,
+            fcmToken: data.fcm_token || ""
           });
         }
+      } catch (error) {
+        console.error("Error loading profile:", error);
+      } finally {
         setLoading(false);
-      });
-  }, [router, toast]);
+      }
+    }
+
+    loadProfile();
+  }, [user?.id]);
 
   const handleSave = async () => {
+    if (!user?.id) return;
     setSaving(true);
+
     try {
-      // Remover máscara antes de salvar no banco
-      const rawPhone = profile.phone.replace(/\D/g, "");
-      const updatedProfile = {
-        ...user,
-        ...profile,
-        phone: rawPhone
-      };
+      if (!supabase) throw new Error("Supabase not configured");
 
-      const res = await fetch("/api/user/profile", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: profile.name,
-          phone: rawPhone,
-          notificationsEnabled: profile.notificationsEnabled,
-          pushNotificationsEnabled: profile.pushNotificationsEnabled,
-          fcmToken: profile.fcmToken
-        }),
-      });
+      const { error } = await supabase
+        .from("profiles")
+        .update({
+          full_name: profile.fullName,
+          phone: profile.phone,
+          notifications_enabled: profile.notificationsEnabled,
+          push_notifications_enabled: profile.pushNotificationsEnabled,
+          fcm_token: profile.fcmToken,
+          updated_at: new Date().toISOString()
+        })
+        .eq("id", user.id);
 
-      if (res.ok) {
-        // Atualizar no Store Reativo e DemoStore
-        setUser(updatedProfile as any);
-        DemoStore.saveUser(updatedProfile);
+      if (error) throw error;
 
-        toast({ title: "Sucesso", description: "Configurações salvas!" });
-      } else {
-        const errorData = await res.json();
-        toast({
-          title: "Erro ao salvar",
-          description: errorData.error || "Não foi possível salvar as configurações no servidor.",
-          variant: "destructive"
-        });
-      }
-    } catch (error) {
       toast({
-        title: "Erro de Conexão",
-        description: "Não foi possível conectar ao servidor. Verifique sua internet.",
+        title: "Configurações salvas!",
+        description: "Suas preferências foram atualizadas com sucesso.",
+      });
+    } catch (error) {
+      console.error("Error saving profile:", error);
+      toast({
+        title: "Erro ao salvar",
+        description: "Não foi possível atualizar suas configurações.",
         variant: "destructive"
       });
     } finally {
@@ -137,20 +102,24 @@ export default function ClientSettingsPage() {
 
   if (loading) {
     return (
-      <Layout>
+      <div className="min-h-screen bg-background">
         <div className="container mx-auto px-4 py-24 flex items-center justify-center">
-          <Loader2 className="w-8 h-8 animate-spin text-primary" />
+          <div className="flex flex-col items-center gap-4">
+            <Loader2 className="w-10 h-10 animate-spin text-primary" />
+            <p className="text-muted-foreground animate-pulse text-sm">Carregando suas preferências...</p>
+          </div>
         </div>
-      </Layout>
+      </div>
     );
   }
 
-    <div className="min-h-screen bg-background">
+  return (
+    <div className="min-h-screen bg-background pb-20">
       <div className="container mx-auto px-4 py-12 max-w-3xl">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-10 gap-4">
           <div>
             <h1 className="text-4xl font-serif font-bold text-foreground flex items-center gap-3">
-              <User className="w-8 h-8 text-primary" /> Minhas Configurações
+              <SettingsIcon className="w-8 h-8 text-primary" /> Minhas Configurações
             </h1>
             <p className="text-muted-foreground mt-2">Gerencie seus dados pessoais e preferências de contato.</p>
           </div>
@@ -172,45 +141,41 @@ export default function ClientSettingsPage() {
                   <User className="w-5 h-5 text-primary" />
                 </div>
                 <div>
-                  <CardTitle>Dados do Perfil</CardTitle>
-                  <CardDescription>Mantenha suas informações de contato atualizadas.</CardDescription>
+                  <CardTitle>Informações Pessoais</CardTitle>
+                  <CardDescription>Seus dados básicos de contato.</CardDescription>
                 </div>
               </div>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-4 pt-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="name" className="text-xs uppercase font-bold tracking-wider text-muted-foreground">Nome Completo</Label>
-                  <Input
-                    id="name"
-                    value={profile.name}
-                    onChange={(e) => setProfile({ ...profile, name: e.target.value })}
-                    placeholder="Seu nome"
-                    className="bg-background/50 border-border/60 focus:border-primary/50 transition-all"
+                  <Label htmlFor="fullName" className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Nome Completo</Label>
+                  <Input 
+                    id="fullName" 
+                    value={profile.fullName} 
+                    onChange={(e) => setProfile({ ...profile, fullName: e.target.value })}
+                    className="bg-accent/30 border-border/50 focus:border-primary/50"
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="email" className="text-xs uppercase font-bold tracking-wider text-muted-foreground">E-mail</Label>
-                  <div className="relative">
-                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/50" />
-                    <Input
-                      id="email"
-                      value={profile.email}
-                      disabled
-                      className="pl-10 bg-accent/30 border-border/40 text-muted-foreground cursor-not-allowed italic"
-                    />
-                  </div>
+                  <Label htmlFor="email" className="text-xs font-bold uppercase tracking-wider text-muted-foreground">E-mail</Label>
+                  <Input 
+                    id="email" 
+                    value={profile.email} 
+                    disabled 
+                    className="bg-accent/10 border-dashed border-border/50 text-muted-foreground cursor-not-allowed"
+                  />
                 </div>
                 <div className="space-y-2 md:col-span-2">
-                  <Label htmlFor="phone" className="text-xs uppercase font-bold tracking-wider text-muted-foreground">Telefone / WhatsApp</Label>
+                  <Label htmlFor="phone" className="text-xs font-bold uppercase tracking-wider text-muted-foreground">WhatsApp / Telefone</Label>
                   <div className="relative">
-                    <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/50" />
-                    <Input
-                      id="phone"
-                      value={profile.phone}
-                      onChange={(e) => setProfile({ ...profile, phone: formatPhone(e.target.value) })}
+                    <Phone className="absolute left-3 top-3 w-4 h-4 text-muted-foreground" />
+                    <Input 
+                      id="phone" 
+                      value={profile.phone} 
+                      onChange={(e) => setProfile({ ...profile, phone: e.target.value })}
+                      className="pl-10 bg-accent/30 border-border/50 focus:border-primary/50"
                       placeholder="(00) 00000-0000"
-                      className="pl-10 bg-background/50 border-border/60 focus:border-primary/50 transition-all"
                     />
                   </div>
                 </div>
@@ -239,7 +204,7 @@ export default function ClientSettingsPage() {
                 <div className="flex items-start gap-3">
                   <Mail className="w-4 h-4 text-primary mt-1 shrink-0" />
                   <div className="space-y-1">
-                    <p className="text-sm font-medium">Lembretes e Confirmações</p>
+                    <p className="text-sm font-medium">Alertas de Agendamento</p>
                     <p className="text-xs text-muted-foreground">
                       Você receberá e-mails automáticos com detalhes do seu horário, confirmações de pagamento e alertas de cancelamento.
                     </p>
@@ -263,11 +228,10 @@ export default function ClientSettingsPage() {
                 checked={profile.pushNotificationsEnabled}
                 onCheckedChange={async (val) => {
                   if (val) {
-                    // Verificar se já foi negado permanentemente no navegador
                     if (typeof window !== "undefined" && "Notification" in window && Notification.permission === "denied") {
                       toast({
                         title: "Acesso Bloqueado",
-                        description: "Para ativar, você precisa ir nas configurações do seu navegador (ícone de cadeado na barra de endereços) e permitir as notificações.",
+                        description: "Para ativar, você precisa ir nas configurações do seu navegador e permitir as notificações.",
                         variant: "destructive"
                       });
                       return;
@@ -281,7 +245,6 @@ export default function ClientSettingsPage() {
                         fcmToken: token 
                       });
                     } else {
-                      // Se chegou aqui e não é 'denied', o usuário pode ter apenas fechado o diálogo ou houve erro técnico
                       if (Notification.permission !== "granted") {
                         toast({
                           title: "Permissão Necessária",
@@ -304,7 +267,7 @@ export default function ClientSettingsPage() {
                   <div className="space-y-1">
                     <p className="text-sm font-medium">Lembretes e Confirmações</p>
                     <p className="text-xs text-muted-foreground">
-                      Você receberá notificações automáticas com detalhes do seu horário, confirmações de pagamento e alertas de cancelamento diretamente no seu dispositivo.
+                      Você receberá notificações instantâneas com detalhes do seu horário e alertas de cancelamento diretamente no seu dispositivo.
                     </p>
                   </div>
                 </div>
@@ -324,10 +287,6 @@ export default function ClientSettingsPage() {
           </div>
         </div>
       </div>
-    </div>     </div>
-          </div>
-        </div>
-      </div>
-    </Layout>
+    </div>
   );
 }

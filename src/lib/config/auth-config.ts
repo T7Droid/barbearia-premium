@@ -3,7 +3,7 @@
  * Consolidating admin emails and role identification logic to prevent out-of-sync authorization.
  */
 
-export const ADMIN_EMAILS = [
+export const ADMIN_EMAILS: string[] = [
   // "thyagonevesa.sa@gmail.com",
 ];
 

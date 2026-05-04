@@ -52,7 +52,8 @@ export default function ClientProfileLayout({ children }: { children: React.Reac
   }, [pathname, router, tenant.slug]);
 
   const handleLogout = async () => {
-    await supabase?.auth.signOut();
+    if (!supabase) return;
+    await supabase.auth.signOut();
     router.push(`/${tenant.slug}/login`);
   };
 
