@@ -82,18 +82,18 @@ export default function SettingsPage() {
     setLoadingStripe(true);
     try {
       // Se já tem customer ID, vai para o Portal. Se não, vai para o Checkout com o plano solicitado ou atual.
-      const endpoint = settings.stripeCustomerId 
-        ? "/api/subscription/portal" 
+      const endpoint = settings.stripeCustomerId
+        ? "/api/subscription/portal"
         : "/api/subscription/checkout";
-      
+
       const res = await fetch(endpoint, {
         method: "POST",
-        headers: { 
+        headers: {
           "Content-Type": "application/json",
-          "x-tenant-slug": tenant.slug 
+          "x-tenant-slug": tenant.slug
         },
-        body: JSON.stringify({ 
-          planId: targetPlanId || settings.plan?.slug || "basico" 
+        body: JSON.stringify({
+          planId: targetPlanId || settings.plan?.slug || "basico"
         })
       });
 
@@ -101,10 +101,10 @@ export default function SettingsPage() {
       if (data.url) {
         window.location.href = data.url;
       } else {
-        toast({ 
-          title: "Erro", 
-          description: data.error || "Falha ao gerar acesso ao Stripe.", 
-          variant: "destructive" 
+        toast({
+          title: "Erro",
+          description: data.error || "Falha ao gerar acesso ao Stripe.",
+          variant: "destructive"
         });
       }
     } catch (e) {
@@ -120,7 +120,7 @@ export default function SettingsPage() {
     }
 
     const params = new URLSearchParams(window.location.search);
-    
+
     // Tratamento de Upgrade Automático
     const upgradePlan = params.get("upgrade");
     if (upgradePlan && !loading && settings.plan) {
@@ -210,8 +210,8 @@ export default function SettingsPage() {
     }
   };
 
-  const bookingUrl = typeof window !== "undefined" 
-    ? `${window.location.origin}/${tenant.slug}/booking` 
+  const bookingUrl = typeof window !== "undefined"
+    ? `${window.location.origin}/${tenant.slug}/booking`
     : "";
 
   const handleCopyLink = () => {
@@ -247,7 +247,7 @@ export default function SettingsPage() {
   const handleNativeShare = async () => {
     const text = `Agende seu horário na barbearia ${tenant.name} pelo nosso portal online! \n\nLink: ${bookingUrl}`;
     const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=1000x1000&data=${encodeURIComponent(bookingUrl)}&bgcolor=ffffff&color=000000&margin=20`;
-    
+
     if (navigator.share) {
       try {
         // Tentar baixar a imagem para compartilhar como arquivo
@@ -281,8 +281,8 @@ export default function SettingsPage() {
       }
     } else {
       handleCopyLink();
-      toast({ 
-        title: "Link Copiado", 
+      toast({
+        title: "Link Copiado",
         description: "Seu navegador não suporta o menu de compartilhamento, por isso copiamos o link para você.",
         variant: "default"
       });
@@ -336,8 +336,8 @@ export default function SettingsPage() {
               <div className="flex flex-wrap items-center gap-2">
                 <CardTitle>Minha Assinatura</CardTitle>
                 <div className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${settings.isSubscriptionActive ? (settings.cancelAtPeriodEnd ? 'bg-amber-500/20 text-amber-600' : 'bg-green-500/20 text-green-500') : 'bg-red-500/20 text-red-500'}`}>
-                  {settings.isSubscriptionActive 
-                    ? (settings.cancelAtPeriodEnd ? 'Cancelamento Pendente' : 'Ativa') 
+                  {settings.isSubscriptionActive
+                    ? (settings.cancelAtPeriodEnd ? 'Cancelamento Pendente' : 'Ativa')
                     : 'Inativa/Vencida'}
                 </div>
                 {settings.subscriptionStatus === 'trialing' && (
@@ -371,8 +371,8 @@ export default function SettingsPage() {
                 </p>
               </div>
             </div>
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               className="w-full gap-2 hover:bg-primary hover:text-white transition-all shadow-md active:scale-95"
               onClick={() => handleManageStripe()}
               disabled={loadingStripe}
@@ -381,7 +381,7 @@ export default function SettingsPage() {
                 <Loader2 className="w-4 h-4 animate-spin" />
               ) : (
                 <>
-                  {settings.stripeCustomerId ? 'Gerenciar Assinatura (Stripe)' : 'Ativar Assinatura Online'} 
+                  {settings.stripeCustomerId ? 'Gerenciar Assinatura (Stripe)' : 'Ativar Assinatura Online'}
                   <ExternalLink className="w-4 h-4" />
                 </>
               )}
@@ -569,64 +569,64 @@ export default function SettingsPage() {
           </CardHeader>
           <CardContent className="space-y-6 flex flex-col items-center py-6">
             <div className="p-4 bg-white rounded-2xl shadow-inner border border-muted/30">
-              <img 
-                src={`https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(bookingUrl)}&bgcolor=ffffff&color=000000&margin=10`} 
+              <img
+                src={`https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(bookingUrl)}&bgcolor=ffffff&color=000000&margin=10`}
                 alt="QR Code Agendamento"
                 className="w-[180px] h-[180px]"
               />
             </div>
 
             <div className="flex gap-4 w-full justify-center">
-              <Button 
-                variant="outline" 
-                size="icon" 
+              <Button
+                variant="outline"
+                size="icon"
                 className="h-12 w-12 rounded-full border-green-500/30 text-green-600 hover:bg-green-50"
                 onClick={() => handleSocialShare('whatsapp')}
               >
                 <MessageCircle className="w-5 h-5" />
               </Button>
-              <Button 
-                variant="outline" 
-                size="icon" 
+              <Button
+                variant="outline"
+                size="icon"
                 className="h-12 w-12 rounded-full border-blue-600/30 text-blue-600 hover:bg-blue-50"
                 onClick={() => handleSocialShare('facebook')}
               >
                 <Facebook className="w-5 h-5" />
               </Button>
-              <Button 
-                variant="outline" 
-                size="icon" 
+              <Button
+                variant="outline"
+                size="icon"
                 className="h-12 w-12 rounded-full border-pink-600/30 text-pink-600 hover:bg-pink-50"
                 onClick={() => handleSocialShare('instagram')}
               >
                 <Instagram className="w-5 h-5" />
               </Button>
-              <Button 
-                variant="outline" 
-                size="icon" 
+              <Button
+                variant="outline"
+                size="icon"
                 className="h-12 w-12 rounded-full border-sky-500/30 text-sky-500 hover:bg-sky-50"
                 onClick={() => handleSocialShare('telegram')}
               >
                 <Send className="w-5 h-5" />
               </Button>
-              <Button 
-                variant="outline" 
-                size="icon" 
+              <Button
+                variant="outline"
+                size="icon"
                 className="h-12 w-12 rounded-full border-primary/30 text-primary hover:bg-primary/5"
                 onClick={handleNativeShare}
               >
                 <Share2 className="w-5 h-5" />
               </Button>
             </div>
-            
+
             <div className="w-full space-y-2">
               <Label className="text-xs text-muted-foreground uppercase font-bold tracking-wider">Link da sua Barbearia Online</Label>
               <div className="flex gap-2">
                 <div className="flex-1 p-3 bg-muted/50 border rounded-lg text-sm font-medium truncate text-muted-foreground select-all">
                   {bookingUrl}
                 </div>
-                <Button 
-                  size="icon" 
+                <Button
+                  size="icon"
                   variant={copied ? "ghost" : "outline"}
                   onClick={handleCopyLink}
                   className={`shrink-0 transition-all ${copied ? 'text-green-500' : 'hover:border-primary hover:text-primary'}`}
