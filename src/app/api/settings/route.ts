@@ -67,6 +67,8 @@ export async function GET(request: NextRequest) {
     .limit(1)
     .single();
 
+  console.log(`[API Settings] subData for ${tenant.id}:`, subData);
+
   // Buscar o WhatsApp do administrador (dono)
   let adminPhone = null;
   if (fullTenant?.owner_id) {
