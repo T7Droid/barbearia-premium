@@ -553,6 +553,14 @@ function BookingContent() {
     }
   };
 
+  // Auto-selecionar data de hoje ao entrar no step de calendário
+  useEffect(() => {
+    if (step === 4 && !selectedDate) {
+      const today = new Date();
+      handleDateSelect(today);
+    }
+  }, [step, selectedDate]);
+
   const handleTimeSelect = (time: string) => {
     setSelectedTime(time);
     handleNextStep();
@@ -1106,7 +1114,7 @@ function BookingContent() {
                           setSelectedTime(null);
                         }}
                         locale={ptBR}
-                        fromDate={new Date()}
+                        fromDate={(() => { const d = new Date(); d.setHours(0,0,0,0); return d; })()}
                         disabled={(date) => {
                           const today = new Date();
                           today.setHours(0, 0, 0, 0);
@@ -1149,9 +1157,22 @@ function BookingContent() {
                         const isToday = dateStr === todayStr;
                         const currentTime = format(new Date(), "HH:mm");
 
-                        return availability?.map((slot: TimeSlot) => {
-                          const isPast = isToday && slot.time <= currentTime;
-                          const isDisabled = !slot.available || isPast;
+                        // Filtrar os slots já passados de hoje para verificar se restam disponíveis
+                        const visibleSlots = availability?.filter((slot: TimeSlot) => {
+                          if (isToday && slot.time <= currentTime) return false; // oculta passados
+                          return true;
+                        });
+
+                        if (isToday && visibleSlots?.length === 0) {
+                          return (
+                            <div className="col-span-3 text-center p-10 border border-dashed rounded-xl text-muted-foreground bg-accent/5">
+                              Não há horários disponíveis para hoje. Escolha outro dia.
+                            </div>
+                          );
+                        }
+
+                        return visibleSlots?.map((slot: TimeSlot) => {
+                          const isDisabled = !slot.available;
 
                           return (
                             <Button
