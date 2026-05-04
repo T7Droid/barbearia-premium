@@ -8,7 +8,8 @@ export class TenantContext {
     const tenantSlug = request.headers.get("x-tenant-slug");
 
     if (tenantId) {
-      return { id: tenantId, slug: tenantSlug };
+      if (tenantSlug) return await TenantService.getTenantBySlug(tenantSlug);
+      return await TenantService.getTenantById(tenantId);
     }
 
     // 2. Fallback: Se não houver headers diretos, tentamos inferir pelo Referer (útil para chamadas de API do browser)
@@ -31,7 +32,6 @@ export class TenantContext {
     if (!slug) return null;
 
     // Buscar no banco se só tivermos o slug
-    const tenant = await TenantService.getTenantBySlug(slug);
-    return tenant ? { id: tenant.id, slug: tenant.slug } : null;
+    return await TenantService.getTenantBySlug(slug);
   }
 }
