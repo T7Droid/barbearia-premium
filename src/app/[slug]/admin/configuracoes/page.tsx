@@ -81,10 +81,12 @@ export default function SettingsPage() {
   const handleManageStripe = async (targetPlanId?: string) => {
     setLoadingStripe(true);
     try {
-      // Se já tem customer ID, vai para o Portal. Se não, vai para o Checkout com o plano solicitado ou atual.
-      const endpoint = settings.stripeCustomerId
-        ? "/api/subscription/portal"
-        : "/api/subscription/checkout";
+      // REGRA: Se o usuário clicou em um plano específico (ex: upgrade para Escala), 
+      // usamos o Checkout para que ele vá direto para o pagamento do novo plano.
+      // Se ele só clicou em "Gerenciar" sem plano alvo, usamos o Portal.
+      const endpoint = (targetPlanId || !settings.stripeCustomerId)
+        ? "/api/subscription/checkout" 
+        : "/api/subscription/portal";
 
       const res = await fetch(endpoint, {
         method: "POST",

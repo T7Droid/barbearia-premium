@@ -92,15 +92,23 @@ export async function POST(request: NextRequest) {
           };
 
           let dbError;
+          // Limpeza: Marcar qualquer outra assinatura deste tenant como cancelada no banco
+          // Isso evita que o sistema se confunda com assinaturas duplicadas (como no upgrade)
+          await supabaseAdmin!
+            .from("subscriptions")
+            .update({ status: 'canceled' })
+            .eq("tenant_id", tenantId)
+            .neq("stripe_subscription_id", stripeSubscriptionId);
+
           if (existingSub) {
-            console.log(`[Stripe Webhook] Updating existing subscription ${existingSub.id}`);
+            console.log(`[Stripe Webhook] Updating existing subscription record`);
             const { error } = await supabaseAdmin!
               .from("subscriptions")
               .update(subPayload)
-              .eq("id", existingSub.id);
+              .eq("tenant_id", tenantId);
             dbError = error;
           } else {
-            console.log(`[Stripe Webhook] Creating new subscription`);
+            console.log(`[Stripe Webhook] Creating new subscription record`);
             const { error } = await supabaseAdmin!
               .from("subscriptions")
               .insert([subPayload]);
@@ -110,7 +118,7 @@ export async function POST(request: NextRequest) {
           if (dbError) {
             console.error(`[Stripe Webhook] DB Error:`, dbError);
           } else {
-            console.log(`[Stripe Webhook] SUCCESS: Subscription activated for tenant ${tenantId}`);
+            console.log(`[Stripe Webhook] SUCCESS: Subscription activated/upgraded for tenant ${tenantId}`);
           }
         } else {
           console.warn(`[Stripe Webhook] SKIP: Missing tenantId (${tenantId}) or subscriptionId (${stripeSubscriptionId})`);
@@ -148,21 +156,30 @@ export async function POST(request: NextRequest) {
             : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
 
           const isCanceled = !!subscription.cancel_at_period_end || !!subscription.cancel_at;
+          const planSlug = subscription.metadata?.planId;
+
+          const updateData: any = {
+            status: subscription.status,
+            expires_at: expiresAt,
+            cancel_at_period_end: isCanceled,
+            updated_at: new Date().toISOString(),
+          };
+
+          // Se o evento trouxe um novo plano no metadado (como no upgrade direto)
+          if (planSlug) {
+            updateData.plan_id = await getPlanUuidFromSlug(planSlug);
+          }
 
           const { error: updateError } = await supabaseAdmin!
             .from("subscriptions")
-            .update({
-              status: subscription.status,
-              expires_at: expiresAt,
-              cancel_at_period_end: isCanceled,
-              updated_at: new Date().toISOString(),
-            })
-            .eq("tenant_id", tenantId);
+            .update(updateData)
+            .eq("tenant_id", tenantId)
+            .eq("stripe_subscription_id", subscription.id);
             
           if (updateError) {
             console.error("[Stripe Webhook] Update Error:", updateError);
           } else {
-            console.log(`[Stripe Webhook] SUCCESS: ${event.type} for tenant ${tenantId} | Saved CancelAtEnd: ${isCanceled}`);
+            console.log(`[Stripe Webhook] SUCCESS: ${event.type} for tenant ${tenantId} | Plan: ${planSlug} | Saved CancelAtEnd: ${isCanceled}`);
           }
         } else {
           console.warn(`[Stripe Webhook] SKIP: Could not identify tenant for sub update ${subscription.id}`);

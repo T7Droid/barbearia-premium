@@ -10,6 +10,16 @@ export interface Plan {
   slug: string;
 }
 
+export interface Subscription {
+  id: string;
+  tenant_id: string;
+  plan_id: string;
+  status: string;
+  expires_at: string;
+  stripe_subscription_id?: string;
+  cancel_at_period_end?: boolean;
+}
+
 export interface Tenant {
   id: string;
   name: string;
@@ -21,7 +31,9 @@ export interface Tenant {
   mp_public_key?: string | null;
   mpConnected?: boolean;
   mpAccessToken?: string | null;
+  stripe_customer_id?: string;
   plans?: Plan;
+  subscriptions?: Subscription[];
 }
 
 export class TenantService {
@@ -30,9 +42,11 @@ export class TenantService {
 
     const { data, error } = await supabaseAdmin
       .from("tenants")
-      .select("*, plans(*)")
+      .select("*, plans(*), subscriptions(*)")
       .eq("slug", slug)
-      .single();
+      .eq("subscriptions.status", "active") // Só traz se estiver ativa
+      .order("created_at", { foreignTable: "subscriptions", ascending: false })
+      .maybeSingle();
 
     if (error || !data) return null;
     return data;
@@ -43,9 +57,11 @@ export class TenantService {
 
     const { data, error } = await supabaseAdmin
       .from("tenants")
-      .select("*, plans(*)")
+      .select("*, plans(*), subscriptions(*)")
       .eq("id", id)
-      .single();
+      .eq("subscriptions.status", "active")
+      .order("created_at", { foreignTable: "subscriptions", ascending: false })
+      .maybeSingle();
 
     if (error || !data) return null;
     return data;

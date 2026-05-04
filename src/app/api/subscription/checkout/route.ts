@@ -22,7 +22,30 @@ export async function POST(request: NextRequest) {
     }
 
     const customerId = (tenant as any).stripe_customer_id;
+    const stripeSubscriptionId = (tenant as any).subscriptions?.[0]?.stripe_subscription_id;
 
+    // Se o usuário já tem uma assinatura ativa, fazemos um UPGRADE em vez de novo checkout
+    if (stripeSubscriptionId) {
+      console.log(`[Stripe Checkout] Upgrading existing subscription: ${stripeSubscriptionId} to ${planId}`);
+      
+      const subscription = await stripe.subscriptions.retrieve(stripeSubscriptionId);
+      
+      await stripe.subscriptions.update(stripeSubscriptionId, {
+        items: [{
+          id: subscription.items.data[0].id,
+          price: plan.stripePriceId,
+        }],
+        metadata: {
+          tenantId: tenant.id,
+          planId: planId,
+        },
+        proration_behavior: "always_invoice", // Cobra a diferença na hora
+      });
+
+      return NextResponse.json({ url: `${request.nextUrl.origin}/${tenant.slug}/admin/configuracoes?upgrade=success` });
+    }
+
+    // Caso contrário, cria um novo checkout normal
     const session = await stripe.checkout.sessions.create({
       customer: customerId || undefined,
       customer_email: customerId ? undefined : result.user.email,
@@ -51,6 +74,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ url: session.url });
   } catch (error: any) {
     console.error("Stripe Checkout Error:", error);
-    return NextResponse.json({ error: error.message || "Erro ao criar sessão de checkout" }, { status: 500 });
+    return NextResponse.json({ error: error.message || "Erro ao processar assinatura" }, { status: 500 });
   }
 }
