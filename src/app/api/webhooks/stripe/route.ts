@@ -27,7 +27,7 @@ export async function POST(request: NextRequest) {
       case "checkout.session.completed":
       case "invoice.paid": {
         console.log(`[Stripe Webhook] Processing ${event.type} for id:`, session.id);
-        
+
         // Em invoice.paid o campo é 'subscription', em checkout.session também.
         const stripeSubscriptionId = session.subscription;
         const stripeCustomerId = session.customer;
@@ -54,7 +54,7 @@ export async function POST(request: NextRequest) {
             .select("id")
             .eq("stripe_customer_id", stripeCustomerId)
             .single();
-          
+
           if (tenantByCustomer) {
             tenantId = tenantByCustomer.id;
             console.log(`[Stripe Webhook] Found tenant in DB: ${tenantId}`);
@@ -63,14 +63,14 @@ export async function POST(request: NextRequest) {
 
         if (tenantId && stripeSubscriptionId) {
           console.log(`[Stripe Webhook] Updating tenant ${tenantId} and subscription...`);
-          
+
           await supabaseAdmin!
             .from("tenants")
             .update({ stripe_customer_id: stripeCustomerId })
             .eq("id", tenantId);
 
           const subscription = await stripe.subscriptions.retrieve(stripeSubscriptionId as string) as any;
-          const expiresAt = subscription.current_period_end 
+          const expiresAt = subscription.current_period_end
             ? new Date(subscription.current_period_end * 1000).toISOString()
             : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
 
@@ -121,11 +121,7 @@ export async function POST(request: NextRequest) {
       case "customer.subscription.updated":
       case "customer.subscription.deleted": {
         const subscription = event.data.object as any;
-        console.log(`[Stripe Webhook] ${event.type} object:`, {
-          id: subscription.id,
-          status: subscription.status,
-          cancel_at_period_end: subscription.cancel_at_period_end
-        });
+        console.log(`[DEBUG_SUBSCRIPTION] ID: ${subscription.id} | Status: ${subscription.status} | CancelAtEnd: ${subscription.cancel_at_period_end}`);
         let tenantId = subscription.metadata?.tenantId;
         const stripeCustomerId = subscription.customer;
 
@@ -139,7 +135,7 @@ export async function POST(request: NextRequest) {
             .select("id")
             .eq("stripe_customer_id", stripeCustomerId)
             .single();
-          
+
           if (tenantByCustomer) {
             tenantId = tenantByCustomer.id;
             console.log(`[Stripe Webhook] Found tenant in DB for update: ${tenantId}`);
@@ -147,7 +143,7 @@ export async function POST(request: NextRequest) {
         }
 
         if (tenantId) {
-          const expiresAt = subscription.current_period_end 
+          const expiresAt = subscription.current_period_end
             ? new Date(subscription.current_period_end * 1000).toISOString()
             : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
 
@@ -160,7 +156,7 @@ export async function POST(request: NextRequest) {
               updated_at: new Date().toISOString(),
             })
             .eq("tenant_id", tenantId);
-            
+
           if (updateError) {
             console.error("[Stripe Webhook] Update Error:", updateError);
           } else {
