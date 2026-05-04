@@ -160,7 +160,7 @@ export async function POST(request: NextRequest) {
           if (updateError) {
             console.error("[Stripe Webhook] Update Error:", updateError);
           } else {
-            console.log(`[Stripe Webhook] SUCCESS: Subscription ${event.type} processed for tenant ${tenantId}`);
+            console.log(`[Stripe Webhook] SUCCESS: ${event.type} for tenant ${tenantId} | Saved CancelAtEnd: ${subscription.cancel_at_period_end}`);
           }
         } else {
           console.warn(`[Stripe Webhook] SKIP: Could not identify tenant for sub update ${subscription.id}`);
