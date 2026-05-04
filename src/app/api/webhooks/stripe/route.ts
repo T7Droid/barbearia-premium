@@ -87,7 +87,7 @@ export async function POST(request: NextRequest) {
             status: subscription.status,
             expires_at: expiresAt,
             stripe_subscription_id: stripeSubscriptionId,
-            cancel_at_period_end: subscription.cancel_at_period_end,
+            cancel_at_period_end: !!subscription.cancel_at_period_end || !!subscription.cancel_at,
             updated_at: new Date().toISOString(),
           };
 
@@ -121,7 +121,7 @@ export async function POST(request: NextRequest) {
       case "customer.subscription.updated":
       case "customer.subscription.deleted": {
         const subscription = event.data.object as any;
-        console.log(`[DEBUG_SUBSCRIPTION] ID: ${subscription.id} | Status: ${subscription.status} | CancelAtEnd: ${subscription.cancel_at_period_end}`);
+        console.log(`[DEBUG_SUBSCRIPTION] ID: ${subscription.id} | Status: ${subscription.status} | CancelAtEnd: ${subscription.cancel_at_period_end} | CancelAt: ${subscription.cancel_at}`);
         let tenantId = subscription.metadata?.tenantId;
         const stripeCustomerId = subscription.customer;
 
@@ -135,7 +135,7 @@ export async function POST(request: NextRequest) {
             .select("id")
             .eq("stripe_customer_id", stripeCustomerId)
             .single();
-
+          
           if (tenantByCustomer) {
             tenantId = tenantByCustomer.id;
             console.log(`[Stripe Webhook] Found tenant in DB for update: ${tenantId}`);
@@ -143,24 +143,26 @@ export async function POST(request: NextRequest) {
         }
 
         if (tenantId) {
-          const expiresAt = subscription.current_period_end
+          const expiresAt = subscription.current_period_end 
             ? new Date(subscription.current_period_end * 1000).toISOString()
             : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
+
+          const isCanceled = !!subscription.cancel_at_period_end || !!subscription.cancel_at;
 
           const { error: updateError } = await supabaseAdmin!
             .from("subscriptions")
             .update({
               status: subscription.status,
               expires_at: expiresAt,
-              cancel_at_period_end: subscription.cancel_at_period_end,
+              cancel_at_period_end: isCanceled,
               updated_at: new Date().toISOString(),
             })
             .eq("tenant_id", tenantId);
-
+            
           if (updateError) {
             console.error("[Stripe Webhook] Update Error:", updateError);
           } else {
-            console.log(`[Stripe Webhook] SUCCESS: ${event.type} for tenant ${tenantId} | Saved CancelAtEnd: ${subscription.cancel_at_period_end}`);
+            console.log(`[Stripe Webhook] SUCCESS: ${event.type} for tenant ${tenantId} | Saved CancelAtEnd: ${isCanceled}`);
           }
         } else {
           console.warn(`[Stripe Webhook] SKIP: Could not identify tenant for sub update ${subscription.id}`);
