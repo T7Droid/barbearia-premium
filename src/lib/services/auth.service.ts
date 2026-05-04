@@ -15,24 +15,23 @@ export class AuthService {
 
     // 1. Verificamos se há um cargo específico para este tenant na nova tabela
     if (tenantId) {
-      const isUsingServiceRole = !!process.env.SUPABASE_SERVICE_ROLE_KEY;
-      console.log(`[AuthService] Using Service Role: ${isUsingServiceRole}`);
+      // Buscar o tenant para checar o owner_id
+      const { data: tenantData } = await supabaseAdmin!
+        .from("tenants")
+        .select("owner_id")
+        .eq("id", tenantId)
+        .single();
 
-      const { data: membership, error: memError } = await supabaseAdmin!
+      const { data: membership } = await supabaseAdmin!
         .from("tenant_memberships")
         .select("role")
         .eq("user_id", user.id)
         .eq("tenant_id", tenantId)
-        .single();
+        .maybeSingle();
       
-      if (memError) {
-        console.error(`[AuthService] Error fetching membership:`, memError);
-      }
-
       if (membership) {
-        console.log(`[AuthService] Membership found:`, membership.role);
         userRole = membership.role;
-      } else if (isAdminEmail(user.email)) {
+      } else if (tenantData?.owner_id === user.id || isAdminEmail(user.email)) {
         userRole = "admin";
       }
     } else if (isAdminEmail(user.email)) {
