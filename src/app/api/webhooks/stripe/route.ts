@@ -64,7 +64,6 @@ export async function POST(request: NextRequest) {
         if (tenantId && stripeSubscriptionId) {
           console.log(`[Stripe Webhook] Updating tenant ${tenantId} and subscription...`);
           
-          // Salvar o customer id no tenant para futuros fallbacks
           await supabaseAdmin!
             .from("tenants")
             .update({ stripe_customer_id: stripeCustomerId })
@@ -73,26 +72,47 @@ export async function POST(request: NextRequest) {
           const subscription = await stripe.subscriptions.retrieve(stripeSubscriptionId as string) as any;
           const expiresAt = subscription.current_period_end 
             ? new Date(subscription.current_period_end * 1000).toISOString()
-            : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(); // Fallback 30 dias
+            : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
 
-          const { error: upsertError } = await supabaseAdmin!
+          // Lógica manual de Upsert para evitar erro 42P10
+          const { data: existingSub } = await supabaseAdmin!
             .from("subscriptions")
-            .upsert({
-              tenant_id: tenantId,
-              plan_id: await getPlanUuidFromSlug(planId || "basico"),
-              status: subscription.status,
-              expires_at: expiresAt,
-              stripe_subscription_id: stripeSubscriptionId,
-              updated_at: new Date().toISOString(),
-            }, { onConflict: 'tenant_id' });
+            .select("id")
+            .eq("tenant_id", tenantId)
+            .maybeSingle();
 
-          if (upsertError) {
-            console.error(`[Stripe Webhook] DB Upsert Error:`, upsertError);
+          const subPayload = {
+            tenant_id: tenantId,
+            plan_id: await getPlanUuidFromSlug(planId || "basico"),
+            status: subscription.status,
+            expires_at: expiresAt,
+            stripe_subscription_id: stripeSubscriptionId,
+            updated_at: new Date().toISOString(),
+          };
+
+          let dbError;
+          if (existingSub) {
+            console.log(`[Stripe Webhook] Updating existing subscription ${existingSub.id}`);
+            const { error } = await supabaseAdmin!
+              .from("subscriptions")
+              .update(subPayload)
+              .eq("id", existingSub.id);
+            dbError = error;
+          } else {
+            console.log(`[Stripe Webhook] Creating new subscription`);
+            const { error } = await supabaseAdmin!
+              .from("subscriptions")
+              .insert([subPayload]);
+            dbError = error;
+          }
+
+          if (dbError) {
+            console.error(`[Stripe Webhook] DB Error:`, dbError);
           } else {
             console.log(`[Stripe Webhook] SUCCESS: Subscription activated for tenant ${tenantId}`);
           }
         } else {
-          console.warn(`[Stripe Webhook] SKIP: Could not identify tenant or subscription ID missing. TenantId: ${tenantId}, SubId: ${stripeSubscriptionId}`);
+          console.warn(`[Stripe Webhook] SKIP: Missing tenantId (${tenantId}) or subscriptionId (${stripeSubscriptionId})`);
         }
         break;
       }
