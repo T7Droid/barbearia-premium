@@ -121,6 +121,11 @@ export async function POST(request: NextRequest) {
       case "customer.subscription.updated":
       case "customer.subscription.deleted": {
         const subscription = event.data.object as any;
+        console.log(`[Stripe Webhook] ${event.type} object:`, {
+          id: subscription.id,
+          status: subscription.status,
+          cancel_at_period_end: subscription.cancel_at_period_end
+        });
         let tenantId = subscription.metadata?.tenantId;
         const stripeCustomerId = subscription.customer;
 

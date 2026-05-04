@@ -10,7 +10,7 @@ export async function GET(request: NextRequest) {
     }
 
     const result = await AuthService.verifySession(request, tenant.id) as any;
-    
+
     if (result.authenticated) {
       const { TenantService } = require("@/lib/services/tenant.service");
       result.isSubscriptionActive = await TenantService.isSubscriptionActive(tenant.id);
@@ -19,7 +19,7 @@ export async function GET(request: NextRequest) {
     const response = NextResponse.json(result);
 
     response.headers.set("Cache-Control", "no-store, max-age=0");
-    
+
     return response;
   } catch (error) {
     return NextResponse.json({ authenticated: false }, { status: 401 });
