@@ -26,16 +26,18 @@ export async function POST(request: NextRequest) {
     switch (event.type) {
       case "checkout.session.completed":
       case "invoice.paid": {
-        console.log(`[Stripe Webhook] Processing ${event.type} for session/invoice:`, session.id);
+        console.log(`[Stripe Webhook] Processing ${event.type} for id:`, session.id);
+        
+        // Em invoice.paid o campo é 'subscription', em checkout.session também.
         const stripeSubscriptionId = session.subscription;
         const stripeCustomerId = session.customer;
 
         let tenantId = session.metadata?.tenantId;
         let planId = session.metadata?.planId;
 
-        console.log(`[Stripe Webhook] Initial data - tenantId: ${tenantId}, planId: ${planId}, customer: ${stripeCustomerId}`);
+        console.log(`[Stripe Webhook] Initial data - tenantId: ${tenantId}, planId: ${planId}, subscriptionId: ${stripeSubscriptionId}`);
 
-        // Fallback 1: Buscar na assinatura
+        // Fallback 1: Buscar na assinatura se tivermos o ID
         if (!tenantId && stripeSubscriptionId) {
           console.log(`[Stripe Webhook] Missing tenantId, retrieving subscription ${stripeSubscriptionId}...`);
           const subscription = await stripe.subscriptions.retrieve(stripeSubscriptionId as string);
@@ -59,22 +61,27 @@ export async function POST(request: NextRequest) {
           }
         }
 
-        if (tenantId) {
+        if (tenantId && stripeSubscriptionId) {
           console.log(`[Stripe Webhook] Updating tenant ${tenantId} and subscription...`);
+          
+          // Salvar o customer id no tenant para futuros fallbacks
           await supabaseAdmin!
             .from("tenants")
             .update({ stripe_customer_id: stripeCustomerId })
             .eq("id", tenantId);
 
           const subscription = await stripe.subscriptions.retrieve(stripeSubscriptionId as string) as any;
+          const expiresAt = subscription.current_period_end 
+            ? new Date(subscription.current_period_end * 1000).toISOString()
+            : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(); // Fallback 30 dias
 
           const { error: upsertError } = await supabaseAdmin!
             .from("subscriptions")
             .upsert({
               tenant_id: tenantId,
-              plan_id: await getPlanUuidFromSlug(planId),
+              plan_id: await getPlanUuidFromSlug(planId || "basico"),
               status: subscription.status,
-              expires_at: new Date(subscription.current_period_end * 1000).toISOString(),
+              expires_at: expiresAt,
               stripe_subscription_id: stripeSubscriptionId,
               updated_at: new Date().toISOString(),
             }, { onConflict: 'tenant_id' });
@@ -85,7 +92,7 @@ export async function POST(request: NextRequest) {
             console.log(`[Stripe Webhook] SUCCESS: Subscription activated for tenant ${tenantId}`);
           }
         } else {
-          console.error(`[Stripe Webhook] CRITICAL: Could not identify tenant for event ${event.type}`);
+          console.warn(`[Stripe Webhook] SKIP: Could not identify tenant or subscription ID missing. TenantId: ${tenantId}, SubId: ${stripeSubscriptionId}`);
         }
         break;
       }
@@ -93,17 +100,25 @@ export async function POST(request: NextRequest) {
       case "customer.subscription.updated":
       case "customer.subscription.deleted": {
         const subscription = event.data.object as any;
-        const tenantId = subscription.metadata.tenantId;
+        const tenantId = subscription.metadata?.tenantId;
+
+        console.log(`[Stripe Webhook] Subscription event ${event.type} for sub: ${subscription.id}, tenant: ${tenantId}`);
 
         if (tenantId) {
-          await supabaseAdmin!
+          const expiresAt = subscription.current_period_end 
+            ? new Date(subscription.current_period_end * 1000).toISOString()
+            : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
+
+          const { error: updateError } = await supabaseAdmin!
             .from("subscriptions")
             .update({
               status: subscription.status,
-              expires_at: new Date(subscription.current_period_end * 1000).toISOString(),
+              expires_at: expiresAt,
               updated_at: new Date().toISOString(),
             })
             .eq("tenant_id", tenantId);
+            
+          if (updateError) console.error("[Stripe Webhook] Update Error:", updateError);
         }
         break;
       }
@@ -117,10 +132,15 @@ export async function POST(request: NextRequest) {
 }
 
 async function getPlanUuidFromSlug(slug: string) {
-  const { data } = await supabaseAdmin!
-    .from("plans")
-    .select("id")
-    .eq("slug", slug)
-    .single();
-  return data?.id;
+  try {
+    const { data } = await supabaseAdmin!
+      .from("plans")
+      .select("id")
+      .eq("slug", slug)
+      .single();
+    return data?.id;
+  } catch (e) {
+    console.error("Error finding plan UUID for slug:", slug);
+    return null;
+  }
 }
