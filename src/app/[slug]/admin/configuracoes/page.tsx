@@ -338,6 +338,11 @@ export default function SettingsPage() {
                 <div className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${settings.isSubscriptionActive ? 'bg-green-500/20 text-green-500' : 'bg-red-500/20 text-red-500'}`}>
                   {settings.isSubscriptionActive ? 'Ativa' : 'Inativa/Vencida'}
                 </div>
+                {settings.subscriptionStatus === 'trialing' && (
+                  <div className="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-amber-500/20 text-amber-600 border border-amber-500/20">
+                    Período de Teste
+                  </div>
+                )}
                 {settings.plan && (
                   <div className="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-primary/20 text-primary">
                     Plano {settings.plan.name}
