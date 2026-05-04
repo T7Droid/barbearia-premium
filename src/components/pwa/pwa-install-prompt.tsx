@@ -1,25 +1,54 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { usePathname } from "next/navigation";
 import { usePWA } from "@/hooks/use-pwa";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { X, Download, Share, PlusSquare, Smartphone } from "lucide-react";
 
+// Rotas em que o banner de instalação do PWA deve aparecer:
+// /{slug}  e  /{slug}/booking
+function useIsTenantRoute(): boolean {
+  const pathname = usePathname();
+  if (!pathname) return false;
+
+  // Rotas públicas/admin que NÃO são de tenant
+  const publicPrefixes = [
+    "/home",
+    "/onboarding",
+    "/privacidade",
+    "/termos",
+    "/api",
+  ];
+  if (publicPrefixes.some((prefix) => pathname.startsWith(prefix))) return false;
+
+  // Segmentos do pathname sem a barra inicial
+  const parts = pathname.split("/").filter(Boolean);
+
+  // Deve ter exatamente 1 segmento (/{slug}) ou 2 com o segundo sendo "booking"
+  if (parts.length === 1) return true;
+  if (parts.length === 2 && parts[1] === "booking") return true;
+
+  return false;
+}
+
 export function PWAInstallPrompt() {
+  const isTenantRoute = useIsTenantRoute();
   const { showInstallPrompt, handleInstall, isIOS, isStandalone } = usePWA();
   const [visible, setVisible] = useState(false);
   const [dismissed, setDismissed] = useState(false);
 
   useEffect(() => {
     // Show prompt after a short delay, but only if not already standalone/dismissed
-    if ((showInstallPrompt || isIOS) && !isStandalone && !dismissed) {
+    // and only on tenant routes (/{slug} and /{slug}/booking)
+    if (isTenantRoute && (showInstallPrompt || isIOS) && !isStandalone && !dismissed) {
       const timer = setTimeout(() => setVisible(true), 3000);
       return () => clearTimeout(timer);
     } else {
       setVisible(false);
     }
-  }, [showInstallPrompt, isIOS, isStandalone, dismissed]);
+  }, [isTenantRoute, showInstallPrompt, isIOS, isStandalone, dismissed]);
 
   const handleDismiss = () => {
     setVisible(false);
