@@ -72,8 +72,6 @@ export default function AdminBarbers() {
   const [showEmail, setShowEmail] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [isResettingPassword, setIsResettingPassword] = useState(false);
-
-  // Estados para Upgrade e Planos
   const [settings, setSettings] = useState<any>(null);
   const [isUpgradeDialogOpen, setIsUpgradeDialogOpen] = useState(false);
   const [upgradeTarget, setUpgradeTarget] = useState<"profissional" | "premium" | "escala">("profissional");
@@ -95,12 +93,11 @@ export default function AdminBarbers() {
   const [services, setServices] = useState<any[]>([]);
   const [isLoadingUnits, setIsLoadingUnits] = useState(true);
   
-  // Lógica de Validação
   const isGeneralValid = (formData.name?.trim() || "") !== "" && (formData.description?.trim() || "") !== "";
   const isServicesValid = formData.serviceIds.length > 0;
   const isAccessValid = formData.unitIds.length > 0;
   const isCredentialsValid = editingBarber 
-    ? true // Na edição, as credenciais estão ocultas/não editáveis
+    ? true
     : ((formData.loginEmail?.trim() || "") !== "" && (formData.loginPassword?.trim() || "").length >= 6);
 
   const isFormValid = isGeneralValid && isServicesValid && isAccessValid && isCredentialsValid;
@@ -139,25 +136,21 @@ export default function AdminBarbers() {
 
   const handleOpenModal = (barber?: any) => {
     if (!barber) {
-      // Verificar limites de plano para novos barbeiros
       const currentPlan = settings?.plan?.slug || 'basico';
       const barberCount = barbers.filter(b => b.active).length;
 
-      // Básico permite 1
       if (currentPlan === 'basico' && barberCount >= 1) {
         setUpgradeTarget('profissional');
         setIsUpgradeDialogOpen(true);
         return;
       }
 
-      // Profissional permite 3
       if (currentPlan === 'profissional' && barberCount >= 3) {
         setUpgradeTarget('premium');
         setIsUpgradeDialogOpen(true);
         return;
       }
 
-      // Premium permite 10
       if (currentPlan === 'premium' && barberCount >= 10) {
         setUpgradeTarget('escala');
         setIsUpgradeDialogOpen(true);
@@ -453,20 +446,7 @@ export default function AdminBarbers() {
                         className={`min-h-[100px] ${formData.description.trim() === "" ? "border-destructive/50" : ""}`}
                       />
                     </div>
-                    {/* Campo de Foto Oculto Temporariamente */}
-                    {/* <div className="space-y-2">
-                      <Label htmlFor="imageUrl">URL da Foto (opcional)</Label>
-                      <div className="relative">
-                        <ImageIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                        <Input
-                          id="imageUrl"
-                          value={formData.imageUrl}
-                          onChange={e => setFormData({...formData, imageUrl: e.target.value})}
-                          className="pl-9"
-                          placeholder="https://images.unsplash.com/..."
-                        />
-                      </div>
-                    </div> */}
+                
                     <div className="space-y-2">
                       <Label htmlFor="commissionPercentage">Comissão (%)</Label>
                       <Input
