@@ -276,7 +276,7 @@ export default function AdminBarbers() {
     try {
       if (!supabase) throw new Error("Supabase não configurado.");
       const { error } = await supabase.auth.resetPasswordForEmail(editingBarber.email, {
-        redirectTo: `${window.location.origin}/reset-password`,
+        redirectTo: `${window.location.origin}/${tenant?.slug}/reset-password`,
       });
 
       if (error) throw error;
