@@ -29,7 +29,7 @@ export function ClientLoginForm() {
     try {
       const response = await fetch("/api/auth/login", {
         method: "POST",
-        headers: { 
+        headers: {
           "Content-Type": "application/json",
           "x-tenant-slug": tenant.slug
         },
@@ -48,11 +48,11 @@ export function ClientLoginForm() {
           title: "Bem-vindo!",
           description: "Você entrou na sua conta.",
         });
-        
+
         // Redireciona para a página originária (from) ou a home
         const from = searchParams.get("from");
         const redirectPath = from || (user.role === "barber" ? `/${tenant.slug}` : `/${tenant.slug}`);
-        
+
         router.push(redirectPath);
         router.refresh();
       } else {
@@ -83,7 +83,7 @@ export function ClientLoginForm() {
             type="email"
             required
             value={formData.email}
-            onChange={(e) => setFormData({...formData, email: e.target.value})}
+            onChange={(e) => setFormData({ ...formData, email: e.target.value })}
             placeholder="exemplo@email.com"
             className="h-12 border-border/50 pl-11 group-focus-within:border-primary transition-all rounded-xl"
           />
@@ -98,7 +98,7 @@ export function ClientLoginForm() {
             type="password"
             required
             value={formData.password}
-            onChange={(e) => setFormData({...formData, password: e.target.value})}
+            onChange={(e) => setFormData({ ...formData, password: e.target.value })}
             placeholder="••••••••"
             className="h-12 border-border/50 pl-11 group-focus-within:border-primary transition-all rounded-xl"
           />
