@@ -18,7 +18,8 @@ export async function POST(request: NextRequest) {
     const plan = PLANS_INFO[planId];
 
     if (!plan || !plan.stripePriceId) {
-      return NextResponse.json({ error: "Plano inválido ou não configurado para Stripe" }, { status: 400 });
+      console.error(`[Stripe Checkout] Invalid plan requested: ${planId}`);
+      return NextResponse.json({ error: `Plano inválido ou não configurado para Stripe: ${planId}` }, { status: 400 });
     }
 
     const customerId = (tenant as any).stripe_customer_id;
@@ -35,6 +36,7 @@ export async function POST(request: NextRequest) {
           id: subscription.items.data[0].id,
           price: plan.stripePriceId,
         }],
+        cancel_at_period_end: false,
         metadata: {
           tenantId: tenant.id,
           planId: planId,

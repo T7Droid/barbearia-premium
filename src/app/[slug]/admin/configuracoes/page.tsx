@@ -125,10 +125,10 @@ export default function SettingsPage() {
 
     // Tratamento de Upgrade Automático
     const upgradePlan = params.get("upgrade");
-    if (upgradePlan && !loading && settings.plan) {
+    if (upgradePlan && !loading) {
       // Pequeno delay para garantir que tudo carregou e evitar loops
       const timer = setTimeout(() => {
-        handleManageStripe(upgradePlan);
+        handleManageStripe(upgradePlan === "success" ? undefined : upgradePlan);
         // Limpa a URL
         window.history.replaceState({}, '', window.location.pathname);
       }, 500);

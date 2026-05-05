@@ -64,9 +64,14 @@ export async function POST(request: NextRequest) {
         if (tenantId && stripeSubscriptionId) {
           console.log(`[Stripe Webhook] Updating tenant ${tenantId} and subscription...`);
 
+          const planUuid = await getPlanUuidFromSlug(planId || "basico");
+          
           await supabaseAdmin!
             .from("tenants")
-            .update({ stripe_customer_id: stripeCustomerId })
+            .update({ 
+              stripe_customer_id: stripeCustomerId,
+              plan_id: planUuid 
+            })
             .eq("id", tenantId);
 
           const subscription = await stripe.subscriptions.retrieve(stripeSubscriptionId as string) as any;
@@ -83,7 +88,7 @@ export async function POST(request: NextRequest) {
 
           const subPayload = {
             tenant_id: tenantId,
-            plan_id: await getPlanUuidFromSlug(planId || "basico"),
+            plan_id: planUuid,
             status: subscription.status,
             expires_at: expiresAt,
             stripe_subscription_id: stripeSubscriptionId,
@@ -167,7 +172,14 @@ export async function POST(request: NextRequest) {
 
           // Se o evento trouxe um novo plano no metadado (como no upgrade direto)
           if (planSlug) {
-            updateData.plan_id = await getPlanUuidFromSlug(planSlug);
+            const planUuid = await getPlanUuidFromSlug(planSlug);
+            updateData.plan_id = planUuid;
+            
+            // Atualizar o tenant também
+            await supabaseAdmin!
+              .from("tenants")
+              .update({ plan_id: planUuid })
+              .eq("id", tenantId);
           }
 
           const { error: updateError } = await supabaseAdmin!
