@@ -25,3 +25,23 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ authenticated: false }, { status: 401 });
   }
 }
+
+export async function PUT(request: NextRequest) {
+  try {
+    const tenant = await TenantContext.getTenant(request);
+    if (!tenant) {
+      return NextResponse.json({ error: "Tenant não identificado" }, { status: 400 });
+    }
+
+    const updates = await request.json();
+    const result = await AuthService.updateProfile(request, updates);
+
+    if (!result.success) {
+      return NextResponse.json({ error: result.error }, { status: 400 });
+    }
+
+    return NextResponse.json({ success: true });
+  } catch (error: any) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+}

@@ -33,25 +33,22 @@ export default function SettingsPage() {
       if (!user?.id) return;
       
       try {
-        if (!supabase) throw new Error("Supabase not configured");
-        
-        const { data, error } = await supabase
-          .from("profiles")
-          .select("*")
-          .eq("id", user.id)
-          .single();
+        const response = await fetch("/api/auth/me", {
+          headers: { "x-tenant-slug": tenant.slug }
+        });
+        const data = await response.json();
 
-        if (error) throw error;
-
-        if (data) {
+        if (data.authenticated && data.user) {
           setProfile({
-            fullName: data.full_name || "",
-            email: data.email || "",
-            phone: data.phone || "",
-            notificationsEnabled: data.notifications_enabled ?? false,
-            pushNotificationsEnabled: data.push_notifications_enabled ?? false,
-            fcmToken: data.fcm_token || ""
+            fullName: data.user.name || "",
+            email: data.user.email || "",
+            phone: data.user.phone || "",
+            notificationsEnabled: data.user.notificationsEnabled ?? false,
+            pushNotificationsEnabled: data.user.pushNotificationsEnabled ?? false,
+            fcmToken: data.user.fcmToken || ""
           });
+        } else {
+          console.error("User not authenticated or profile empty");
         }
       } catch (error) {
         console.error("Error loading profile:", error);
@@ -68,21 +65,24 @@ export default function SettingsPage() {
     setSaving(true);
 
     try {
-      if (!supabase) throw new Error("Supabase not configured");
-
-      const { error } = await supabase
-        .from("profiles")
-        .update({
-          full_name: profile.fullName,
+      const response = await fetch("/api/auth/me", {
+        method: "PUT",
+        headers: { 
+          "Content-Type": "application/json",
+          "x-tenant-slug": tenant.slug
+        },
+        body: JSON.stringify({
+          name: profile.fullName,
           phone: profile.phone,
-          notifications_enabled: profile.notificationsEnabled,
-          push_notifications_enabled: profile.pushNotificationsEnabled,
-          fcm_token: profile.fcmToken,
-          updated_at: new Date().toISOString()
+          notificationsEnabled: profile.notificationsEnabled,
+          pushNotificationsEnabled: profile.pushNotificationsEnabled,
+          fcmToken: profile.fcmToken
         })
-        .eq("id", user.id);
+      });
 
-      if (error) throw error;
+      if (!response.ok) {
+        throw new Error("Erro ao salvar o perfil no backend");
+      }
 
       toast({
         title: "Configurações salvas!",

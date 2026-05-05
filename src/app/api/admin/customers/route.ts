@@ -15,13 +15,9 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Não autorizado" }, { status: 403 });
     }
 
-    // Buscar perfis através da tabela de vínculos para isolar por tenant
     const { data: memberships, error: memberError } = await supabaseAdmin!
       .from("tenant_memberships")
-      .select(`
-        role,
-        profiles (*)
-      `)
+      .select("user_id, role")
       .eq("tenant_id", tenant.id)
       .eq("role", "client");
 
@@ -30,9 +26,22 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Erro ao buscar vínculos" }, { status: 500 });
     }
 
+    const userIds = (memberships || []).map(m => m.user_id).filter(Boolean);
+    let profilesData: any[] = [];
+
+    if (userIds.length > 0) {
+      const { data: pData, error: pError } = await supabaseAdmin!
+        .from("profiles")
+        .select("*")
+        .in("id", userIds);
+        
+      if (!pError && pData) {
+        profilesData = pData;
+      }
+    }
+
     // Mapear dados garantindo que colunas inexistentes tenham valores padrão
-    const customers = (memberships || []).map(m => {
-      const p = m.profiles as any;
+    const customers = profilesData.map(p => {
       return {
         id: p.id,
         full_name: p.full_name,

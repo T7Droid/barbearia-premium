@@ -25,21 +25,22 @@ export async function POST(request: NextRequest) {
     }
 
     // 1. Try Supabase Auth first if configured
-    if (isSupabaseConfigured && supabase) {
-      const { data, error } = await supabase.auth.signUp({
+    if (isSupabaseConfigured && supabaseAdmin && supabase) {
+      const { data, error } = await supabaseAdmin.auth.admin.createUser({
         email,
         password,
-        options: {
-          data: {
-            full_name: name,
-            phone: phone || "",
-            notifications_enabled: false,
-            push_notifications_enabled: false,
-          }
+        email_confirm: true,
+        user_metadata: {
+          full_name: name
         }
       });
 
       if (!error && data.user) {
+        // Authenticate the user to get the session token
+        const { data: authData } = await supabase.auth.signInWithPassword({
+          email,
+          password
+        });
         // Buscar configurações do tenant específico
         const { data: settingsData } = await supabaseAdmin!
           .from("settings")
@@ -52,21 +53,30 @@ export async function POST(request: NextRequest) {
 
         console.log(`[AUTH REGISTER] Atribuindo ${initialPoints} pontos iniciais para usuário ${data.user.id} no tenant ${tenant.id}`);
         
-        const { error: profileError } = await supabaseAdmin!.from("profiles").upsert({
-          id: data.user.id,
-          tenant_id: tenant.id,
+        const { error: profileError } = await supabaseAdmin!.from("profiles").update({
           full_name: name,
-          email: email, // Persistir o e-mail no perfil
+          email: email,
           phone: phone || "",
           points: initialPoints,
           notifications_enabled: false,
           push_notifications_enabled: false,
           accepted_terms: acceptedTerms === true,
           accepted_privacy: acceptedPrivacy === true
-        });
+        }).eq("id", data.user.id);
 
         if (profileError) {
           console.error("[AUTH REGISTER] Erro ao criar/atualizar perfil:", profileError);
+        }
+
+        // Adicionar o usuário como membro do tenant (para aparecer na lista de clientes do admin)
+        const { error: membershipError } = await supabaseAdmin!.from("tenant_memberships").upsert({
+          user_id: data.user.id,
+          tenant_id: tenant.id,
+          role: "client"
+        }, { onConflict: 'user_id,tenant_id' });
+
+        if (membershipError) {
+          console.error("[AUTH REGISTER] Erro ao criar vínculo de tenant:", membershipError);
         }
 
         const response = NextResponse.json({ 
@@ -78,7 +88,7 @@ export async function POST(request: NextRequest) {
             points: initialPoints
           } 
         });
-        response.cookies.set("session_token", data.session?.access_token || "", {
+        response.cookies.set("session_token", authData.session?.access_token || "", {
           httpOnly: true,
           secure: process.env.NODE_ENV === "production",
           sameSite: "lax",
