@@ -36,6 +36,22 @@ export default function ResetPasswordPage() {
     }
   }, []);
 
+  const hasSequences = (str: string) => {
+    for (let i = 0; i < str.length - 2; i++) {
+      const char1 = str.charCodeAt(i);
+      const char2 = str.charCodeAt(i + 1);
+      const char3 = str.charCodeAt(i + 2);
+      if ((char1 + 1 === char2 && char2 + 1 === char3) || (char1 - 1 === char2 && char2 - 1 === char3)) {
+        return true;
+      }
+    }
+    return false;
+  };
+
+  const hasRepeatedChars = (str: string) => {
+    return /(.)\1\1/.test(str); // Detecta 3 ou mais caracteres repetidos (ex: 111, aaa)
+  };
+
   const handleResetPassword = async (e: React.FormEvent) => {
     e.preventDefault();
     if (password !== confirmPassword) {
@@ -47,10 +63,37 @@ export default function ResetPasswordPage() {
       return;
     }
     
-    if (password.length < 6) {
+    if (password.length < 8) {
       toast({
         title: "Senha muito curta",
-        description: "A senha deve ter pelo menos 6 caracteres.",
+        description: "A senha deve ter pelo menos 8 caracteres.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    if (!/(?=.*[a-zA-Z])(?=.*[0-9])/.test(password)) {
+      toast({
+        title: "Senha muito simples",
+        description: "A senha deve conter letras e números.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    if (hasSequences(password)) {
+      toast({
+        title: "Senha muito simples",
+        description: "Evite sequências simples (ex: 123, abc).",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    if (hasRepeatedChars(password)) {
+      toast({
+        title: "Senha muito simples",
+        description: "Evite repetir caracteres (ex: 111, aaa).",
         variant: "destructive"
       });
       return;
