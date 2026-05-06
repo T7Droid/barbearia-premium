@@ -209,124 +209,120 @@ export default function BarberSchedulePage() {
 
   if (isLoading) {
     return (
-      <Layout>
-        <div className="flex items-center justify-center min-h-[60vh]">
-          <Loader2 className="w-8 h-8 animate-spin text-primary" />
-        </div>
-      </Layout>
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
     );
   }
 
   return (
-    <Layout>
-      <div className="container mx-auto px-4 py-8 max-w-4xl space-y-8">
-        <div>
-          <h1 className="text-3xl font-serif font-bold tracking-tight flex items-center gap-3">
-            <Calendar className="w-8 h-8 text-primary" /> Meus Horários
-          </h1>
-          <p className="text-muted-foreground">Configure os seus horários de atendimento para cada unidade em que você atua.</p>
-        </div>
+    <div className="container mx-auto px-4 py-8 max-w-4xl space-y-8">
+      <div>
+        <h1 className="text-3xl font-serif font-bold tracking-tight flex items-center gap-3">
+          <Calendar className="w-8 h-8 text-primary" /> Meus Horários
+        </h1>
+        <p className="text-muted-foreground">Configure os seus horários de atendimento para cada unidade em que você atua.</p>
+      </div>
 
-        {units.length === 0 ? (
-          <Card className="p-12 text-center text-muted-foreground">
-            Você ainda não está vinculado a nenhuma unidade. Entre em contato com o administrador.
-          </Card>
-        ) : (
-          units.map((unit) => (
-            <Card key={unit.id} className="border-border/50 shadow-xl overflow-hidden">
-              <CardHeader className="bg-primary/5 border-b">
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                  <div>
-                    <CardTitle className="text-lg flex items-center gap-2">
-                      <MapPin className="w-4 h-4 text-primary" />
-                      Unidade: <span className="text-primary">{unit.name}</span>
-                    </CardTitle>
-                    <CardDescription>Defina sua jornada nesta unidade específica.</CardDescription>
-                  </div>
-                  
+      {units.length === 0 ? (
+        <Card className="p-12 text-center text-muted-foreground">
+          Você ainda não está vinculado a nenhuma unidade. Entre em contato com o administrador.
+        </Card>
+      ) : (
+        units.map((unit) => (
+          <Card key={unit.id} className="border-border/50 shadow-xl overflow-hidden">
+            <CardHeader className="bg-primary/5 border-b">
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div>
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    <MapPin className="w-4 h-4 text-primary" />
+                    Unidade: <span className="text-primary">{unit.name}</span>
+                  </CardTitle>
+                  <CardDescription>Defina sua jornada nesta unidade específica.</CardDescription>
                 </div>
-              </CardHeader>
-              <CardContent className="p-0">
-                <div className="divide-y divide-border/50">
-                  {DAYS_OF_WEEK.map((day) => {
-                    const uId = String(unit.id);
-                    const unitDay = unit.weekly_hours?.[day.id] || { active: false, start: "09:00", end: "18:00" };
-                    const config = weeklyHours[uId]?.[day.id] || { active: false, start: unitDay.start, end: unitDay.end };
-                    const isUnitClosed = !unitDay.active;
+                
+              </div>
+            </CardHeader>
+            <CardContent className="p-0">
+              <div className="divide-y divide-border/50">
+                {DAYS_OF_WEEK.map((day) => {
+                  const uId = String(unit.id);
+                  const unitDay = unit.weekly_hours?.[day.id] || { active: false, start: "09:00", end: "18:00" };
+                  const config = weeklyHours[uId]?.[day.id] || { active: false, start: unitDay.start, end: unitDay.end };
+                  const isUnitClosed = !unitDay.active;
 
-                    return (
-                      <div key={day.id} className={`p-6 transition-colors hover:bg-muted/5 ${isUnitClosed ? 'bg-muted/20 opacity-80' : ''}`}>
-                        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-                          <div className="flex flex-col gap-1 min-w-[150px]">
-                            <span className="font-bold text-lg text-foreground">{day.label}</span>
-                            <div className="flex items-center gap-2">
-                              <Switch 
-                                checked={config.active && !isUnitClosed} 
-                                disabled={isUnitClosed}
-                                onCheckedChange={(checked) => handleToggleDay(uId, day.id, checked)} 
-                              />
-                              <span className={`text-xs font-bold uppercase tracking-wider ${isUnitClosed ? 'text-destructive' : config.active ? 'text-green-500' : 'text-muted-foreground'}`}>
-                                {isUnitClosed ? 'Fechado' : config.active ? 'Atendimento' : 'Folga'}
-                              </span>
-                            </div>
+                  return (
+                    <div key={day.id} className={`p-6 transition-colors hover:bg-muted/5 ${isUnitClosed ? 'bg-muted/20 opacity-80' : ''}`}>
+                      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+                        <div className="flex flex-col gap-1 min-w-[150px]">
+                          <span className="font-bold text-lg text-foreground">{day.label}</span>
+                          <div className="flex items-center gap-2">
+                            <Switch 
+                              checked={config.active && !isUnitClosed} 
+                              disabled={isUnitClosed}
+                              onCheckedChange={(checked) => handleToggleDay(uId, day.id, checked)} 
+                            />
+                            <span className={`text-xs font-bold uppercase tracking-wider ${isUnitClosed ? 'text-destructive' : config.active ? 'text-green-500' : 'text-muted-foreground'}`}>
+                              {isUnitClosed ? 'Fechado' : config.active ? 'Atendimento' : 'Folga'}
+                            </span>
                           </div>
+                        </div>
 
-                          {config.active && !isUnitClosed && (
-                            <div className="flex flex-1 items-center gap-4 animate-in fade-in slide-in-from-left-2 duration-300 justify-end">
-                              <div className="flex items-center gap-2">
-                                 <span className="text-[10px] uppercase font-bold text-muted-foreground">Início</span>
-                                  <Select
-                                    value={config.start || unitDay.start || "09:00"}
-                                    onValueChange={(val) => handleTimeChange(uId, day.id, "start", val)}
-                                  >
-                                    <SelectTrigger className="w-[110px] h-10 bg-background border-border/50 shadow-sm">
-                                      <SelectValue />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                      {generateTimeOptions(unitDay.start, unitDay.end).map(time => (
+                        {config.active && !isUnitClosed && (
+                          <div className="flex flex-1 items-center gap-4 animate-in fade-in slide-in-from-left-2 duration-300 justify-end">
+                            <div className="flex items-center gap-2">
+                               <span className="text-[10px] uppercase font-bold text-muted-foreground">Início</span>
+                                <Select
+                                  value={config.start || unitDay.start || "09:00"}
+                                  onValueChange={(val) => handleTimeChange(uId, day.id, "start", val)}
+                                >
+                                  <SelectTrigger className="w-[110px] h-10 bg-background border-border/50 shadow-sm">
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {generateTimeOptions(unitDay.start, unitDay.end).map(time => (
+                                      <SelectItem key={time} value={time}>{time}</SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                            </div>
+                            
+                            <div className="flex items-center gap-2">
+                               <span className="text-[10px] uppercase font-bold text-muted-foreground">Fim</span>
+                                <Select
+                                  value={config.end || unitDay.end || "18:00"}
+                                  onValueChange={(val) => handleTimeChange(uId, day.id, "end", val)}
+                                >
+                                  <SelectTrigger className="w-[110px] h-10 bg-background border-border/50 shadow-sm">
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {generateTimeOptions(unitDay.start, unitDay.end)
+                                      .filter(t => t > (config.start || "00:00"))
+                                      .map(time => (
                                         <SelectItem key={time} value={time}>{time}</SelectItem>
                                       ))}
-                                    </SelectContent>
-                                  </Select>
-                              </div>
-                              
-                              <div className="flex items-center gap-2">
-                                 <span className="text-[10px] uppercase font-bold text-muted-foreground">Fim</span>
-                                  <Select
-                                    value={config.end || unitDay.end || "18:00"}
-                                    onValueChange={(val) => handleTimeChange(uId, day.id, "end", val)}
-                                  >
-                                    <SelectTrigger className="w-[110px] h-10 bg-background border-border/50 shadow-sm">
-                                      <SelectValue />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                      {generateTimeOptions(unitDay.start, unitDay.end)
-                                        .filter(t => t > (config.start || "00:00"))
-                                        .map(time => (
-                                          <SelectItem key={time} value={time}>{time}</SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                  </Select>
-                              </div>
+                                  </SelectContent>
+                                </Select>
                             </div>
-                          )}
-                        </div>
+                          </div>
+                        )}
                       </div>
-                    );
-                  })}
-                </div>
-              </CardContent>
-            </Card>
-          ))
-        )}
+                    </div>
+                  );
+                })}
+              </div>
+            </CardContent>
+          </Card>
+        ))
+      )}
 
-        <div className="sticky bottom-8 flex justify-end">
-          <Button onClick={handleSave} disabled={isSaving || units.length === 0} className="gap-2 shadow-2xl h-14 px-8 text-lg font-bold">
-            {isSaving ? <Loader2 className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5" />}
-            Salvar Minhas Escalas
-          </Button>
-        </div>
+      <div className="sticky bottom-8 flex justify-end">
+        <Button onClick={handleSave} disabled={isSaving || units.length === 0} className="gap-2 shadow-2xl h-14 px-8 text-lg font-bold">
+          {isSaving ? <Loader2 className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5" />}
+          Salvar Minhas Escalas
+        </Button>
       </div>
-    </Layout>
+    </div>
   );
 }

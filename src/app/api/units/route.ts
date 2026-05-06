@@ -20,11 +20,20 @@ export async function GET(request: NextRequest) {
     .eq("tenant_id", tenant.id)
     .order("name", { ascending: true });
 
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
-  }
+  // Mapear para camelCase e remover campos internos
+  const mapped = (units || []).map((u: any) => ({
+    id: u.id,
+    name: u.name,
+    address: u.address,
+    number: u.number,
+    city: u.city,
+    state: u.state,
+    postalCode: u.postal_code,
+    googleMapsLink: u.google_maps_link,
+    weeklyHours: u.weekly_hours
+  }));
 
-  return NextResponse.json(units);
+  return NextResponse.json(mapped);
 }
 
 export async function POST(request: NextRequest) {

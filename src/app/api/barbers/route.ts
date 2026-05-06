@@ -51,20 +51,30 @@ export async function GET(request: NextRequest) {
     }
   }
 
+  // Verificar sessão para filtrar dados sensíveis
+  const auth = await AuthService.verifySession(request, tenant.id);
+  const isAdmin = auth.authenticated && auth.user?.role === "admin";
+
   // Mapear para camelCase e incluir associações
-  let mapped = (data || []).map((b: any) => ({
-    id: b.id,
-    name: b.name,
-    description: b.description,
-    imageUrl: b.image_url,
-    active: b.active,
-    userId: b.user_id,
-    email: b.user_id ? profilesMap[b.user_id] : null,
-    weeklyHours: b.weekly_hours,
-    commissionPercentage: b.commission_percentage !== null && b.commission_percentage !== undefined ? b.commission_percentage : 50,
-    units: (b.barber_units || []).map((bu: any) => ({ id: bu.unit_id })),
-    services: (b.barber_services || []).map((bs: any) => ({ id: bs.service_id }))
-  }));
+  let mapped = (data || []).map((b: any) => {
+    const isSelf = auth.authenticated && auth.user?.id === b.user_id;
+    const canSeeSensitive = isAdmin || isSelf;
+
+    return {
+      id: b.id,
+      name: b.name,
+      description: b.description,
+      imageUrl: b.image_url,
+      active: b.active,
+      userId: b.user_id,
+      // Só expõe e-mail e comissão se for admin ou o próprio dono do perfil
+      email: canSeeSensitive ? (b.user_id ? profilesMap[b.user_id] : null) : null,
+      commissionPercentage: canSeeSensitive ? (b.commission_percentage !== null && b.commission_percentage !== undefined ? b.commission_percentage : 50) : null,
+      weeklyHours: b.weekly_hours,
+      units: (b.barber_units || []).map((bu: any) => ({ id: bu.unit_id })),
+      services: (b.barber_services || []).map((bs: any) => ({ id: bs.service_id }))
+    };
+  });
 
   // Filtrar por unidade se o parâmetro unitId for fornecido
   const unitId = request.nextUrl.searchParams.get("unitId");

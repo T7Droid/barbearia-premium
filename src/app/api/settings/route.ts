@@ -81,6 +81,11 @@ export async function GET(request: NextRequest) {
   }
   // ------------------------------------------
 
+  // Verificar sessão para filtrar dados sensíveis
+  const auth = await AuthService.verifySession(request, tenant.id);
+  const isAdmin = auth.authenticated && auth.user?.role === "admin";
+  const isStaff = auth.authenticated && (auth.user?.role === "admin" || auth.user?.role === "barber");
+
   const settings = {
     isPointsEnabled: finalData.is_points_enabled,
     pointsPerAppointment: finalData.points_per_appointment,
@@ -93,17 +98,18 @@ export async function GET(request: NextRequest) {
     weeklyHours: finalData.weekly_hours,
     mpPublicKey: tenantData?.mp_public_key || process.env.NEXT_PUBLIC_MERCADOPAGO_PUBLIC_KEY || "",
     mpConnected: tenantData?.mp_connected || false,
-    mpConnectionError: tenantData?.mp_connection_error || null,
+    mpConnectionError: isAdmin ? (tenantData?.mp_connection_error || null) : null,
     tenantId: tenant.id,
     tenantSlug: tenant.slug,
-    plan: fullTenant?.plans || null,
-    isSubscriptionActive: isSubActive,
-    subscriptionStatus: subData?.status || "inactive",
-    cancelAtPeriodEnd: subData?.cancel_at_period_end || false,
-    appointmentsCount: appointmentsCount || 0,
-    subscriptionExpiresAt: subData?.expires_at || null,
-    adminPhone: adminPhone,
-    stripeCustomerId: (tenantData as any)?.stripe_customer_id || null
+    // Dados sensíveis protegidos por papel
+    plan: isAdmin ? (fullTenant?.plans || null) : null,
+    isSubscriptionActive: isStaff ? isSubActive : true, // Para o público sempre assume ativo ou nem mostra
+    subscriptionStatus: isStaff ? (subData?.status || "inactive") : null,
+    cancelAtPeriodEnd: isAdmin ? (subData?.cancel_at_period_end || false) : null,
+    appointmentsCount: isAdmin ? (appointmentsCount || 0) : null,
+    subscriptionExpiresAt: isAdmin ? (subData?.expires_at || null) : null,
+    adminPhone: isStaff ? adminPhone : null, // Telefone do dono apenas para staff
+    stripeCustomerId: isAdmin ? ((tenantData as any)?.stripe_customer_id || null) : null
   };
 
   return NextResponse.json(settings);
