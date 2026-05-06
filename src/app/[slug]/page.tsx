@@ -1,14 +1,14 @@
 "use client";
 
-import Link from "next/link";
 import { Layout } from "@/components/layout";
 import { Button } from "@/components/ui/button";
-import { useListServices } from "@workspace/api-client-react";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Clock, MapPin, Phone, Loader2 } from "lucide-react";
-import { formatCurrencyFromCents } from "@/lib/format";
 import { useTenant } from "@/hooks/use-tenant";
-import { useState, useEffect } from "react";
+import { formatCurrencyFromCents } from "@/lib/format";
+import { useListServices } from "@workspace/api-client-react";
+import { Clock, Loader2, MapPin, Phone } from "lucide-react";
+import Link from "next/link";
+import { useEffect, useState } from "react";
 
 export default function Home() {
   const { data: services, isLoading, isError } = useListServices();
@@ -25,7 +25,6 @@ export default function Home() {
         });
         if (res.ok) {
           const data = await res.json();
-          // Ordenar por nome para garantir consistência entre as seções do footer
           const sortedData = data.sort((a: any, b: any) => a.name.localeCompare(b.name));
           setUnits(sortedData);
         }

@@ -66,7 +66,6 @@ function BookingContent() {
   const searchParams = useSearchParams();
   const { toast } = useToast();
   
-  // Obter contexto do tenant
   const tenant = useTenant();
   const getLink = (path: string) => `/${tenant.slug}${path}`;
 
@@ -106,7 +105,6 @@ function BookingContent() {
   const [isBookingForOthers, setIsBookingForOthers] = useState(false);
   const [otherPersonName, setOtherPersonName] = useState("");
   
-  // Sincronizar método de pagamento quando chegar no checkout
   useEffect(() => {
     if (step === 6 && tenant) {
       const canPayLocal = !settings?.isPrepaymentRequired && currentUser?.canPayAtShop !== false;
@@ -115,7 +113,6 @@ function BookingContent() {
       
       const defaultMethod = isCardAvailable ? "card" : (isPixAvailable ? "pix" : "local");
       
-      // Se o método atual não estiver disponível, muda para o padrão
       if (paymentMethod === "card" && !isCardAvailable) setPaymentMethod(defaultMethod);
       else if (paymentMethod === "pix" && !isPixAvailable) setPaymentMethod(defaultMethod);
       else if (paymentMethod === "local" && !canPayLocal) setPaymentMethod(defaultMethod);
@@ -136,34 +133,29 @@ function BookingContent() {
   const [isPollingPix, setIsPollingPix] = useState(false);
   const [pixCountdown, setPixCountdown] = useState(0);
 
-  // Cache de dados para economia de chamadas
   const [cache, setCache] = useState<Record<string, any>>({
     units: [],
-    barbers: {}, // unitId -> barbers[]
-    services: {}, // unitId -> services[]
+    barbers: {}, 
+    services: {}, 
   });
 
-  // Estados de Disponibilidade
   const [isGloballyClosed, setIsGloballyClosed] = useState(false);
   const [closureReason, setClosureReason] = useState<"settings" | "barbers" | "subscription_expired" | "limit_reached" | null>(null);
   const [originalPaymentMethod, setOriginalPaymentMethod] = useState<string | null>(null);
 
   const checkAvailability = (sData: any, bData: any[], uData: any[]) => {
-    // 0. Verificar Assinatura
     if (sData.isSubscriptionActive === false) {
       setIsGloballyClosed(true);
       setClosureReason("subscription_expired");
       return;
     }
 
-    // 1. Verificar Limite de Agendamentos Mensais
     if (sData.plan && sData.appointmentsCount >= sData.plan.max_appointments_month) {
       setIsGloballyClosed(true);
       setClosureReason("limit_reached");
       return;
     }
 
-    // 2. Verificar Unidades (Pelo menos uma unidade com horário ativo)
     const hasOpenUnit = uData && uData.length > 0;
 
     if (!hasOpenUnit) {
@@ -172,7 +164,6 @@ function BookingContent() {
       return;
     }
 
-    // 3. Verificar se há barbeiros bookable
     if (!bData || bData.length === 0) {
       setIsGloballyClosed(true);
       setClosureReason("barbers");
@@ -184,7 +175,7 @@ function BookingContent() {
   };
 
   const isValidCpf = (cpfStr: string) => {
-    if (!cpfStr) return true; // se vazio não valida (ignorado)
+    if (!cpfStr) return true; 
     const strCPF = cpfStr.replace(/[^\d]+/g, "");
     if (strCPF.length !== 11 || /^(\d)\1{10}$/.test(strCPF)) return false;
     let sum = 0, rest;
@@ -200,7 +191,6 @@ function BookingContent() {
     return true;
   };
 
-  // Script do Mercado Pago
   useEffect(() => {
     const script = document.createElement("script");
     script.src = "https://sdk.mercadopago.com/js/v2";
@@ -215,7 +205,6 @@ function BookingContent() {
   useEffect(() => {
     const headers = { "x-tenant-slug": tenant.slug };
     
-    // Tenta carregar do cache primeiro
     if (cache.units.length > 0) {
       setIsLoadingUnits(false);
       return;
@@ -273,7 +262,6 @@ function BookingContent() {
     });
   }, [tenant]);
 
-  // Buscar dados do agendamento original em caso de reagendamento para preservar status de pagamento
   useEffect(() => {
     if (rescheduleId && tenant?.slug) {
       const headers = { "x-tenant-slug": tenant.slug };
@@ -289,7 +277,6 @@ function BookingContent() {
     }
   }, [rescheduleId, tenant?.slug]);
 
-  // Pre-selecionar serviço se vier via URL
   useEffect(() => {
     if (preSelectedServiceId && Array.isArray(services) && selectedServices.length === 0) {
       const s = services.find(srv => String(srv.id) === String(preSelectedServiceId));
@@ -297,12 +284,9 @@ function BookingContent() {
     }
   }, [preSelectedServiceId, services, selectedServices.length]);
 
-  // Filtrar barbeiros e serviços quando a unidade é selecionada (Com Cache)
   useEffect(() => {
     if (selectedUnit && Array.isArray(allServices)) {
       const uId = selectedUnit.id;
-
-      // 1. Barbeiros
       if (cache.barbers[uId]) {
         const barbersList = cache.barbers[uId];
         setBarbers(barbersList);
@@ -316,7 +300,6 @@ function BookingContent() {
           .then(res => res.json())
           .then(data => {
               const rawList = Array.isArray(data) ? data : [];
-              // Filtrar barbeiros que não trabalham nesta unidade (pelo menos 1 dia ativo)
               const barbersList = rawList.filter(b => {
                 const hours = b.weeklyHours || b.weekly_hours;
                 if (!hours || !hours[uId]) return false;
@@ -334,7 +317,6 @@ function BookingContent() {
           .finally(() => setIsLoadingBarbers(false));
       }
         
-      // 2. Serviços
       if (cache.services[uId]) {
         setServices(cache.services[uId]);
       } else {
@@ -355,7 +337,7 @@ function BookingContent() {
   const totalDuration = selectedServices.reduce((sum, s) => sum + (s.durationMinutes || 0), 0);
 
   useEffect(() => {
-    if (step < 4) return; // Só busca se já selecionou serviços
+    if (step < 4) return;
     
     const fetchBusyDates = async () => {
       setIsLoadingBusyDates(true);
@@ -410,22 +392,12 @@ function BookingContent() {
 
   const isChangingAvailability = isLoadingAvailability || isFetchingAvailability;
 
-
-  // Update ref to latest handlePaymentSubmit to avoid stale closures in useEffect
   useEffect(() => {
     paymentSubmitRef.current = handlePaymentSubmit;
   }, [sessionId, mpPaymentToken, mpPaymentData, isPrePaid, paymentMethod, selectedServices, customerInfo]);
 
   useEffect(() => {
-    // Only proceed if all requirements are met
     if (!isMpLoaded || !mpPublicKey || step !== 6 || paymentMethod !== "card" || isPrePaid) {
-      console.log("DEBUG: MP Brick não inicializou. Razões:", {
-        isMpLoaded,
-        hasMpKey: !!mpPublicKey,
-        step,
-        paymentMethod,
-        isPrePaid
-      });
       return;
     }
 
@@ -435,13 +407,6 @@ function BookingContent() {
       const totalAmount = selectedServices.reduce((sum, s) => sum + (s.price || 0), 0);
       const amount = totalAmount / 100;
       const email = customerInfo.email;
-
-      console.log("DEBUG: Mercado Pago Initialization Config:", {
-        amount,
-        email,
-        publicKey: mpPublicKey?.substring(0, 10) + "...",
-        services: selectedServices.map(s => s.name).join(", ")
-      });
 
       if (amount <= 0) {
         console.error("DEBUG: Valor inválido para o Mercado Pago:", amount);
@@ -466,11 +431,10 @@ function BookingContent() {
               visual: { style: { theme: 'dark' } },
             },
             callbacks: {
-              onReady: () => console.log("Card Brick Ready"),
+              onReady: () => undefined,
               onSubmit: (formData: any) => {
                 return new Promise<void>(async (resolve, reject) => {
                   try {
-                    console.log("Card Brick Submit", formData);
                     setMpPaymentData(formData);
                     setMpPaymentToken(formData.token);
 
@@ -482,14 +446,12 @@ function BookingContent() {
                     }
                   } catch (error) {
                     console.error("Erro ao processar onSubmit do Brick:", error);
-                    // Rejeitar faz o botão ser reativado no formulário do Mercado Pago
                     reject();
                   }
                 });
               },
               onError: (error: any) => {
                 console.error("Card Brick Error Detail:", error);
-                // Tenta extrair mais informações se o erro for um objeto vazio {}
                 if (error && Object.keys(error).length === 0) {
                   console.warn("DEBUG: Erro vazio recebido do MP. Verifique as chaves e o ambiente (Sandbox vs Prod).");
                 }
@@ -506,7 +468,6 @@ function BookingContent() {
 
     return () => {
       if (cardPaymentBrickController) {
-        console.log("Desmontando Card Brick...");
         cardPaymentBrickController.unmount();
       }
     };
@@ -517,7 +478,6 @@ function BookingContent() {
 
   const handleNextStep = () => setStep((s) => Math.min(s + 1, 6));
   const handlePrevStep = () => setStep((s) => {
-    // Não permitir voltar para o passo 1 se houver apenas um barbeiro
     if (barbers.length === 1 && s === 2) return s;
     if (rescheduleId && s === 2) return s;
     return Math.max(s - 1, 1);
@@ -553,7 +513,6 @@ function BookingContent() {
     }
   };
 
-  // Auto-selecionar data de hoje ao entrar no step de calendário
   useEffect(() => {
     if (step === 4 && !selectedDate) {
       const today = new Date();
@@ -570,7 +529,6 @@ function BookingContent() {
     e.preventDefault();
     if (selectedServices.length === 0 || !selectedDate || !selectedTime || !customerInfo.name || !customerInfo.email) return;
 
-    // Lógica de agendamento para terceiros
     const finalCustomerName = isBookingForOthers && otherPersonName.trim()
       ? `${otherPersonName.trim()} (Agendado por ${customerInfo.name})`
       : customerInfo.name;
@@ -654,18 +612,15 @@ function BookingContent() {
     }
   };
 
-  // Auto-gerar Pix quando selecionar a aba
   useEffect(() => {
     if (step === 6 && paymentMethod === "pix" && !pixData && !isGeneratingPix && sessionId && customerInfo.cpf) {
       handleGeneratePix();
     }
   }, [step, paymentMethod, pixData, isGeneratingPix, sessionId, customerInfo.cpf]);
 
-  // Efeito de Polling PIX
   useEffect(() => {
     let timer: NodeJS.Timeout;
     
-    // Para o polling se sair do passo 6 ou trocar de método
     if (step !== 6 || paymentMethod !== "pix") {
       if (isPollingPix) {
         setIsPollingPix(false);
@@ -736,16 +691,10 @@ function BookingContent() {
       });
 
       if ((paymentMethod === "card" || paymentMethod === "pix") && settings?.isPointsEnabled) {
-        // Em vez de somar manualmente, solicitamos que o Store recarregue os dados do banco
-        // O backend já processou o acréscimo de pontos no AppointmentService.confirm
         await refreshProfile(tenant?.slug);
       }
 
       DemoStore.saveAppointment(appointment);
-      
-      console.log("DEBUG: Agendamento retornado pela API:", appointment);
-      
-      // Captura robusta do ID (tenta vários formatos de resposta da API)
       const rawId = (appointment as any)?.id || 
                     (appointment as any)?.data?.id || 
                     (appointment as any)?.appointment?.id || 
@@ -759,7 +708,6 @@ function BookingContent() {
         router.push(getLink("/meu-perfil/historico"));
       }
     } catch (error: any) {
-      // Traduzir mensagens técnicas do Mercado Pago
       let errorMessage = error.response?.data?.error || error.message || "Não foi possível confirmar o agendamento.";
       
       const isSlotOccupied = errorMessage.includes("SLOT_OCCUPIED") || 
@@ -771,7 +719,7 @@ function BookingContent() {
           description: "Desculpe, este horário acabou de ser preenchido por outro cliente. Por favor, escolha um novo horário.",
           variant: "destructive"
         });
-        setStep(4); // Volta para a seleção de horários
+        setStep(4);
         setSelectedTime(null);
         return;
       }
@@ -864,10 +812,8 @@ function BookingContent() {
               const hasUnits = units.length > 1;
               const hasBarbers = barbers.length > 1;
               
-              // O total de passos visíveis depende se houve pulo automático
               const totalSteps = 4 + (hasUnits ? 1 : 0) + (hasBarbers ? 1 : 0);
               
-              // Mapeamento de steps reais para visuais para manter progresso linear
               let visualStep = 1;
               if (step === 1 && hasUnits) visualStep = 1;
               else if (step === 2) visualStep = hasUnits ? 2 : 1;
@@ -1120,10 +1066,8 @@ function BookingContent() {
                           today.setHours(0, 0, 0, 0);
                           const dateStr = format(date, "yyyy-MM-dd");
                           
-                          // Bloquear se for data passada (redundante com fromDate mas seguro)
                           if (date < today) return true;
                           
-                          // Bloquear se o backend marcou como ocupado/fechado
                           if (busyDates.includes(dateStr)) return true;
                           
                           return false;
@@ -1157,9 +1101,8 @@ function BookingContent() {
                         const isToday = dateStr === todayStr;
                         const currentTime = format(new Date(), "HH:mm");
 
-                        // Filtrar os slots já passados de hoje para verificar se restam disponíveis
                         const visibleSlots = availability?.filter((slot: TimeSlot) => {
-                          if (isToday && slot.time <= currentTime) return false; // oculta passados
+                          if (isToday && slot.time <= currentTime) return false;
                           return true;
                         });
 
@@ -1383,7 +1326,6 @@ function BookingContent() {
                         const isPixAvailable = !!(customerInfo.cpf && isValidCpf(customerInfo.cpf)) && !!tenant.mpConnected;
                         const isCardAvailable = !!tenant.mpConnected;
                         
-                        // Determinar o método padrão com base na disponibilidade
                         const defaultPaymentMethod = isCardAvailable ? "card" : (isPixAvailable ? "pix" : "local");
                         
                         let tabCount = 0;

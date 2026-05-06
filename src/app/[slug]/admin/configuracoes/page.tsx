@@ -1,25 +1,17 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { Layout } from "@/components/layout";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
-import { useToast } from "@/hooks/use-toast";
-import { Loader2, Save, ShieldCheck, CalendarClock, CreditCard, Clock, Settings, ExternalLink, Ticket, Wallet, AlertCircle, LayoutGrid, QrCode, Copy, Check, Instagram, Facebook, MessageCircle, Send, Share2 } from "lucide-react";
-import Link from "next/link";
-import { DemoStore } from "@/lib/persistence/demo-store";
-import { useTenant } from "@/hooks/use-tenant";
-import { Label } from "@/components/ui/label";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { formatDateBR, formatCurrencyFromCents } from "@/lib/format";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
+import { useTenant } from "@/hooks/use-tenant";
+import { useToast } from "@/hooks/use-toast";
+import { formatCurrencyFromCents, formatDateBR } from "@/lib/format";
+import { DemoStore } from "@/lib/persistence/demo-store";
+import { AlertCircle, CalendarClock, Check, Copy, CreditCard, ExternalLink, Facebook, Instagram, LayoutGrid, Loader2, MessageCircle, QrCode, Save, Send, Settings, Share2, ShieldCheck, Ticket, Wallet } from "lucide-react";
+import Link from "next/link";
+import { useEffect, useState } from "react";
 
 export default function SettingsPage() {
   const { toast } = useToast();
@@ -81,9 +73,6 @@ export default function SettingsPage() {
   const handleManageStripe = async (targetPlanId?: string) => {
     setLoadingStripe(true);
     try {
-      // REGRA: Se o usuário clicou em um plano específico (ex: upgrade para Escala), 
-      // usamos o Checkout para que ele vá direto para o pagamento do novo plano.
-      // Se ele só clicou em "Gerenciar" sem plano alvo, usamos o Portal.
       const endpoint = (targetPlanId || !settings.stripeCustomerId)
         ? "/api/subscription/checkout" 
         : "/api/subscription/portal";
@@ -123,13 +112,10 @@ export default function SettingsPage() {
 
     const params = new URLSearchParams(window.location.search);
 
-    // Tratamento de Upgrade Automático
     const upgradePlan = params.get("upgrade");
     if (upgradePlan && !loading) {
-      // Pequeno delay para garantir que tudo carregou e evitar loops
       const timer = setTimeout(() => {
         handleManageStripe(upgradePlan === "success" ? undefined : upgradePlan);
-        // Limpa a URL
         window.history.replaceState({}, '', window.location.pathname);
       }, 500);
       return () => clearTimeout(timer);
@@ -144,7 +130,7 @@ export default function SettingsPage() {
       toast({ title: "Erro na conexão", description: decodeURIComponent(mpError), variant: "destructive" });
       window.history.replaceState({}, '', window.location.pathname);
     }
-  }, [tenant, loading]); // Adicionado loading como dependência para o upgrade automático
+  }, [tenant, loading]);
 
   const handleConnectMP = async () => {
     setConnectingMP(true);
@@ -252,7 +238,6 @@ export default function SettingsPage() {
 
     if (navigator.share) {
       try {
-        // Tentar baixar a imagem para compartilhar como arquivo
         const response = await fetch(qrCodeUrl);
         const blob = await response.blob();
         const file = new File([blob], `agendamento-${tenant.slug}.png`, { type: 'image/png' });
@@ -263,23 +248,19 @@ export default function SettingsPage() {
           url: bookingUrl,
         };
 
-        // Verificar se o navegador suporta compartilhar arquivos
         if (navigator.canShare && navigator.canShare({ files: [file] })) {
           shareData.files = [file];
         }
 
         await navigator.share(shareData);
       } catch (err) {
-        // Fallback se o fetch ou a inclusão do arquivo falhar
         try {
           await navigator.share({
             title: `Agendamento - ${tenant.name}`,
             text: text,
             url: bookingUrl,
           });
-        } catch (e) {
-          // Usuário cancelou
-        }
+        } catch (e) {}
       }
     } else {
       handleCopyLink();
@@ -327,7 +308,6 @@ export default function SettingsPage() {
       </div>
 
       <div className="space-y-6">
-        {/* Subscription Status */}
         <Card className="bg-card border-border/50 shadow-lg overflow-hidden">
           <div className="h-1.5 w-full bg-gradient-to-r from-primary to-primary-foreground opacity-50" />
           <CardHeader className="flex flex-row items-center gap-4 pb-2">

@@ -1,38 +1,36 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import {
-  Save,
-  ImageIcon,
-  MapPin,
-  LayoutGrid,
-  Scissors,
-  Plus,
-  Pencil,
-  Trash2,
-  Loader2,
-  X,
-  Clock,
-  DollarSign
-} from "lucide-react";
-import { Checkbox } from "@/components/ui/checkbox";
-import { 
-  Tabs, 
-  TabsContent, 
-  TabsList, 
-  TabsTrigger 
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger
 } from "@/components/ui/tabs";
-import { Separator } from "@/components/ui/separator";
-import { useToast } from "@/hooks/use-toast";
-import Link from "next/link";
-import { formatCurrencyFromCents } from "@/lib/format";
+import { Textarea } from "@/components/ui/textarea";
 import { useTenant } from "@/hooks/use-tenant";
+import { useToast } from "@/hooks/use-toast";
+import { formatCurrencyFromCents } from "@/lib/format";
+import {
+  Clock,
+  DollarSign,
+  LayoutGrid,
+  Loader2,
+  MapPin,
+  Pencil,
+  Plus,
+  Save,
+  Scissors,
+  Trash2,
+  X
+} from "lucide-react";
+import Link from "next/link";
+import { useEffect, useState } from "react";
 
 interface Service {
   id: number;
@@ -147,7 +145,7 @@ export default function AdminServices() {
     const url = editingService ? `/api/services/${editingService.id}` : "/api/services";
 
     try {
-      let finalImageUrl = "/images/cortepremium.jpeg"; // Fallback padrão
+      let finalImageUrl = "/images/cortepremium.jpeg";
       const nameLower = formData.name.toLowerCase();
 
       if (nameLower.includes("coloração") || nameLower.includes("coloracao") || nameLower.includes("camuflagem")) {
@@ -402,23 +400,6 @@ export default function AdminServices() {
                         </div>
                       </div>
                     </div>
-
-                    {/* Campo URL da Imagem ocultado a pedido */}
-                    {/*
-                    <div className="space-y-2">
-                      <Label htmlFor="imageUrl">URL da Imagem (opcional)</Label>
-                      <div className="relative">
-                        <ImageIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                        <Input
-                          id="imageUrl"
-                          value={formData.imageUrl}
-                          onChange={e => setFormData({...formData, imageUrl: e.target.value})}
-                          className="pl-9"
-                          placeholder="https://images.unsplash.com/..."
-                        />
-                      </div>
-                    </div>
-                    */}
                   </TabsContent>
 
                   <TabsContent value="unidades" className="p-6 space-y-4 m-0">

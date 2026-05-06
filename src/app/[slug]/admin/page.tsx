@@ -1,53 +1,48 @@
 "use client";
 
-import { Layout } from "@/components/layout";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { useTenant } from "@/components/tenant-provider";
 import { Badge } from "@/components/ui/badge";
-import { 
-  Select, 
-  SelectContent, 
-  SelectItem, 
-  SelectTrigger, 
-  SelectValue 
-} from "@/components/ui/select";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { useListAppointments, useGetStatsSummary } from "@workspace/api-client-react";
-import { Calendar, DollarSign, Scissors, Users, Settings, CreditCard, Wallet, CheckCircle2, AlertCircle, MapPin, Banknote, Smartphone, ChevronDown, Search, TrendingUp } from "lucide-react";
-import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
-import Link from "next/link";
-import { useEffect, useState, useCallback } from "react";
-import { useUserStore } from "@/lib/store/user-store";
-import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
+} from "@/components/ui/select";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { useToast } from "@/hooks/use-toast";
 import { formatCurrencyFromCents } from "@/lib/format";
-import { useTenant } from "@/components/tenant-provider";
+import { useUserStore } from "@/lib/store/user-store";
+import { useGetStatsSummary, useListAppointments } from "@workspace/api-client-react";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
-import * as XLSX from "xlsx";
-import { FileText, FileSpreadsheet } from "lucide-react";
-import { format } from "date-fns";
-import { ptBR } from "date-fns/locale";
-import { useToast } from "@/hooks/use-toast";
-import { 
-  BarChart, 
-  Bar, 
-  XAxis, 
-  YAxis, 
-  CartesianGrid, 
-  Tooltip as RechartsTooltip, 
-  ResponsiveContainer, 
-  PieChart, 
-  Pie, 
-  Cell, 
-  Legend 
+import { AlertCircle, Banknote, Calendar, CheckCircle2, ChevronDown, CreditCard, DollarSign, FileSpreadsheet, FileText, MapPin, Scissors, Search, Settings, Smartphone, TrendingUp, Users } from "lucide-react";
+import Link from "next/link";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import {
+  Bar,
+  BarChart,
+  CartesianGrid,
+  Cell,
+  Legend,
+  Pie,
+  PieChart,
+  Tooltip as RechartsTooltip,
+  ResponsiveContainer,
+  XAxis,
+  YAxis
 } from "recharts";
-import { useMemo } from "react";
+import * as XLSX from "xlsx";
 
 export default function Admin() {
   const { toast } = useToast();
@@ -57,7 +52,6 @@ export default function Admin() {
   const [selectedMonth, setSelectedMonth] = useState((now.getMonth() + 1).toString());
   const [selectedYear, setSelectedYear] = useState(now.getFullYear().toString());
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
-  // Estado para controle de pagamento
   const [payingId, setPayingId] = useState<number | null>(null);
   const [paymentMethodMap, setPaymentMethodMap] = useState<Record<number, string>>({});
   const [searchTerm, setSearchTerm] = useState("");
@@ -98,9 +92,6 @@ export default function Admin() {
     }
   }, [tenant?.slug, refreshProfile]);
 
-  // -------------------------------------------------------
-  // Helpers de método de pagamento
-  // -------------------------------------------------------
   const getPaymentMethodLabel = (method: string | null | undefined) => {
     switch (method) {
       case "cash":   return "Dinheiro";
@@ -117,13 +108,10 @@ export default function Admin() {
       case "pix":    return <Smartphone className="w-3.5 h-3.5" />;
       case "card":   return <CreditCard className="w-3.5 h-3.5" />;
       case "online": return <CreditCard className="w-3.5 h-3.5" />;
-      default:       return <Banknote className="w-3.5 h-3.5" />;  // cash e fallback
+      default:       return <Banknote className="w-3.5 h-3.5" />; 
     }
   };
 
-  // -------------------------------------------------------
-  // Marcar como pago
-  // -------------------------------------------------------
   const markAsPaid = useCallback(async (appointmentId: number, methodOverride?: string) => {
     const method = methodOverride || paymentMethodMap[appointmentId] || "cash";
     setPayingId(appointmentId);
@@ -146,9 +134,6 @@ export default function Admin() {
     }
   }, [tenant?.slug, paymentMethodMap, refetchAppointments, toast]);
 
-  // -------------------------------------------------------
-  // Processamento de dados para os gráficos
-  // -------------------------------------------------------
   const chartData = useMemo(() => {
     if (!appointments || appointments.length === 0) return { services: [], status: [], barbers: [] };
 
@@ -157,7 +142,6 @@ export default function Admin() {
     const barberMap: Record<string, number> = {};
 
     appointments.forEach((a: any) => {
-      // 1. Faturamento por Serviço (Apenas pagos e não cancelados)
       if (a.is_paid && a.status !== 'cancelled') {
         const services = a.services_json || [];
         services.forEach((s: any) => {
@@ -165,11 +149,9 @@ export default function Admin() {
         });
       }
 
-      // 2. Status dos Agendamentos
       const statusLabel = a.status === 'confirmed' ? 'Confirmado' : a.status === 'pending' ? 'Pendente' : 'Cancelado';
       statusMap[statusLabel] = (statusMap[statusLabel] || 0) + 1;
 
-      // 3. Agendamentos por Barbeiro
       if (a.status !== 'cancelled') {
         const barberName = a.barber_name || "Sem Nome";
         barberMap[barberName] = (barberMap[barberName] || 0) + 1;
@@ -177,7 +159,7 @@ export default function Admin() {
     });
 
     return {
-      services: Object.entries(serviceMap).map(([name, value]) => ({ name, value: Math.round(value / 100) })), // Em reais
+      services: Object.entries(serviceMap).map(([name, value]) => ({ name, value: Math.round(value / 100) })),
       status: Object.entries(statusMap).map(([name, value]) => ({ name, value })),
       barbers: Object.entries(barberMap).map(([name, value]) => ({ name, value })),
     };
@@ -267,7 +249,7 @@ export default function Admin() {
       head: [['Data/Hora', 'Cliente', 'Barbeiro', 'Serviço', 'Valor', 'Pagamento', 'Status']],
       body: tableData,
       theme: 'grid',
-      headStyles: { fillColor: [142, 68, 173] }, // Roxo premium
+      headStyles: { fillColor: [142, 68, 173] },
       styles: { fontSize: 8 },
     });
 
@@ -332,7 +314,6 @@ export default function Admin() {
           </div>
         </div>
 
-        {}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
           <Card className="bg-card border-border/50">
             <CardHeader className="flex flex-row items-center justify-between pb-2">
@@ -390,7 +371,6 @@ export default function Admin() {
           </Card>
         </div>
 
-      {/* SEÇÃO DE BI - EXCLUSIVA ESCALA */}
       {loadingSettings ? (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
           <Skeleton className="h-[380px] w-full rounded-xl" />
@@ -466,7 +446,6 @@ export default function Admin() {
         </Card>
       )}
 
-      {/* Lista de Agendamentos */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
           <h2 className="text-2xl font-serif font-bold text-foreground">Últimos Agendamentos</h2>
           
@@ -514,7 +493,6 @@ export default function Admin() {
                   <SelectValue placeholder="Ano" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="2024">2024</SelectItem>
                   <SelectItem value="2025">2025</SelectItem>
                   <SelectItem value="2026">2026</SelectItem>
                   <SelectItem value="2027">2027</SelectItem>

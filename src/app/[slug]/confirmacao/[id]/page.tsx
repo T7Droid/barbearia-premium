@@ -1,21 +1,17 @@
 "use client";
 
-import { useEffect, useState, use } from "react";
 import { Layout } from "@/components/layout";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
-import { CheckCircle2, Calendar, Clock, MapPin, Share2, Wallet, Scissors, ExternalLink, Download, Award, CalendarPlus, UserPlus, ArrowRight, Printer, MessageCircle } from "lucide-react";
-import { useGetAppointment } from "@workspace/api-client-react";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { useTenant } from "@/hooks/use-tenant";
 import { useToast } from "@/hooks/use-toast";
-import { format } from "date-fns";
-import { ptBR } from "date-fns/locale";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { formatCurrencyFromCents } from "@/lib/format";
 import { DemoStore } from "@/lib/persistence/demo-store";
-import { useTenant } from "@/hooks/use-tenant";
+import { useGetAppointment } from "@workspace/api-client-react";
+import { Award, Calendar, CheckCircle2, Clock, Download, MapPin, MessageCircle, Printer, Share2 } from "lucide-react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { use, useEffect, useState } from "react";
 
 export default function ConfirmationPage(props: { params: Promise<{ slug: string, id: string }> }) {
   const params = use(props.params);
@@ -29,7 +25,6 @@ export default function ConfirmationPage(props: { params: Promise<{ slug: string
       ? appointment.servicesJson.map((s: any) => s.name).join(", ")
       : (appointment.serviceName || appointment.service_name);
 
-    // Valor total formatado (com detalhes por serviço se houver múltiplos)
     const totalCents = appointment.totalPrice || appointment.total_price || appointment.servicePrice || appointment.service_price || 0;
     const priceFormatted = formatCurrencyFromCents(totalCents);
     const servicesJson = appointment.servicesJson || appointment.services_json;
@@ -103,11 +98,9 @@ export default function ConfirmationPage(props: { params: Promise<{ slug: string
       });
   }, [tenant]);
 
-  // Se a API falhar em encontrar, tenta o DemoStore (LocalStorage)
   useEffect(() => {
     if (!isLoading && !apiAppointment) {
       const appointments = DemoStore.getAppointments();
-      // Tenta achar por UUID primeiro, depois por ID numérico
       const found = appointments.find((a: any) => a.uuid === idParam || String(a.id) === idParam);
       if (found) setFallbackAppointment(found);
     }
@@ -384,7 +377,6 @@ function generateICS(appointment: any, settings: any) {
 
   const startDate = new Date(`${dateStr}T${timeStr}`);
 
-  // Calcular duração total baseada nos serviços (JSONB) ou fallback para slot_interval
   let duration = settings?.slot_interval || 45;
   if (appointment.servicesJson && Array.isArray(appointment.servicesJson)) {
     duration = appointment.servicesJson.reduce((sum: number, s: any) => sum + (s.durationMinutes || s.duration_minutes || 0), 0);
@@ -400,8 +392,8 @@ function generateICS(appointment: any, settings: any) {
 
   const serviceName = appointment.serviceName || appointment.service_name || "Serviço Adquirido";
   const customerName = appointment.customerName || appointment.customer_name || "Cliente";
-  const shopName = settings?.shopName || appointment.unit?.name || "King Barber";
-  const address = appointment.unit?.address || settings?.address || "Endereço da Barbearia";
+  const shopName = settings?.shopName || appointment.unit?.name || "Kingbarbers";
+  const address = appointment.unit?.address || settings?.address || "Não informado";
 
   return `BEGIN:VCALENDAR
 VERSION:2.0

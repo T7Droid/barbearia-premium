@@ -66,7 +66,6 @@ export function ClientLoginForm() {
       const data = await response.json();
 
       if (response.ok) {
-        // Persistir para Modo Demo e Sincronizar Store Reativa
         const user = data.user;
         DemoStore.saveUser(user);
         userStore.setUser(user);
@@ -76,7 +75,6 @@ export function ClientLoginForm() {
           description: "Você entrou na sua conta.",
         });
 
-        // Redireciona para a página originária (from) ou a home
         const from = searchParams.get("from");
         const redirectPath = from || (user.role === "barber" ? `/${tenant.slug}` : `/${tenant.slug}`);
 
@@ -123,7 +121,6 @@ export function ClientLoginForm() {
           <Dialog open={isResetDialogOpen} onOpenChange={(open) => {
             setIsResetDialogOpen(open);
             if (!open) {
-              // Reset state when closing
               setTimeout(() => {
                 setResetSuccess(false);
                 setResetEmail("");

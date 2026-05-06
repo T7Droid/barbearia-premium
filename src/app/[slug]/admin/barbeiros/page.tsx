@@ -1,55 +1,52 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Switch } from "@/components/ui/switch";
-import { Separator } from "@/components/ui/separator";
-import {
-  User,
-  Users,
-  Scissors,
-  Eye,
-  EyeOff,
-  Plus,
-  UserPlus,
-  Save,
-  ImageIcon,
-  Key,
-  MapPin,
-  Loader2,
-  Pencil,
-  Trash2,
-  X,
-  LayoutGrid
-} from "lucide-react";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
+  DialogTitle
 } from "@/components/ui/dialog";
-import { Checkbox } from "@/components/ui/checkbox";
-import { 
-  Tabs, 
-  TabsContent, 
-  TabsList, 
-  TabsTrigger 
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Separator } from "@/components/ui/separator";
+import { Switch } from "@/components/ui/switch";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger
 } from "@/components/ui/tabs";
-import { useToast } from "@/hooks/use-toast";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { Textarea } from "@/components/ui/textarea";
 import { useTenant } from "@/hooks/use-tenant";
+import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/lib/supabase";
-import { Mail, AlertCircle, TrendingUp, Sparkles, ShieldCheck } from "lucide-react";
-import { format } from "date-fns";
-import { ptBR } from "date-fns/locale";
+import {
+  AlertCircle,
+  Eye,
+  EyeOff,
+  Key,
+  LayoutGrid,
+  Loader2,
+  Mail,
+  MapPin,
+  Pencil,
+  Save,
+  Scissors,
+  ShieldCheck,
+  Sparkles,
+  Trash2,
+  TrendingUp,
+  User,
+  UserPlus,
+  Users,
+  X
+} from "lucide-react";
+import Link from "next/link";
+import { useEffect, useState } from "react";
 
 interface Barber {
   id: number;
@@ -386,7 +383,6 @@ export default function AdminBarbers() {
         </Table>
       </Card>
 
-      {/* Modal Barbeiro */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm animate-in fade-in duration-200">
           <Card className="w-full max-w-lg shadow-2xl relative animate-in zoom-in-95 duration-200 border-border/50">
@@ -652,7 +648,6 @@ export default function AdminBarbers() {
         </div>
       )}
 
-      {/* Dialog de Upgrade de Plano */}
       <Dialog open={isUpgradeDialogOpen} onOpenChange={setIsUpgradeDialogOpen}>
         <DialogContent className="max-w-md p-0 overflow-hidden border-none shadow-2xl">
           <div className={`h-2 w-full ${upgradeTarget === 'profissional' ? 'bg-blue-500' : upgradeTarget === 'premium' ? 'bg-amber-500' : 'bg-purple-600'}`} />

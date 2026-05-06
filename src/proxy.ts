@@ -2,10 +2,8 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 
-// Função simples para verificar admin, evitando importações pesadas no middleware
 function isAdminEmail(email?: string): boolean {
   if (!email) return false;
-  // Fallback para os emails conhecidos se o env não estiver disponível no edge
   const adminEmails = (process.env.ADMIN_EMAILS || "thyagosilvestre@gmail.com,thyago_silvestre@hotmail.com").split(",");
   return adminEmails.includes(email.toLowerCase().trim());
 }
@@ -13,7 +11,6 @@ function isAdminEmail(email?: string): boolean {
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // 1. Ignorar arquivos estáticos, webhooks e rotas OAuth
   if (
     pathname.includes(".") ||
     pathname.startsWith("/_next") ||
@@ -26,11 +23,9 @@ export async function proxy(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // 2. Tentar extrair o slug de forma robusta
   let slug = "";
   const pathParts = pathname.split("/").filter(Boolean);
 
-  // Tentar primeiro do header explícito (sempre confiável se enviado)
   const tenantSlugHeader = request.headers.get("x-tenant-slug");
   const referer = request.headers.get("referer");
 
@@ -49,7 +44,6 @@ export async function proxy(request: NextRequest) {
     }
   }
 
-  // Fallback: se ainda não temos slug, tentar do path
   if (!slug && pathParts.length > 0) {
     const firstPart = pathParts[0];
     if (!["api", "admin", "dashboard", "meu-perfil", "login", "cadastro", "onboarding"].includes(firstPart)) {
@@ -64,11 +58,9 @@ export async function proxy(request: NextRequest) {
 
   try {
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
-    // No Middleware usamos a Service Role para bypass de RLS se necessário, ou Anon Key
     const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Verificar se o tenant existe
     const { data: tenant, error: tenantError } = await supabase
       .from("tenants")
       .select("id, name")
@@ -92,7 +84,6 @@ export async function proxy(request: NextRequest) {
       const { data: { user } } = await supabase.auth.getUser(token);
 
       if (user) {
-        // Buscar o cargo na tabela de vínculos
         const { data: membership } = await supabase
           .from("tenant_memberships")
           .select("role")

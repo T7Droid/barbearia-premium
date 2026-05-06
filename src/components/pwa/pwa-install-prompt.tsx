@@ -7,13 +7,10 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { X, Download, Share, PlusSquare, Smartphone } from "lucide-react";
 
-// Rotas em que o banner de instalação do PWA deve aparecer:
-// /{slug}  e  /{slug}/booking
 function useIsTenantRoute(): boolean {
   const pathname = usePathname();
   if (!pathname) return false;
 
-  // Rotas públicas/admin que NÃO são de tenant
   const publicPrefixes = [
     "/home",
     "/onboarding",
@@ -23,10 +20,8 @@ function useIsTenantRoute(): boolean {
   ];
   if (publicPrefixes.some((prefix) => pathname.startsWith(prefix))) return false;
 
-  // Segmentos do pathname sem a barra inicial
   const parts = pathname.split("/").filter(Boolean);
 
-  // Deve ter exatamente 1 segmento (/{slug}) ou 2 com o segundo sendo "booking"
   if (parts.length === 1) return true;
   if (parts.length === 2 && parts[1] === "booking") return true;
 
@@ -40,8 +35,6 @@ export function PWAInstallPrompt() {
   const [dismissed, setDismissed] = useState(false);
 
   useEffect(() => {
-    // Show prompt after a short delay, but only if not already standalone/dismissed
-    // and only on tenant routes (/{slug} and /{slug}/booking)
     if (isTenantRoute && (showInstallPrompt || isIOS) && !isStandalone && !dismissed) {
       const timer = setTimeout(() => setVisible(true), 3000);
       return () => clearTimeout(timer);
@@ -53,11 +46,9 @@ export function PWAInstallPrompt() {
   const handleDismiss = () => {
     setVisible(false);
     setDismissed(true);
-    // Optional: save to localStorage to not show again for a while
     localStorage.setItem("pwa-prompt-dismissed", Date.now().toString());
   };
 
-  // Check if dismissed in last 7 days
   useEffect(() => {
     const lastDismissed = localStorage.getItem("pwa-prompt-dismissed");
     if (lastDismissed) {
@@ -79,7 +70,6 @@ export function PWAInstallPrompt() {
         className="fixed bottom-6 left-4 right-4 z-[100] md:left-auto md:right-6 md:w-96"
       >
         <div className="bg-card/95 backdrop-blur-md border border-primary/20 rounded-2xl shadow-2xl p-5 overflow-hidden">
-          {/* Background Gradient Effect */}
           <div className="absolute top-0 right-0 -mr-8 -mt-8 w-32 h-32 bg-primary/10 rounded-full blur-3xl pointer-events-none" />
           
           <div className="flex items-start gap-4 relative">

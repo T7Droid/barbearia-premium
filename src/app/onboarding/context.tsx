@@ -15,7 +15,7 @@ export interface OnboardingData {
     state: string;
   };
   services: Array<{
-    id: string; // temp id for UI
+    id: string;
     name: string;
     price: number;
     duration_minutes: number;

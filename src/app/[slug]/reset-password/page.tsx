@@ -1,16 +1,16 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
-import { supabase } from "@/lib/supabase";
+import { Layout } from "@/components/layout";
+import { useTenant } from "@/components/tenant-provider";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Lock, Loader2 } from "lucide-react";
-import { useTenant } from "@/components/tenant-provider";
-import { Layout } from "@/components/layout";
+import { supabase } from "@/lib/supabase";
+import { Loader2, Lock } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 
 export default function ResetPasswordPage() {
   const router = useRouter();
@@ -22,8 +22,6 @@ export default function ResetPasswordPage() {
   const [errorMsg, setErrorMsg] = useState("");
   
   useEffect(() => {
-    // Supabase redirects to this page with the access token in the URL hash.
-    // If there is an error (e.g. expired link), it will be in the hash too.
     const hash = window.location.hash;
     if (hash && hash.includes("error=")) {
       const urlParams = new URLSearchParams(hash.substring(1));
@@ -49,7 +47,7 @@ export default function ResetPasswordPage() {
   };
 
   const hasRepeatedChars = (str: string) => {
-    return /(.)\1\1/.test(str); // Detecta 3 ou mais caracteres repetidos (ex: 111, aaa)
+    return /(.)\1\1/.test(str); 
   };
 
   const handleResetPassword = async (e: React.FormEvent) => {
@@ -101,7 +99,6 @@ export default function ResetPasswordPage() {
 
     setIsLoading(true);
     try {
-      // Since the user is authenticated via the URL hash, we can update their password
       const { error } = await supabase!.auth.updateUser({ password });
       
       if (error) throw error;
@@ -111,7 +108,6 @@ export default function ResetPasswordPage() {
         description: "Sua senha foi alterada com sucesso. Você já pode fazer o login.",
       });
       
-      // Redirect to login page
       router.push(`/${tenant.slug}/login`);
     } catch (error: any) {
       toast({

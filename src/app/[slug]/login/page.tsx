@@ -1,11 +1,11 @@
 "use client";
 
 import { Layout } from "@/components/layout";
-import { ClientLoginForm } from "./login-form";
-import { User, Sparkles } from "lucide-react";
-import { Suspense } from "react";
-import Link from "next/link";
 import { useTenant } from "@/hooks/use-tenant";
+import { Sparkles, User } from "lucide-react";
+import Link from "next/link";
+import { Suspense } from "react";
+import { ClientLoginForm } from "./login-form";
 
 export default function ClientLoginPage() {
   const tenant = useTenant();

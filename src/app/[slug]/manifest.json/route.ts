@@ -9,9 +9,9 @@ export async function GET(
   const tenant = await TenantService.getTenantBySlug(slug);
 
   const manifest = {
-    name: tenant?.name || "King Barber",
-    short_name: tenant?.name || "King Barber",
-    description: `Agende seu horário na ${tenant?.name || "King Barber"}. A melhor experiência em barbearia.`,
+    name: tenant?.name || "King Barbers",
+    short_name: tenant?.name || "King Barbers",
+    description: `Agende seu horário na ${tenant?.name || "King Barbers"}. A melhor experiência em barbearia.`,
     start_url: `/${slug}`,
     scope: `/${slug}`,
     display: "standalone",

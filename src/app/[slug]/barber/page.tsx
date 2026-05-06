@@ -1,40 +1,17 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useEffect, useState } from "react";
 
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { useToast } from "@/hooks/use-toast";
-import { useTenant } from "@/hooks/use-tenant";
-import { useUserStore } from "@/lib/store/user-store";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
-  Calendar,
-  Clock,
-  Users,
-  Scissors,
-  TrendingUp,
-  CheckCircle2,
-  AlertCircle,
-  Wallet,
-  FileText,
-  FileSpreadsheet,
-  Download,
-  Banknote,
-  Smartphone,
-  CreditCard,
-  Loader2
-} from "lucide-react";
-import { 
-  Select, 
-  SelectContent, 
-  SelectItem, 
-  SelectTrigger, 
-  SelectValue 
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
 } from "@/components/ui/select";
-import jsPDF from "jspdf";
-import autoTable from "jspdf-autotable";
-import * as XLSX from "xlsx";
 import {
   Table,
   TableBody,
@@ -43,10 +20,31 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { useTenant } from "@/hooks/use-tenant";
+import { useToast } from "@/hooks/use-toast";
+import { formatCurrencyFromCents } from "@/lib/format";
+import { useUserStore } from "@/lib/store/user-store";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
+import {
+  AlertCircle,
+  Banknote,
+  Calendar,
+  CheckCircle2,
+  Clock,
+  CreditCard,
+  FileSpreadsheet,
+  FileText,
+  Loader2,
+  Scissors,
+  Smartphone,
+  TrendingUp,
+  Wallet
+} from "lucide-react";
 import { useRouter } from "next/navigation";
-import { formatCurrencyFromCents } from "@/lib/format";
+import * as XLSX from "xlsx";
 
 export default function BarberDashboard() {
   const { toast } = useToast();
@@ -191,22 +189,16 @@ export default function BarberDashboard() {
     return sortOrder === "asc" ? valA.localeCompare(valB) : valB.localeCompare(valA);
   }) : [];
 
-  // ─── Contadores calculados no frontend ───────────────────────────────────
-  // Usamos a data/hora local atual para classificar cada agendamento.
-  // Agendamentos cancelados são excluídos dos três contadores.
-  const todayStr = format(now, "yyyy-MM-dd");           // ex: "2026-05-04"
-  const nowTimeStr = format(now, "HH:mm");              // ex: "10:31"
+  const todayStr = format(now, "yyyy-MM-dd");
+  const nowTimeStr = format(now, "HH:mm");
 
   const activeAppointments = (todayAppointments || []).filter(
     (a: any) => a.status !== "cancelled"
   );
 
-  /** Agendamentos com data == hoje (independente do horário) */
   const todayCount = activeAppointments.filter(
     (a: any) => a.appointment_date === todayStr
   ).length;
-
-  /** Passados: data < hoje  OU  (data == hoje E horário já passou) */
   const completedCount = activeAppointments.filter((a: any) => {
     if (a.appointment_date < todayStr) return true;
     if (a.appointment_date === todayStr) {
@@ -216,7 +208,6 @@ export default function BarberDashboard() {
     return false;
   }).length;
 
-  /** Futuros: data > hoje  OU  (data == hoje E horário ainda não passou) */
   const pendingCount = activeAppointments.filter((a: any) => {
     if (a.appointment_date > todayStr) return true;
     if (a.appointment_date === todayStr) {

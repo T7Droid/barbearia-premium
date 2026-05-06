@@ -1,28 +1,25 @@
 "use client";
-import { useEffect, useState } from "react";
-import { Layout } from "@/components/layout";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Button } from "@/components/ui/button";
-import {
-  Users,
-  LayoutGrid,
-  Phone,
-  Mail,
-  Award,
-  Loader2,
-  Calendar,
-  Search,
-  RefreshCw,
-  XCircle,
-  CreditCard,
-  Store
-} from "lucide-react";
+import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
-import { useToast } from "@/hooks/use-toast";
-import Link from "next/link";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useTenant } from "@/hooks/use-tenant";
+import { useToast } from "@/hooks/use-toast";
+import {
+  Award,
+  Calendar,
+  CreditCard,
+  LayoutGrid,
+  Mail,
+  Phone,
+  RefreshCw,
+  Search,
+  Store,
+  Users,
+  XCircle
+} from "lucide-react";
+import Link from "next/link";
+import { useEffect, useState } from "react";
 
 interface Customer {
   id: string;

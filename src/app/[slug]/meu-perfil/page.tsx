@@ -1,19 +1,17 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
-import { Layout } from "@/components/layout";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { useToast } from "@/hooks/use-toast";
-import { Loader2, User, Mail, Phone, Calendar, History, Settings as SettingsIcon, LogOut, Scissors, Award, Gift } from "lucide-react";
-import Link from "next/link";
-import { formatCurrencyFromCents } from "@/lib/format";
-import { Progress } from "@/components/ui/progress";
-import { Label } from "@/components/ui/label";
 import { useTenant } from "@/components/tenant-provider";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Label } from "@/components/ui/label";
+import { Progress } from "@/components/ui/progress";
+import { useToast } from "@/hooks/use-toast";
 import { DemoStore } from "@/lib/persistence/demo-store";
 import { useUserStore } from "@/lib/store/user-store";
+import { Award, Gift, History, Loader2, LogOut, Mail, Phone, Scissors, Settings as SettingsIcon, User } from "lucide-react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 
 export default function UserProfile() {
   const router = useRouter();
@@ -31,14 +29,13 @@ export default function UserProfile() {
       const headers = { "x-tenant-slug": tenant.slug };
 
       try {
-        console.log("Dashboard: Buscando /api/auth/me e /api/settings...");
         const [userRes, settingsRes] = await Promise.all([
           fetch("/api/auth/me", { signal: controller.signal, headers }),
           fetch("/api/settings", { signal: controller.signal, headers })
         ]);
-        
+
         clearTimeout(timeoutId);
-        
+
         if (!userRes.ok) {
           const savedUser = DemoStore.getUser();
           if (savedUser) {
@@ -50,10 +47,9 @@ export default function UserProfile() {
           return;
         }
 
-        // Usar refreshProfile para centralizar a busca do usuário no store
         const userData = await refreshProfile(tenant.slug);
         const settingsData = await settingsRes.json();
-        
+
         if (!userData) {
           const savedUser = DemoStore.getUser();
           if (savedUser) {
@@ -121,7 +117,6 @@ export default function UserProfile() {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Card de Pontos e Fidelidade */}
           {settings?.isPointsEnabled && (
             <Card className="lg:col-span-3 border-primary/20 bg-primary/5">
               <CardContent className="pt-6">
@@ -159,7 +154,6 @@ export default function UserProfile() {
             </Card>
           )}
 
-          {/* Dados Pessoais */}
           <Card className="lg:col-span-1 shadow-sm border-border/40">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-lg font-serif">
@@ -191,7 +185,6 @@ export default function UserProfile() {
             </CardContent>
           </Card>
 
-          {/* Menu de Ações Rápida */}
           <Card className="lg:col-span-2 shadow-sm border-border/40 overflow-hidden">
             <div className="grid grid-cols-1 md:grid-cols-2 h-full">
               <div className="p-6 flex flex-col justify-between border-b md:border-b-0 md:border-r border-border/40 hover:bg-accent/5 transition-colors group">

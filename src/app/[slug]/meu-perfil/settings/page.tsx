@@ -1,17 +1,16 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { User, Mail, Phone, Bell, ShieldCheck, Save, Loader2, Settings as SettingsIcon } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { useToast } from "@/hooks/use-toast";
 import { useTenant } from "@/hooks/use-tenant";
-import { useUserStore } from "@/lib/store/user-store";
-import { supabase } from "@/lib/supabase";
+import { useToast } from "@/hooks/use-toast";
 import { requestNotificationPermission } from "@/lib/firebase";
+import { useUserStore } from "@/lib/store/user-store";
+import { Bell, Loader2, Mail, Phone, Save, Settings as SettingsIcon, ShieldCheck, User } from "lucide-react";
+import { useEffect, useState } from "react";
 
 export default function SettingsPage() {
   const { toast } = useToast();
@@ -132,7 +131,6 @@ export default function SettingsPage() {
         </div>
 
         <div className="space-y-6">
-          {/* Personal Info */}
           <Card className="bg-card border-border/50 shadow-xl overflow-hidden transition-all hover:border-primary/20">
             <div className="h-1.5 w-full bg-gradient-to-r from-primary/60 to-primary/10" />
             <CardHeader className="pb-4">
@@ -183,7 +181,6 @@ export default function SettingsPage() {
             </CardContent>
           </Card>
 
-          {/* Notifications */}
           <Card className="bg-card border-border/50 shadow-xl transition-all hover:border-primary/20">
             <CardHeader className="flex flex-row items-center gap-4 pb-2">
               <div className="w-10 h-10 rounded-full bg-orange-500/10 flex items-center justify-center">
@@ -214,7 +211,6 @@ export default function SettingsPage() {
             </CardContent>
           </Card>
 
-          {/* Push Notifications */}
           <Card className="bg-card border-border/50 shadow-xl transition-all hover:border-primary/20">
             <CardHeader className="flex flex-row items-center gap-4 pb-2">
               <div className="w-10 h-10 rounded-full bg-blue-500/10 flex items-center justify-center">
@@ -275,7 +271,6 @@ export default function SettingsPage() {
             </CardContent>
           </Card>
 
-          {/* Security Note */}
           <div className="bg-primary/5 border border-primary/20 rounded-xl p-5 flex gap-4 text-sm text-foreground">
             <ShieldCheck className="w-6 h-6 text-primary shrink-0" />
             <div className="space-y-1">

@@ -21,7 +21,7 @@ export function Step3Services() {
     if (!newService.name || !newService.price) return;
     
     const nameLower = newService.name.toLowerCase();
-    let finalImageUrl = "/images/cortepremium.jpeg"; // Fallback padrão
+    let finalImageUrl = "/images/cortepremium.jpeg";
 
     if (nameLower.includes("coloração") || nameLower.includes("coloracao") || nameLower.includes("camuflagem")) {
       finalImageUrl = "/images/coloracaocamuflagem.jpeg";
@@ -38,7 +38,7 @@ export function Step3Services() {
     const serviceToAdd = {
       id: Math.random().toString(36).substr(2, 9),
       name: newService.name,
-      price: Math.round(parseFloat(newService.price) * 100), // cents
+      price: Math.round(parseFloat(newService.price) * 100),
       duration_minutes: parseInt(newService.duration),
       description: newService.description,
       imageUrl: finalImageUrl,

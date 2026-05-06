@@ -36,7 +36,6 @@ export function AdminLoginForm() {
         const data = await response.json();
         const user = data.user;
         
-        // Sincronizar Store Reativa e Modo Demo
         userStore.setUser(user);
         DemoStore.saveUser(user);
 

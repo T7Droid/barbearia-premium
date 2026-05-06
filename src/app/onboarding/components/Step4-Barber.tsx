@@ -9,9 +9,7 @@ import { UserPlus, User, ArrowLeft, Mail, AlertCircle } from "lucide-react";
 import { useRef, useEffect } from "react";
 
 interface Step4BarberProps {
-  /** Quando true, foca e seleciona o campo de e-mail ao montar (vindo de erro no step 5) */
   focusEmail?: boolean;
-  /** Chamado após aplicar o foco, para resetar o flag no componente pai */
   onEmailFocused?: () => void;
 }
 
@@ -19,7 +17,6 @@ export function Step4Barber({ focusEmail = false, onEmailFocused }: Step4BarberP
   const { data, updateData, setStep } = useOnboarding();
   const emailInputRef = useRef<HTMLInputElement>(null);
 
-  // Foca o e-mail quando redirecionado do step 5 por conflito de e-mail
   useEffect(() => {
     if (focusEmail) {
       const timer = setTimeout(() => {

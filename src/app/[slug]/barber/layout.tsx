@@ -23,7 +23,6 @@ export default function BarberLayout({ children }: { children: React.ReactNode }
   const [isSubscriptionActive, setIsSubscriptionActive] = useState<boolean | null>(null);
 
   useEffect(() => {
-    // Proteção para BFCache: Se o usuário voltar, resetamos o loading
     const handlePageShow = () => setIsLoading(false);
     window.addEventListener("pageshow", handlePageShow);
 
@@ -63,7 +62,6 @@ export default function BarberLayout({ children }: { children: React.ReactNode }
     router.push(`/${tenant.slug}/login`);
   };
 
-  // 1. Enquanto estiver checando, mostra o loader global
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
@@ -75,7 +73,6 @@ export default function BarberLayout({ children }: { children: React.ReactNode }
     );
   }
 
-  // 2. BLOQUEIO CRÍTICO: Se a assinatura estiver inativa, mostramos a tela de bloqueio e PARAMOS por aqui
   if (isSubscriptionActive === false) {
     return (
       <Layout>
@@ -115,7 +112,6 @@ export default function BarberLayout({ children }: { children: React.ReactNode }
     );
   }
 
-  // 3. Se for autorizado e estiver pago, renderiza o dashboard
   if (isAuthorized) {
     return <Layout>{children}</Layout>;
   }

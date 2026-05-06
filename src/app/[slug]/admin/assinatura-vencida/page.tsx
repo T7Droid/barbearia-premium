@@ -2,11 +2,11 @@
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { AlertCircle, CreditCard, ExternalLink, Loader2, LogOut } from "lucide-react";
-import { useState, useEffect } from "react";
 import { useTenant } from "@/hooks/use-tenant";
-import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
+import { AlertCircle, CreditCard, Loader2, LogOut } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 
 export default function SubscriptionExpiredPage() {
   const tenant = useTenant();
@@ -16,7 +16,6 @@ export default function SubscriptionExpiredPage() {
   const [currentPlanId, setCurrentPlanId] = useState<string>("basico");
 
   useEffect(() => {
-    // Proteção para BFCache: Se o usuário voltar do Stripe, resetamos o loading do botão
     const handlePageShow = (event: PageTransitionEvent) => {
       if (event.persisted || event) {
         setLoading(false);
@@ -57,12 +56,9 @@ export default function SubscriptionExpiredPage() {
 
   const handlePay = async () => {
     setLoading(true);
-    
-    // Lista de planos válidos para conferência
+
     const validPlans = ["basico", "profissional", "premium", "escala"];
     const finalPlanId = validPlans.includes(currentPlanId) ? currentPlanId : "basico";
-
-    console.log("Iniciando checkout para o plano:", finalPlanId);
 
     try {
       const res = await fetch("/api/subscription/checkout", {

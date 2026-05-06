@@ -18,15 +18,12 @@ export async function GET() {
     const messaging = firebase.messaging();
 
     self.addEventListener('push', (event) => {
-      console.log('[SW] Push Nativo recebido:', event);
       
       event.waitUntil(
         clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windowClients) => {
-          // Verifica se o app está em primeiro plano
           const isForeground = windowClients.some(client => client.focused);
           
           if (isForeground) {
-            console.log('[SW] App em primeiro plano. O toast cuidará da exibição. Ignorando notificação nativa.');
             return;
           }
 
@@ -36,8 +33,6 @@ export async function GET() {
           } catch (e) {
             data = { notification: { title: 'Nova Mensagem', body: event.data ? event.data.text() : '' } };
           }
-
-          console.log('[SW] Dados processados do Push:', data);
 
           const notification = data.notification || (data.data && data.data.notification ? JSON.parse(data.data.notification) : data.data) || {};
           const title = notification.title || data.title || 'Novo Agendamento';
@@ -50,7 +45,7 @@ export async function GET() {
             badge: '/icons/icon-192x192.png',
             image: image,
             vibrate: [100, 50, 100],
-            data: data.data || data, // Guardar os dados para usar no clique
+            data: data.data || data,
             tag: 'push-notification',
             renotify: true
           };
@@ -60,12 +55,9 @@ export async function GET() {
       );
     });
 
-    // Mantendo o listener do Firebase apenas para log, sem disparar nova notificação
     messaging.onBackgroundMessage((payload) => {
       console.log('[SW/Firebase] onBackgroundMessage disparado (apenas log):', payload);
     });
-
-    // Lógica de Cache PWA e Atualização Forçada
     const CACHE_NAME = 'kingbarber-v1';
     
     self.addEventListener('install', (event) => {
@@ -89,13 +81,11 @@ export async function GET() {
       );
     });
 
-    // Clique na notificação
     self.addEventListener('notificationclick', (event) => {
       event.notification.close();
       const data = event.notification.data;
       console.log('[SW] Clique detectado. Dados:', data);
       
-      // Busca exaustiva pelo slug em diferentes formatos de payload FCM
       const slug = data?.slug || 
                    data?.data?.slug || 
                    data?.notification?.slug || 
@@ -108,14 +98,12 @@ export async function GET() {
 
       event.waitUntil(
         clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windowClients) => {
-          // Se já houver uma aba aberta com essa URL (ou parte dela), foca nela
           for (let i = 0; i < windowClients.length; i++) {
             const client = windowClients[i];
             if (client.url.includes(urlToOpen) && 'focus' in client) {
               return client.focus();
             }
           }
-          // Se não, abre uma nova aba/janela no contexto do PWA
           if (clients.openWindow) {
             return clients.openWindow(urlToOpen);
           }

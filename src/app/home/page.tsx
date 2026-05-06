@@ -1,6 +1,6 @@
 import { GlobalLayout } from "@/components/global-layout";
 import { Button } from "@/components/ui/button";
-import { MessageCircle, Check, Clock, CreditCard, Smartphone, TrendingUp } from "lucide-react";
+import { Check, Clock, CreditCard, MessageCircle, Smartphone, TrendingUp } from "lucide-react";
 
 export default function RootPage() {
   return (
@@ -13,7 +13,6 @@ export default function RootPage() {
           </p>
         </div>
 
-        {/* COPY HERO */}
         <div className="max-w-5xl w-full mb-16">
           <div className="mb-12 text-center flex flex-col items-center">
             <h2 className="text-3xl md:text-5xl font-bold mb-4 text-foreground leading-tight text-center">
@@ -26,7 +25,6 @@ export default function RootPage() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-10">
-            {/* CARD 1 */}
             <div className="bg-card border border-border/50 p-8 rounded-3xl shadow-sm hover:shadow-md hover:border-primary/30 transition-all flex flex-col items-center text-center gap-4 h-full">
               <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center">
                 <Clock className="w-7 h-7 text-primary" />
@@ -39,7 +37,6 @@ export default function RootPage() {
               </div>
             </div>
 
-            {/* CARD 2 */}
             <div className="bg-card border border-border/50 p-8 rounded-3xl shadow-sm hover:shadow-md hover:border-primary/30 transition-all flex flex-col items-center text-center gap-4 h-full">
               <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center">
                 <CreditCard className="w-7 h-7 text-primary" />
@@ -52,7 +49,6 @@ export default function RootPage() {
               </div>
             </div>
 
-            {/* CARD 3 */}
             <div className="bg-card border border-border/50 p-8 rounded-3xl shadow-sm hover:shadow-md hover:border-primary/30 transition-all flex flex-col items-center text-center gap-4 h-full">
               <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center">
                 <Smartphone className="w-7 h-7 text-primary" />
@@ -67,7 +63,6 @@ export default function RootPage() {
               </div>
             </div>
 
-            {/* CARD 4 */}
             <div className="bg-card border border-border/50 p-8 rounded-3xl shadow-sm hover:shadow-md hover:border-primary/30 transition-all flex flex-col items-center text-center gap-4 h-full">
               <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center">
                 <TrendingUp className="w-7 h-7 text-primary" />
@@ -89,7 +84,6 @@ export default function RootPage() {
           </div>
         </div>
 
-        {/* Planos */}
         <div className="max-w-7xl w-full mb-24 px-4">
           <div className="text-center mb-16">
             <h2 className="text-3xl md:text-5xl font-bold mb-4 text-foreground">Planos que crescem com você</h2>
@@ -97,7 +91,6 @@ export default function RootPage() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 py-14 gap-6 items-stretch">
-            {/* Plano Básico */}
             <div className="bg-card border border-border/50 p-8 rounded-3xl flex flex-col hover:border-primary/30 transition-all shadow-sm">
               <div className="mb-6 text-center">
                 <div className="flex justify-center mb-6">
@@ -203,7 +196,6 @@ export default function RootPage() {
               </Button>
             </div>
 
-            {/* Plano Premium */}
             <div className="bg-card border border-border/50 p-8 rounded-3xl flex flex-col hover:border-primary/30 transition-all shadow-sm">
               <div className="mb-6 text-center">
                 <div className="flex justify-center mb-6">
@@ -266,7 +258,6 @@ export default function RootPage() {
               </Button>
             </div>
 
-            {/* Plano Escala */}
             <div className="bg-card border border-border/50 p-8 rounded-3xl flex flex-col hover:border-primary/30 transition-all shadow-sm">
               <div className="mb-6 text-center">
                 <div className="flex justify-center mb-6">
@@ -338,7 +329,6 @@ export default function RootPage() {
           </div>
         </div>
 
-        {/* CTA */}
         <div className="bg-card border border-border/50 p-10 rounded-3xl shadow-2xl max-w-lg w-full transition-all hover:border-primary/50 hover:shadow-primary/5 relative overflow-hidden text-center z-10 group">
           <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-primary via-yellow-400 to-primary background-animate" />
 
@@ -368,7 +358,7 @@ export default function RootPage() {
 
         <img 
           src="/imagem_marketing.png" 
-          alt="Marketing King Barber" 
+          alt="Marketing King Barbers" 
           className="mt-8 max-w-md w-full py-12"
         />
 

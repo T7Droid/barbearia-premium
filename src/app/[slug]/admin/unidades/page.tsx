@@ -1,31 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { useToast } from "@/hooks/use-toast";
-import { useTenant } from "@/hooks/use-tenant";
-import { MapPin, Plus, Trash2, Edit2, ExternalLink, Loader2, LayoutGrid, Clock, TrendingUp, Sparkles, ShieldCheck } from "lucide-react";
-import Link from "next/link";
-import { Switch } from "@/components/ui/switch";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { 
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -35,10 +10,35 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
+import { useTenant } from "@/hooks/use-tenant";
+import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { Clock, Edit2, ExternalLink, LayoutGrid, Loader2, MapPin, Plus, ShieldCheck, Sparkles, TrendingUp } from "lucide-react";
+import Link from "next/link";
+import { useEffect, useState } from "react";
 
 export default function UnidadesPage() {
   const { toast } = useToast();
@@ -49,12 +49,9 @@ export default function UnidadesPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [editingUnit, setEditingUnit] = useState<any>(null);
 
-  // Estados para Upgrade e Planos
   const [settings, setSettings] = useState<any>(null);
   const [isUpgradeDialogOpen, setIsUpgradeDialogOpen] = useState(false);
   const [upgradeTarget, setUpgradeTarget] = useState<"premium" | "escala">("premium");
-
-  // Estados para Bloqueio de Datas
   const [blockedDays, setBlockedDays] = useState<any[]>([]);
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
   const [isBlockDialogOpen, setIsBlockDialogOpen] = useState(false);
@@ -156,18 +153,15 @@ export default function UnidadesPage() {
 
   const handleOpenDialog = (unit: any = null) => {
     if (!unit) {
-      // Verificar limites de plano para novas unidades
       const currentPlan = settings?.plan?.slug || 'basico';
       const unitCount = units.length;
 
-      // Básico e Profissional permitem apenas 1 unidade
       if ((currentPlan === 'basico' || currentPlan === 'profissional') && unitCount >= 1) {
         setUpgradeTarget('premium');
         setIsUpgradeDialogOpen(true);
         return;
       }
 
-      // Premium permite até 3 unidades
       if (currentPlan === 'premium' && unitCount >= 3) {
         setUpgradeTarget('escala');
         setIsUpgradeDialogOpen(true);
@@ -251,13 +245,11 @@ export default function UnidadesPage() {
     setSelectedDate(date);
     const dateStr = format(date, "yyyy-MM-dd");
 
-    // Pre-selecionar unidades que já estão bloqueadas
     const existingBlocks = blockedDays.filter(b => b.date === dateStr);
     setTargetUnitIds(existingBlocks.map(b => b.unit_id));
 
     setIsProcessingBlock(true);
     try {
-      // Verificar se há agendamentos para TODAS as unidades naquele dia
       const res = await fetch("/api/admin/blocked-days", {
         method: "POST",
         headers: { 
@@ -288,7 +280,6 @@ export default function UnidadesPage() {
 
   const saveBlocks = async (force = false) => {
     if (targetUnitIds.length === 0) {
-      // Se desmarcou tudo, vamos remover todos os bloqueios daquela data
       const dateStr = format(selectedDate!, "yyyy-MM-dd");
       setIsProcessingBlock(true);
       try {
@@ -424,7 +415,6 @@ export default function UnidadesPage() {
         </div>
       )}
 
-      {/* Seção de Bloqueio de Agenda */}
       <div className="mt-16 pt-8 border-t">
         <div className="mb-6">
           <h2 className="text-2xl font-serif font-bold tracking-tight">Bloqueio de Agenda</h2>
@@ -517,7 +507,6 @@ export default function UnidadesPage() {
         </div>
       </div>
 
-      {/* Dialog de Seleção de Unidades */}
       <Dialog open={isBlockDialogOpen} onOpenChange={setIsBlockDialogOpen}>
         <DialogContent>
           <DialogHeader>
@@ -563,7 +552,6 @@ export default function UnidadesPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Alert Dialog de Confirmação de Cancelamento */}
       <AlertDialog open={isConfirmCancelOpen} onOpenChange={setIsConfirmCancelOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -749,7 +737,6 @@ export default function UnidadesPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Dialog de Upgrade de Plano */}
       <Dialog open={isUpgradeDialogOpen} onOpenChange={setIsUpgradeDialogOpen}>
         <DialogContent className="max-w-md p-0 overflow-hidden border-none shadow-2xl">
           <div className={`h-2 w-full ${upgradeTarget === 'premium' ? 'bg-amber-500' : 'bg-purple-600'}`} />

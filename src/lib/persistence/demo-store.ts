@@ -1,10 +1,5 @@
 "use client";
 
-/**
- * Utilitário de Persistência para Modo Demonstração (Demo)
- * Resolve o problema de perda de estado em ambientes serverless (Vercel) usando Mock.
- */
-
 const KEYS = {
   USER: "barber_premium_demo_user",
   APPOINTMENTS: "barber_premium_demo_appointments",
@@ -12,7 +7,6 @@ const KEYS = {
 };
 
 export class DemoStore {
-  // --- Usuário e Sessão ---
   static saveUser(user: any) {
     if (typeof window === "undefined") return;
     localStorage.setItem(KEYS.USER, JSON.stringify(user));
@@ -30,11 +24,9 @@ export class DemoStore {
     localStorage.removeItem(KEYS.APPOINTMENTS);
   }
 
-  // --- Agendamentos ---
   static saveAppointment(appointment: any) {
     if (typeof window === "undefined") return;
     const current = this.getAppointments();
-    // Adicionar ao início da lista e remover duplicatas pelo ID
     const updated = [appointment, ...current.filter((a: any) => String(a.id) !== String(appointment.id))];
     localStorage.setItem(KEYS.APPOINTMENTS, JSON.stringify(updated));
   }
@@ -52,7 +44,6 @@ export class DemoStore {
     return saved ? JSON.parse(saved) : [];
   }
 
-  // --- Configurações ---
   static saveSettings(settings: any) {
     if (typeof window === "undefined") return;
     localStorage.setItem(KEYS.SETTINGS, JSON.stringify(settings));

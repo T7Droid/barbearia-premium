@@ -1,18 +1,17 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useOnboarding } from "./context";
+import { Card, CardContent } from "@/components/ui/card";
+import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/lib/supabase";
+import { Calendar, Check, Loader2, MapPin, Sparkles, Users, Zap } from "lucide-react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useEffect, useState } from "react";
 import { Step1Tenant } from "./components/Step1-Tenant";
 import { Step2Unit } from "./components/Step2-Unit";
 import { Step3Services } from "./components/Step3-Services";
 import { Step4Barber } from "./components/Step4-Barber";
 import { Step5Account } from "./components/Step5-Account";
-import { Card, CardContent } from "@/components/ui/card";
-import { Check, Loader2, Sparkles } from "lucide-react";
-import { useSearchParams, useRouter } from "next/navigation";
-import { supabase } from "@/lib/supabase";
-import { useToast } from "@/hooks/use-toast";
-import { Zap, ShieldCheck, Users, MapPin, Calendar } from "lucide-react";
+import { useOnboarding } from "./context";
 
 const LOADING_STEPS = [
   "Verificando disponibilidade de painel...",
@@ -32,13 +31,11 @@ function OnboardingContent() {
   const planFromUrl = searchParams.get("plan");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [loadingStepIndex, setLoadingStepIndex] = useState(0);
-  // Plano básico: ao ter conflito de e-mail, volta ao step 4 com o campo em foco
   const [focusBarberEmail, setFocusBarberEmail] = useState(false);
   const router = useRouter();
   const { toast } = useToast();
 
   useEffect(() => {
-    // Segurança: Se não houver plano na URL nem no contexto, redireciona para a home
     if (!planFromUrl && !data.planId) {
       toast({
         title: "Atenção!",
@@ -59,7 +56,6 @@ function OnboardingContent() {
     setIsSubmitting(true);
     setLoadingStepIndex(0);
 
-    // Efeito Psicológico: Rodar as mensagens
     const interval = setInterval(() => {
       setLoadingStepIndex((prev) => {
         if (prev < LOADING_STEPS.length - 2) return prev + 1;
@@ -80,10 +76,8 @@ function OnboardingContent() {
         throw new Error(result.error || "Erro ao criar barbearia");
       }
 
-      // Chegou no penúltimo passo do loader? Esperar o final
       setLoadingStepIndex(LOADING_STEPS.length - 1);
-      
-      // Auto-login
+
       if (data.account.password) {
         await supabase?.auth.signInWithPassword({
           email: data.account.email,
@@ -91,7 +85,6 @@ function OnboardingContent() {
         });
       }
 
-      // Pequena pausa no "Concluído"
       setTimeout(() => {
         clearInterval(interval);
         router.push(`/${result.slug}/admin/configuracoes`);
@@ -107,7 +100,6 @@ function OnboardingContent() {
 
       if (error.message.includes("already been registered")) {
         if (data.planId === "basico") {
-          // No plano básico, barbeiro = admin. Volta ao step 4 para corrigir o e-mail.
           setFocusBarberEmail(true);
           setStep(4);
           friendlyMessage = "Este e-mail já está cadastrado. Volte à etapa do profissional e use um e-mail diferente.";
@@ -157,8 +149,6 @@ function OnboardingContent() {
   return (
     <div className="container mx-auto px-4 py-8 md:py-12 max-w-5xl">
       <div className="grid grid-cols-1 md:grid-cols-12 gap-6 md:gap-8 items-start">
-        
-        {/* Sidebar Rail */}
         <div className="md:col-span-3 space-y-6">
           <div className="sticky top-24 space-y-6">
             <div>
@@ -186,7 +176,6 @@ function OnboardingContent() {
               </nav>
             </div>
 
-            {/* Plan Info Card - Responsive */}
             {currentPlan && (
               <div className="bg-card border border-border/50 rounded-2xl p-4 shadow-sm animate-in zoom-in-95 duration-300">
                 <div className="flex items-center gap-2 mb-3">
@@ -229,7 +218,6 @@ function OnboardingContent() {
           </div>
         </div>
 
-        {/* Content Area */}
         <Card className="md:col-span-9 border-border/50 shadow-2xl overflow-hidden min-h-[500px] flex flex-col">
           <CardContent className="p-8 md:p-12 flex-1 flex flex-col justify-center">
             <div className="animate-in fade-in slide-in-from-right-4 duration-500">

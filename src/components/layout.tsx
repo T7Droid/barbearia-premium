@@ -25,12 +25,10 @@ export function Layout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const { toast } = useToast();
 
-  // Tentar obter o tenant do context. Se não estiver em um [slug], o hook lidará com isso.
   let tenant: any = null;
   try {
     tenant = useTenant();
   } catch (e) {
-    // Fora de um contexto de tenant (ex: landing page global)
   }
 
   const { user, setUser, refreshProfile } = useUserStore();
@@ -44,16 +42,13 @@ export function Layout({ children }: { children: React.ReactNode }) {
           headers["x-tenant-slug"] = tenant.slug;
         }
 
-        // Usar refreshProfile para centralizar a busca do usuário no store
         const userData = await refreshProfile(tenant?.slug);
 
         if (userData) {
           DemoStore.saveUser(userData);
         } else {
-          // Se não houver sessão ativa no servidor, limpamos o cache local para evitar redirecionamentos errados
           const savedUser = DemoStore.getUser();
           if (savedUser) {
-            // Se tínhamos um user no cache mas o servidor disse que não estamos logados, o cache está expirado
             DemoStore.clearUser();
           }
           setUser(null);
@@ -62,7 +57,6 @@ export function Layout({ children }: { children: React.ReactNode }) {
         const settingsRes = await fetch("/api/settings", { headers, cache: "no-store" });
         const settingsData = await settingsRes.json();
 
-        // Configurações e Sincronização
         if (settingsRes.ok) {
           setIsPointsEnabled(settingsData.isPointsEnabled);
           DemoStore.saveSettings(settingsData);
@@ -192,7 +186,6 @@ export function Layout({ children }: { children: React.ReactNode }) {
                   </DropdownMenuLabel>
                   <DropdownMenuSeparator />
 
-                  {/* Itens Administrativos */}
                   {user.role === 'admin' && (
                     <>
                       <DropdownMenuLabel className="text-[10px] uppercase text-muted-foreground font-bold tracking-widest pt-3 pb-1">Administração</DropdownMenuLabel>
@@ -208,7 +201,6 @@ export function Layout({ children }: { children: React.ReactNode }) {
                     </>
                   )}
 
-                  {/* Itens do Barbeiro */}
                   {(user.role === 'barber' || user.role === 'admin') && (
                     <>
                       <DropdownMenuLabel className="text-[10px] uppercase text-muted-foreground font-bold tracking-widest pt-3 pb-1">Profissional</DropdownMenuLabel>
@@ -222,7 +214,6 @@ export function Layout({ children }: { children: React.ReactNode }) {
                     </>
                   )}
 
-                  {/* Itens do Cliente (Acessíveis por ambos) */}
                   <DropdownMenuLabel className="text-[10px] uppercase text-muted-foreground font-bold tracking-widest pt-3 pb-1">Minha Conta</DropdownMenuLabel>
                   <DropdownMenuItem asChild>
                     <Link href={getLink("/meu-perfil")} onClick={(e) => handleLinkClick(e, "/meu-perfil")}><User className="mr-2 h-4 w-4" /> Meu Perfil</Link>

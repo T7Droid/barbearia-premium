@@ -18,7 +18,6 @@ export function Step5Account({ onFinish, isSubmitting }: Step5AccountProps) {
   const [showPassword, setShowPassword] = useState(false);
   const [confirmPassword, setConfirmPassword] = useState("");
 
-  // Plano básico: mantém nome e email do admin em sincronia com o barbeiro (step 4)
   useEffect(() => {
     if (data.planId === "basico") {
       const hasChanges =
@@ -40,14 +39,12 @@ export function Step5Account({ onFinish, isSubmitting }: Step5AccountProps) {
   const passwordRegex = /^(?=.*[a-zA-Z])(?=.*[0-9]).{8,}$/;
   const password = data.account.password || "";
 
-  // Funções de validação de padrões
   const hasSequences = (str: string) => {
     const lowerStr = str.toLowerCase();
     for (let i = 0; i < lowerStr.length - 2; i++) {
       const char1 = lowerStr.charCodeAt(i);
       const char2 = lowerStr.charCodeAt(i + 1);
       const char3 = lowerStr.charCodeAt(i + 2);
-      // Sequência crescente (123, abc) ou decrescente (321, cba)
       if ((char1 + 1 === char2 && char2 + 1 === char3) || (char1 - 1 === char2 && char2 - 1 === char3)) {
         return true;
       }
@@ -56,7 +53,7 @@ export function Step5Account({ onFinish, isSubmitting }: Step5AccountProps) {
   };
 
   const hasRepeatedChars = (str: string) => {
-    return /(.)\1\1/.test(str); // Detecta 3 ou mais caracteres repetidos (ex: 111, aaa)
+    return /(.)\1\1/.test(str);
   };
 
   const getPasswordError = () => {

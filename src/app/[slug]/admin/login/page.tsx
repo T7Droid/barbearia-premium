@@ -1,10 +1,10 @@
 "use client";
 
-import { AdminLoginForm } from "./login-form";
-import { Scissors, ShieldCheck } from "lucide-react";
-import { Suspense, useEffect, useState } from "react";
-import { useRouter, useParams } from "next/navigation";
 import { useUserStore } from "@/lib/store/user-store";
+import { Scissors, ShieldCheck } from "lucide-react";
+import { useParams, useRouter } from "next/navigation";
+import { Suspense, useEffect, useState } from "react";
+import { AdminLoginForm } from "./login-form";
 
 export default function AdminLoginPage() {
   const router = useRouter();
@@ -22,7 +22,6 @@ export default function AdminLoginPage() {
     }
   }, [user, router, slug]);
 
-  // Sempre inicia em loading até que o componente esteja montado e a verificação concluída
   if (!isMounted || storeLoading || isRedirecting || user?.role === "admin") {
     return (
       <div className="flex-1 flex items-center justify-center min-h-[80vh] bg-muted/30">

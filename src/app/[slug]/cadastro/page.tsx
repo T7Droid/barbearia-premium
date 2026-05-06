@@ -1,19 +1,19 @@
 "use client";
 
-import { useState, Suspense, useEffect } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
 import { Layout } from "@/components/layout";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { useToast } from "@/hooks/use-toast";
-import { UserPlus, ShieldCheck, ArrowRight, Loader2 } from "lucide-react";
-import { Checkbox } from "@/components/ui/checkbox";
-import Link from "next/link";
-import { DemoStore } from "@/lib/persistence/demo-store";
 import { useTenant } from "@/hooks/use-tenant";
+import { useToast } from "@/hooks/use-toast";
+import { DemoStore } from "@/lib/persistence/demo-store";
 import { userStore } from "@/lib/store/user-store";
+import { ArrowRight, Loader2, ShieldCheck, UserPlus } from "lucide-react";
+import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Suspense, useEffect, useState } from "react";
 
 function CadastroContent() {
   const router = useRouter();
@@ -117,7 +117,6 @@ function CadastroContent() {
       if (response.ok) {
         const userData = await response.json();
         
-        // Persistência para Modo Demo e Sincronizar Store Reativa
         const user = {
           ...userData.user,
           phone: formData.phone

@@ -1,10 +1,15 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { Layout } from "@/components/layout";
-import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Table,
   TableBody,
@@ -13,21 +18,15 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Calendar, Clock, History as HistoryIcon, RefreshCw, Scissors, AlertCircle, Loader2, XCircle, DollarSign, CheckCircle2, Wallet, MessageCircle } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
-import Link from "next/link";
-import { format, isBefore, addDays, parseISO } from "date-fns";
-import { DemoStore } from "@/lib/persistence/demo-store";
 import { useTenant } from "@/hooks/use-tenant";
-import { useRouter } from "next/navigation";
+import { useToast } from "@/hooks/use-toast";
 import { formatCurrencyFromCents } from "@/lib/format/currency";
+import { DemoStore } from "@/lib/persistence/demo-store";
+import { addDays, isBefore, parseISO } from "date-fns";
+import { AlertCircle, Calendar, CheckCircle2, Clock, History as HistoryIcon, Loader2, MessageCircle, RefreshCw, Scissors, Wallet, XCircle } from "lucide-react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 
 export default function AppointmentHistory() {
   const { toast } = useToast();
@@ -81,7 +80,6 @@ export default function AppointmentHistory() {
         const authData = await authRes.json();
         const settingsData = await settingsRes.json();
 
-        // 1. Lidar com Autenticação
         if (authData.authenticated) {
           DemoStore.saveUser(authData.user);
         } else {
@@ -92,13 +90,10 @@ export default function AppointmentHistory() {
           }
         }
 
-        // 2. Lidar com Agendamentos
         let apiAppsRaw = [];
         if (appsRes.ok) {
           apiAppsRaw = await appsRes.json();
-        } else if (appsRes.status === 401) {
-          console.log("Histórico: API retornou 401, usando apenas dados locais...");
-        }
+        } else if (appsRes.status === 401) {}
 
         const apiApps = (Array.isArray(apiAppsRaw) ? apiAppsRaw : []).map((app: any) => ({
           ...app,
@@ -112,15 +107,12 @@ export default function AppointmentHistory() {
           barberName: app.barber_name || app.barberName,
         }));
 
-        // 3. Mesclar com dados locais (DemoStore) se necessário
         const savedApps = DemoStore.getAppointments();
         const allApps = [...apiApps];
 
-        // Se autenticado, vamos limpar do LocalStorage o que já está no banco
         const isAuthenticated = authData.authenticated;
 
         savedApps.forEach(saved => {
-          // Filtrar por tenant para evitar mostrar agendamentos de outras barbearias
           if (saved.tenantId && saved.tenantId !== settingsData.tenantId) {
             return;
           }
@@ -128,12 +120,10 @@ export default function AppointmentHistory() {
           const isAlreadyInApi = apiApps.some(api => String(api.id) === String(saved.id));
 
           if (isAlreadyInApi) {
-            // Se já está no banco e estamos logados, removemos da cópia local para evitar lixo
             if (isAuthenticated) {
               DemoStore.removeAppointment(saved.id);
             }
           } else {
-            // Se não está no banco (ou banco falhou/estamos offline), mostramos o local
             allApps.push(saved);
           }
         });
@@ -151,7 +141,6 @@ export default function AppointmentHistory() {
         setLoading(false);
       } catch (error) {
         console.error("Histórico Load Error:", error);
-        // Fallback total para DemoStore em caso de erro de rede ou crítico
         const savedApps = DemoStore.getAppointments();
         setAppointments(savedApps);
         setLoading(false);

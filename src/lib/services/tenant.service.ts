@@ -44,7 +44,7 @@ export class TenantService {
       .from("tenants")
       .select("*, plans(*), subscriptions(*)")
       .eq("slug", slug)
-      .eq("subscriptions.status", "active") // Só traz se estiver ativa
+      .eq("subscriptions.status", "active")
       .order("created_at", { foreignTable: "subscriptions", ascending: false })
       .maybeSingle();
 

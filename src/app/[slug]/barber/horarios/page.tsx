@@ -1,14 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { Layout } from "@/components/layout";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Switch } from "@/components/ui/switch";
-import { Clock, Save, Loader2, Calendar, MapPin } from "lucide-react";
-import { format } from "date-fns";
-import { ptBR } from "date-fns/locale";
-import { useRouter } from "next/navigation";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Select,
   SelectContent,
@@ -16,11 +10,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useToast } from "@/hooks/use-toast";
+import { Switch } from "@/components/ui/switch";
 import { useTenant } from "@/hooks/use-tenant";
-import { Label } from "@/components/ui/label";
+import { useToast } from "@/hooks/use-toast";
+import { Calendar, Loader2, MapPin, Save } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 
-import { Input } from "@/components/ui/input";
 
 const DAYS_OF_WEEK = [
   { id: "monday", label: "Segunda-feira" },
@@ -80,14 +76,11 @@ export default function BarberSchedulePage() {
         const uId = String(unit.id);
         let unitData = dbHours[uId];
         
-        // Se não houver dados específicos para esta unidade, tentamos migrar se houver dados legados
         if (!unitData) {
           const isLegacyFlat = dbHours.monday || dbHours.tuesday;
           if (isLegacyFlat) {
-            // Migra preservando apenas os horários úteis (opcional) ou limpando
             unitData = JSON.parse(JSON.stringify(dbHours)); 
           } else {
-            // Inicializa vazio (tudo fechado) conforme o fluxo dinâmico exige
             unitData = {
               config: { useBreakTime: false, breakTimeMinutes: "0" }
             };
@@ -97,11 +90,9 @@ export default function BarberSchedulePage() {
           }
         }
         
-        // Garantir que a config de respiro existe no objeto com nomes corretos
         if (!unitData.config) {
           unitData.config = { useBreakTime: false, breakTimeMinutes: "0" };
         } else {
-          // Normalizar nomes se vierem do legado
           if (unitData.config.isBreakEnabled !== undefined) {
              unitData.config.useBreakTime = unitData.config.isBreakEnabled;
           }
@@ -177,9 +168,8 @@ export default function BarberSchedulePage() {
   const handleSave = async () => {
     setIsSaving(true);
     try {
-      // Saneamento final: se a unidade está fechada em um dia, o barbeiro deve estar inativo nesse dia
       const sanitizedHours = JSON.parse(JSON.stringify(weeklyHours));
-      
+
       units.forEach((unit) => {
         const uId = String(unit.id);
         if (sanitizedHours[uId]) {
@@ -194,8 +184,6 @@ export default function BarberSchedulePage() {
         }
       });
 
-      console.log("[SALVAR] Enviando horários saneados:", sanitizedHours);
-      
       const res = await fetch(`/api/barbers/${barberId}`, {
         method: "PUT",
         headers: { 
@@ -211,7 +199,6 @@ export default function BarberSchedulePage() {
       }
 
       toast({ title: "Sucesso!", description: "Escalas salvas e saneadas com sucesso." });
-      // Atualizar o estado local com os dados limpos
       setWeeklyHours(sanitizedHours);
     } catch (error: any) {
       toast({ title: "Erro ao Salvar", description: error.message, variant: "destructive" });
@@ -257,32 +244,6 @@ export default function BarberSchedulePage() {
                     <CardDescription>Defina sua jornada nesta unidade específica.</CardDescription>
                   </div>
                   
-                  {/* 
-                  <div className="bg-background/40 border border-primary/20 rounded-xl p-4 flex items-center gap-6 shadow-sm">
-                    <div className="flex flex-col gap-1">
-                      <Label className="text-xs font-bold uppercase tracking-widest text-primary/80">Tempo de Respiro</Label>
-                      <div className="flex items-center gap-2">
-                        <Switch 
-                          checked={weeklyHours[String(unit.id)]?.config?.useBreakTime || false}
-                          onCheckedChange={(val) => handleToggleBreakTime(String(unit.id), val)}
-                        />
-                        <span className="text-xs font-medium text-foreground">Intervalo entre serviços?</span>
-                      </div>
-                    </div>
-                    
-                    {weeklyHours[String(unit.id)]?.config?.useBreakTime && (
-                      <div className="flex flex-col gap-1 animate-in zoom-in-95 duration-200">
-                        <Label className="text-[10px] font-bold uppercase text-muted-foreground">Minutos</Label>
-                        <Input 
-                          type="number"
-                          className="w-20 h-9 bg-background/50"
-                          value={weeklyHours[String(unit.id)]?.config?.breakTimeMinutes || "0"}
-                          onChange={(e) => handleBreakTimeMinutesChange(String(unit.id), e.target.value)}
-                        />
-                      </div>
-                    )}
-                  </div>
-                  */}
                 </div>
               </CardHeader>
               <CardContent className="p-0">

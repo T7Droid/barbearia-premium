@@ -21,7 +21,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     const adminLoginPath = `/${tenant.slug}/admin/login`;
     const adminRootPath = `/${tenant.slug}/admin`;
 
-    // Proteção para BFCache: Se o usuário voltar do Stripe, resetamos o loading
     const handlePageShow = (event: PageTransitionEvent) => {
       if (event.persisted || event) {
         setIsLoading(false);
@@ -94,7 +93,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     };
   }, [pathname, router, tenant.slug]);
 
-  // 1. Enquanto estiver checando (sessão ou assinatura), mostra o loader global
   if (isLoading) {
     return (
       <div className="container mx-auto px-4 py-12 flex flex-col items-center justify-center bg-background">
@@ -107,14 +105,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const isExpiredPath = pathname.endsWith("/assinatura-vencida");
   const adminLoginPath = `/${tenant.slug}/admin/login`;
 
-  // 2. Se for a página de login, permitimos renderizar para o admin deslogado
   if (pathname === adminLoginPath) {
     return <Layout>{children}</Layout>;
   }
 
-  // 3. BLOQUEIO CRÍTICO: Só renderiza os filhos se:
-  // - O usuário for admin autorizado
-  // - E a assinatura NÃO estiver inativa (ou se já estiver na página de aviso de vencimento)
   const canRender = isAuthorized && (isSubscriptionActive !== false || isExpiredPath);
 
   if (canRender) {
@@ -125,6 +119,5 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     );
   }
 
-  // 4. Fallback de segurança: Se caiu aqui e não é autorizado, o useEffect já disparou o redirect
   return null;
 }

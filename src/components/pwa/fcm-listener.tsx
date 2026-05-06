@@ -17,16 +17,10 @@ export function FCMListener() {
 
   useEffect(() => {
     if (!messaging) return;
-
-    console.log("[FCMListener] Configurando listener de mensagens em primeiro plano...");
-
     const unsubscribe = onMessage(messaging, (payload) => {
-      console.log("[FCMListener] Mensagem recebida em primeiro plano:", payload);
-
       const title = payload.notification?.title || "Nova Notificação";
       const body = payload.notification?.body || "Você recebeu uma nova atualização.";
       
-      // O slug do tenant pode vir no payload de dados ou ser usado o atual ou do localStorage
       let slug = payload.data?.slug || tenant?.slug;
       
       if (!slug && typeof window !== "undefined") {

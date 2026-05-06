@@ -33,9 +33,7 @@ export default function ClientProfileLayout({ children }: { children: React.Reac
         
         if (data.authenticated) {
           userStore.setUser(data.user);
-          // Se for explicitamente false, a assinatura está inativa
           const active = data.isSubscriptionActive !== false;
-          console.log(`[ClientProfileLayout] Subscription active: ${active}`, data.isSubscriptionActive);
           setIsSubscriptionActive(active);
         } else {
           router.push(`/${tenant.slug}/login?from=${encodeURIComponent(pathname)}`);
@@ -57,7 +55,6 @@ export default function ClientProfileLayout({ children }: { children: React.Reac
     router.push(`/${tenant.slug}/login`);
   };
 
-  // 1. Enquanto estiver checando, mostra o loader global
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
@@ -66,7 +63,6 @@ export default function ClientProfileLayout({ children }: { children: React.Reac
     );
   }
 
-  // 2. BLOQUEIO CRÍTICO: Se a assinatura estiver inativa, mostramos a tela de bloqueio e PARAMOS
   if (isSubscriptionActive === false) {
     return (
       <Layout>
@@ -115,6 +111,5 @@ export default function ClientProfileLayout({ children }: { children: React.Reac
     );
   }
 
-  // 3. Se estiver pago e logado, renderiza o perfil
   return <Layout>{children}</Layout>;
 }

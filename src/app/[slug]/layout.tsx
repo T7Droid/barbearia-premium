@@ -9,7 +9,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   const tenant = await TenantService.getTenantBySlug(slug);
   
   return {
-    title: tenant?.name || "King Barber",
+    title: tenant?.name || "Kingbarbers",
     manifest: `/${slug}/manifest.json`,
   };
 }
@@ -21,7 +21,6 @@ export default async function TenantLayout(props: {
   let slug = params.slug;
   const children = props.children;
 
-  // Fallback: Tentar pegar do header se o params.slug estiver vazio ou falhar
   if (!slug) {
     const headersList = await headers();
     slug = headersList.get("x-tenant-slug") || "";
