@@ -14,8 +14,6 @@ async function checkAdmin(request: NextRequest, serviceId?: number) {
 
   // Se um serviceId foi fornecido, garantir que pertence a este tenant
   if (serviceId) {
-    const { data: service } = await ServiceService.getById(serviceId);
-    // Nota: ServiceService.getById retorna o serviço mas não checamos tenant lá.
     // Vamos buscar direto no supabaseAdmin para checar o tenant_id.
     const { data: serviceData } = await (require("@/lib/supabase").supabaseAdmin)
       .from("services")

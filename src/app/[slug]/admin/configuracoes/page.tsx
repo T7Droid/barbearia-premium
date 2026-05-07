@@ -363,7 +363,9 @@ export default function SettingsPage() {
                 <Loader2 className="w-4 h-4 animate-spin" />
               ) : (
                 <>
-                  {settings.stripeCustomerId ? 'Gerenciar Assinatura (Stripe)' : 'Ativar Assinatura Online'}
+                  {settings.cancelAtPeriodEnd 
+                    ? 'Renovar assinatura' 
+                    : (settings.stripeCustomerId ? 'Gerenciar Assinatura (Stripe)' : 'Ativar Assinatura Online')}
                   <ExternalLink className="w-4 h-4" />
                 </>
               )}

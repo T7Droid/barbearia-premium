@@ -100,7 +100,7 @@ export default function UserProfile() {
     );
   }
 
-  const formatPhone = (phone: string) => {
+  const formatPhone = (phone: string | undefined | null) => {
     if (!phone) return "Não informado";
     const cleaned = phone.replace(/\D/g, "");
     if (cleaned.length === 11) {
