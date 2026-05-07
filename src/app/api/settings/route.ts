@@ -102,13 +102,13 @@ export async function GET(request: NextRequest) {
     tenantId: tenant.id,
     tenantSlug: tenant.slug,
     // Dados sensíveis protegidos por papel
-    plan: isAdmin ? (fullTenant?.plans || null) : null,
-    isSubscriptionActive: isStaff ? isSubActive : true, // Para o público sempre assume ativo ou nem mostra
+    plan: isAdmin ? (fullTenant?.plans || null) : (fullTenant?.plans ? { slug: fullTenant.plans.slug } : null),
+    isSubscriptionActive: isStaff ? isSubActive : true,
     subscriptionStatus: isStaff ? (subData?.status || "inactive") : null,
     cancelAtPeriodEnd: isAdmin ? (subData?.cancel_at_period_end || false) : null,
     appointmentsCount: isAdmin ? (appointmentsCount || 0) : null,
     subscriptionExpiresAt: isAdmin ? (subData?.expires_at || null) : null,
-    adminPhone: isStaff ? adminPhone : null, // Telefone do dono apenas para staff
+    adminPhone: isStaff ? adminPhone : null,
     stripeCustomerId: isAdmin ? ((tenantData as any)?.stripe_customer_id || null) : null
   };
 

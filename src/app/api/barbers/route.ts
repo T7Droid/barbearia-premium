@@ -134,7 +134,7 @@ export async function POST(request: NextRequest) {
 
     if (currentBarbers !== null && currentBarbers >= fullTenant.plans.max_barbers) {
       return NextResponse.json({ 
-        error: `Limite atingido: Seu plano (${fullTenant.plans.name}) permite no máximo ${fullTenant.plans.max_barbers} barbeiros ativos.` 
+        error: `Limite de barbeiros ativos atingido para o plano ${fullTenant.plans.name}. Por favor, realize o upgrade do seu plano para cadastrar novos profissionais.` 
       }, { status: 403 });
     }
     // --------------------------------------------

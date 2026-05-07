@@ -103,12 +103,33 @@ export class AuthService {
       return { success: false, error: "Não autenticado" };
     }
 
+    // --- SEGURANÇA: Validar se o plano permite notificações por e-mail ---
+    let finalNotificationsEnabled = updates.notificationsEnabled;
+    
+    // Precisamos do slug do tenant para checar o plano
+    const tenantSlug = request.headers.get("x-tenant-slug");
+    if (tenantSlug && updates.notificationsEnabled === true) {
+      const { data: tenantData } = await supabaseAdmin!
+        .from("tenants")
+        .select("id, plan_id, plans(slug)")
+        .eq("slug", tenantSlug)
+        .single();
+      
+      const planSlug = (tenantData as any)?.plans?.slug;
+      if (planSlug === "basico") {
+        return { 
+          success: false, 
+          error: "Funcionalidade restrita: O recebimento de e-mails não está disponível no Plano Básico. Faça o upgrade para o Plano Profissional ou Premium para ativar." 
+        };
+      }
+    }
+
     const { error } = await supabaseAdmin!
       .from("profiles")
       .update({
         full_name: updates.name,
         phone: updates.phone,
-        notifications_enabled: updates.notificationsEnabled,
+        notifications_enabled: finalNotificationsEnabled,
         push_notifications_enabled: updates.pushNotificationsEnabled,
         fcm_token: updates.fcmToken
       })

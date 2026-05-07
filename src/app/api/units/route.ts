@@ -87,7 +87,7 @@ export async function POST(request: NextRequest) {
 
     if (currentUnits !== null && currentUnits >= fullTenant.plans.max_units) {
       return NextResponse.json({ 
-        error: `Limite atingido: Seu plano (${fullTenant.plans.name}) permite no máximo ${fullTenant.plans.max_units} unidade(s).` 
+        error: `Limite de unidades atingido para o plano ${fullTenant.plans.name}. Por favor, realize o upgrade do seu plano para cadastrar novas localizações.` 
       }, { status: 403 });
     }
     // --------------------------------------------

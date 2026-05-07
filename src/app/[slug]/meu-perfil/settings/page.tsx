@@ -18,6 +18,7 @@ export default function SettingsPage() {
   const { user } = useUserStore();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [settings, setSettings] = useState<any>(null);
   const [profile, setProfile] = useState({
     fullName: "",
     email: "",
@@ -28,36 +29,40 @@ export default function SettingsPage() {
   });
 
   useEffect(() => {
-    async function loadProfile() {
+    async function loadData() {
       if (!user?.id) return;
       
       try {
-        const response = await fetch("/api/auth/me", {
-          headers: { "x-tenant-slug": tenant.slug }
-        });
-        const data = await response.json();
+        const headers = { "x-tenant-slug": tenant.slug };
+        const [authRes, settingsRes] = await Promise.all([
+          fetch("/api/auth/me", { headers }),
+          fetch("/api/settings", { headers })
+        ]);
 
-        if (data.authenticated && data.user) {
+        const authData = await authRes.json();
+        const settingsData = await settingsRes.json();
+
+        setSettings(settingsData);
+
+        if (authData.authenticated && authData.user) {
           setProfile({
-            fullName: data.user.name || "",
-            email: data.user.email || "",
-            phone: data.user.phone || "",
-            notificationsEnabled: data.user.notificationsEnabled ?? false,
-            pushNotificationsEnabled: data.user.pushNotificationsEnabled ?? false,
-            fcmToken: data.user.fcmToken || ""
+            fullName: authData.user.name || "",
+            email: authData.user.email || "",
+            phone: authData.user.phone || "",
+            notificationsEnabled: authData.user.notificationsEnabled ?? false,
+            pushNotificationsEnabled: authData.user.pushNotificationsEnabled ?? false,
+            fcmToken: authData.user.fcmToken || ""
           });
-        } else {
-          console.error("User not authenticated or profile empty");
         }
       } catch (error) {
-        console.error("Error loading profile:", error);
+        console.error("Error loading data:", error);
       } finally {
         setLoading(false);
       }
     }
 
-    loadProfile();
-  }, [user?.id]);
+    loadData();
+  }, [user?.id, tenant.slug]);
 
   const handleSave = async () => {
     if (!user?.id) return;
@@ -171,7 +176,20 @@ export default function SettingsPage() {
                     <Input 
                       id="phone" 
                       value={profile.phone} 
-                      onChange={(e) => setProfile({ ...profile, phone: e.target.value })}
+                      onChange={(e) => {
+                        const val = e.target.value.replace(/\D/g, "");
+                        let formatted = val;
+                        if (val.length > 0) {
+                          formatted = `(${val.slice(0, 2)}`;
+                          if (val.length > 2) {
+                            formatted += `) ${val.slice(2, 7)}`;
+                          }
+                          if (val.length > 7) {
+                            formatted += `-${val.slice(7, 11)}`;
+                          }
+                        }
+                        setProfile({ ...profile, phone: formatted.slice(0, 15) });
+                      }}
                       className="pl-10 bg-accent/30 border-border/50 focus:border-primary/50"
                       placeholder="(00) 00000-0000"
                     />
@@ -181,35 +199,37 @@ export default function SettingsPage() {
             </CardContent>
           </Card>
 
-          <Card className="bg-card border-border/50 shadow-xl transition-all hover:border-primary/20">
-            <CardHeader className="flex flex-row items-center gap-4 pb-2">
-              <div className="w-10 h-10 rounded-full bg-orange-500/10 flex items-center justify-center">
-                <Bell className="w-5 h-5 text-orange-500" />
-              </div>
-              <div className="flex-1">
-                <CardTitle>Comunicações por E-mail</CardTitle>
-                <CardDescription>Escolha como deseja ser avisado sobre seus agendamentos.</CardDescription>
-              </div>
-              <Switch
-                checked={profile.notificationsEnabled}
-                onCheckedChange={(val) => setProfile({ ...profile, notificationsEnabled: val })}
-                className="data-[state=checked]:bg-primary"
-              />
-            </CardHeader>
-            <CardContent>
-              <div className="p-4 rounded-lg bg-accent/30 border border-border/40">
-                <div className="flex items-start gap-3">
-                  <Mail className="w-4 h-4 text-primary mt-1 shrink-0" />
-                  <div className="space-y-1">
-                    <p className="text-sm font-medium">Alertas de Agendamento</p>
-                    <p className="text-xs text-muted-foreground">
-                      Você receberá e-mails automáticos com detalhes do seu horário, confirmações de pagamento e alertas de cancelamento.
-                    </p>
+          {settings?.plan?.slug !== "basico" && (
+            <Card className="bg-card border-border/50 shadow-xl transition-all hover:border-primary/20">
+              <CardHeader className="flex flex-row items-center gap-4 pb-2">
+                <div className="w-10 h-10 rounded-full bg-orange-500/10 flex items-center justify-center">
+                  <Bell className="w-5 h-5 text-orange-500" />
+                </div>
+                <div className="flex-1">
+                  <CardTitle>Comunicações por E-mail</CardTitle>
+                  <CardDescription>Escolha como deseja ser avisado sobre seus agendamentos.</CardDescription>
+                </div>
+                <Switch
+                  checked={profile.notificationsEnabled}
+                  onCheckedChange={(val) => setProfile({ ...profile, notificationsEnabled: val })}
+                  className="data-[state=checked]:bg-primary"
+                />
+              </CardHeader>
+              <CardContent>
+                <div className="p-4 rounded-lg bg-accent/30 border border-border/40">
+                  <div className="flex items-start gap-3">
+                    <Mail className="w-4 h-4 text-primary mt-1 shrink-0" />
+                    <div className="space-y-1">
+                      <p className="text-sm font-medium">Alertas de Agendamento</p>
+                      <p className="text-xs text-muted-foreground">
+                        Você receberá e-mails automáticos com detalhes do seu horário, confirmações de pagamento e alertas de cancelamento.
+                      </p>
+                    </div>
                   </div>
                 </div>
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+          )}
 
           <Card className="bg-card border-border/50 shadow-xl transition-all hover:border-primary/20">
             <CardHeader className="flex flex-row items-center gap-4 pb-2">

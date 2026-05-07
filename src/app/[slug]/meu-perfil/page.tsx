@@ -100,6 +100,17 @@ export default function UserProfile() {
     );
   }
 
+  const formatPhone = (phone: string) => {
+    if (!phone) return "Não informado";
+    const cleaned = phone.replace(/\D/g, "");
+    if (cleaned.length === 11) {
+      return `(${cleaned.slice(0, 2)}) ${cleaned.slice(2, 7)}-${cleaned.slice(7)}`;
+    } else if (cleaned.length === 10) {
+      return `(${cleaned.slice(0, 2)}) ${cleaned.slice(2, 6)}-${cleaned.slice(6)}`;
+    }
+    return phone;
+  };
+
   const getLink = (path: string) => `/${tenant.slug}${path}`;
 
   return (
@@ -173,7 +184,7 @@ export default function UserProfile() {
                 <Label className="text-xs text-muted-foreground uppercase font-bold tracking-wider">Telefone</Label>
                 <div className="flex items-center gap-2">
                   <Phone className="w-4 h-4 text-muted-foreground" />
-                  <p className="text-sm font-medium">{user?.phone || 'Não informado'}</p>
+                  <p className="text-sm font-medium">{formatPhone(user?.phone)}</p>
                 </div>
               </div>
               <Button asChild variant="outline" className="w-full mt-2">

@@ -31,20 +31,38 @@ export async function PUT(
     .eq("id", id)
     .single();
 
-  const isOwner = barberRecord?.user_id === auth.user!.id;
-  const isAdmin = auth.user!.role === "admin";
+    const isOwner = barberRecord?.user_id === auth.user!.id;
+    const isAdmin = auth.user!.role === "admin";
 
   if (!isAdmin && !isOwner) {
     return NextResponse.json({ error: "Não autorizado a editar este perfil" }, { status: 403 });
   }
 
   try {
-    const id = parseInt(idStr);
     const body = await request.json();
-
-    // Garantir que o barbeiro pertence ao tenant antes de atualizar
     const { name, description, imageUrl, active, unitIds, serviceIds, loginData, weeklyHours, commissionPercentage } = body;
 
+    // Proteção: Barbeiro (não admin) só pode editar descrição e foto
+    if (!isAdmin && isOwner) {
+      const updateFields: any = {
+        description,
+        image_url: imageUrl,
+        weekly_hours: weeklyHours
+      };
+      
+      const { data: updatedBarber, error } = await supabaseAdmin!
+        .from("barbers")
+        .update(updateFields)
+        .eq("id", id)
+        .eq("tenant_id", tenant.id)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return NextResponse.json(updatedBarber);
+    }
+
+    // Se for Admin, segue com o fluxo completo original
     let userId = undefined;
 
     // 1. Criar login se não tiver e for solicitado
