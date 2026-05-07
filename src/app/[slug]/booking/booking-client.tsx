@@ -220,7 +220,7 @@ function BookingContent() {
       let activeUnits = [] as any[];
       if (Array.isArray(unitsData)) {
         activeUnits = unitsData.filter(unit => {
-          const hours = unit.weekly_hours || {};
+          const hours = unit.weeklyHours || unit.weekly_hours || {};
           return Object.values(hours).some((day: any) => day.active === true);
         });
 

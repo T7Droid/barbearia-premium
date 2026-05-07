@@ -214,22 +214,44 @@ export async function POST(request: NextRequest) {
 
     if (error) throw error;
 
-    // 3. Associar Unidades (M2M)
+    // 3. Associar Unidades (M2M) - Com validação de tenant
     if (Array.isArray(unitIds) && unitIds.length > 0) {
-      const associations = unitIds.map(uId => ({
-        barber_id: barber.id,
-        unit_id: uId
-      }));
-      await supabaseAdmin.from("barber_units").insert(associations);
+      const { data: validUnits } = await supabaseAdmin
+        .from("units")
+        .select("id")
+        .eq("tenant_id", tenant.id)
+        .in("id", unitIds);
+      
+      const validUnitIds = (validUnits || []).map(u => u.id);
+      const filteredUnitIds = unitIds.filter(uId => validUnitIds.includes(uId));
+
+      if (filteredUnitIds.length > 0) {
+        const associations = filteredUnitIds.map(uId => ({
+          barber_id: barber.id,
+          unit_id: uId
+        }));
+        await supabaseAdmin.from("barber_units").insert(associations);
+      }
     }
 
-    // 4. Associar Serviços (M2M)
+    // 4. Associar Serviços (M2M) - Com validação de tenant
     if (Array.isArray(serviceIds) && serviceIds.length > 0) {
-      const svcAssociations = serviceIds.map(sId => ({
-        barber_id: barber.id,
-        service_id: Number(sId)
-      }));
-      await supabaseAdmin.from("barber_services").insert(svcAssociations);
+      const { data: validServices } = await supabaseAdmin
+        .from("services")
+        .select("id")
+        .eq("tenant_id", tenant.id)
+        .in("id", serviceIds);
+      
+      const validServiceIds = (validServices || []).map(s => s.id);
+      const filteredServiceIds = serviceIds.filter(sId => validServiceIds.includes(Number(sId)));
+
+      if (filteredServiceIds.length > 0) {
+        const svcAssociations = filteredServiceIds.map(sId => ({
+          barber_id: barber.id,
+          service_id: Number(sId)
+        }));
+        await supabaseAdmin.from("barber_services").insert(svcAssociations);
+      }
     }
 
     return NextResponse.json(barber);

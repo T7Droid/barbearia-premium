@@ -187,20 +187,13 @@ CREATE POLICY "public_read_service_units" ON public.service_units FOR SELECT USI
 DROP POLICY IF EXISTS "admin_manage_service_units" ON public.service_units;
 CREATE POLICY "admin_manage_service_units" ON public.service_units FOR ALL USING (
   EXISTS (
-    SELECT 1 FROM public.tenant_memberships
-    WHERE user_id::text = auth.uid()::text AND role = 'admin'
+    SELECT 1 FROM public.services s
+    WHERE s.id = service_id AND check_is_admin(s.tenant_id::text)
   )
 );
 -- Nota: Usando subquery simples em tenant_memberships é seguro se a política da tenant_memberships não for recursiva.
 -- Mas por segurança, vamos usar a função:
-DROP POLICY IF EXISTS "admin_manage_service_units" ON public.service_units;
-CREATE POLICY "admin_manage_service_units" ON public.service_units FOR ALL USING (
-  -- Como não temos tenant_id nesta tabela, usamos uma lógica genérica de admin
-  EXISTS (
-    SELECT 1 FROM public.tenant_memberships
-    WHERE user_id::text = auth.uid()::text AND role = 'admin'
-  )
-);
+
 
 -- barber_units
 ALTER TABLE public.barber_units ENABLE ROW LEVEL SECURITY;
@@ -209,8 +202,8 @@ CREATE POLICY "public_read_barber_units" ON public.barber_units FOR SELECT USING
 DROP POLICY IF EXISTS "admin_manage_barber_units" ON public.barber_units;
 CREATE POLICY "admin_manage_barber_units" ON public.barber_units FOR ALL USING (
   EXISTS (
-    SELECT 1 FROM public.tenant_memberships
-    WHERE user_id::text = auth.uid()::text AND role = 'admin'
+    SELECT 1 FROM public.barbers b
+    WHERE b.id = barber_id AND check_is_admin(b.tenant_id::text)
   )
 );
 
@@ -221,8 +214,8 @@ CREATE POLICY "public_read_barber_services" ON public.barber_services FOR SELECT
 DROP POLICY IF EXISTS "admin_manage_barber_services" ON public.barber_services;
 CREATE POLICY "admin_manage_barber_services" ON public.barber_services FOR ALL USING (
   EXISTS (
-    SELECT 1 FROM public.tenant_memberships
-    WHERE user_id::text = auth.uid()::text AND role = 'admin'
+    SELECT 1 FROM public.barbers b
+    WHERE b.id = barber_id AND check_is_admin(b.tenant_id::text)
   )
 );
 

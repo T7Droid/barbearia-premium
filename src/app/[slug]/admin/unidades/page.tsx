@@ -177,9 +177,9 @@ export default function UnidadesPage() {
         number: unit.number || "",
         city: unit.city || "",
         state: unit.state || "",
-        postal_code: unit.postal_code || "",
-        google_maps_link: unit.google_maps_link || "",
-        weekly_hours: unit.weekly_hours || DEFAULT_HOURS
+        postal_code: unit.postalCode || "",
+        google_maps_link: unit.googleMapsLink || "",
+        weekly_hours: unit.weeklyHours || DEFAULT_HOURS
       });
     } else {
       setEditingUnit(null);
@@ -398,7 +398,7 @@ export default function UnidadesPage() {
                     {unit.address}, {unit.number}
                   </p>
                   <p className="text-muted-foreground">
-                    CEP: {unit.postal_code || "N/A"}
+                    CEP: {unit.postalCode || "N/A"}
                   </p>
                 </div>
 

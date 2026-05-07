@@ -72,13 +72,25 @@ export async function POST(request: NextRequest) {
 
     if (error) throw error;
 
-    // Associar Unidades (M2M)
+    // Associar Unidades (M2M) - Com validação de tenant
     if (Array.isArray(unitIds) && unitIds.length > 0) {
-      const associations = unitIds.map(uId => ({
-        service_id: service.id,
-        unit_id: uId
-      }));
-      await supabaseAdmin.from("service_units").insert(associations);
+      // Validar se todas as unidades pertencem ao tenant
+      const { data: validUnits } = await supabaseAdmin
+        .from("units")
+        .select("id")
+        .eq("tenant_id", tenant.id)
+        .in("id", unitIds);
+      
+      const validUnitIds = (validUnits || []).map(u => u.id);
+      const filteredUnitIds = unitIds.filter(uId => validUnitIds.includes(uId));
+
+      if (filteredUnitIds.length > 0) {
+        const associations = filteredUnitIds.map(uId => ({
+          service_id: service.id,
+          unit_id: uId
+        }));
+        await supabaseAdmin.from("service_units").insert(associations);
+      }
     }
 
     return NextResponse.json(service, { status: 201 });

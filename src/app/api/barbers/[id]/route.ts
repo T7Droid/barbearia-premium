@@ -88,21 +88,43 @@ export async function PUT(
 
     if (error) throw error;
 
-    // 2. Sincronizar Unidades
+    // 2. Sincronizar Unidades - Com validação de tenant
     if (Array.isArray(unitIds)) {
       await supabaseAdmin!.from("barber_units").delete().eq("barber_id", id);
       if (unitIds.length > 0) {
-        const associations = unitIds.map(uId => ({ barber_id: id, unit_id: uId }));
-        await supabaseAdmin!.from("barber_units").insert(associations);
+        const { data: validUnits } = await supabaseAdmin!
+          .from("units")
+          .select("id")
+          .eq("tenant_id", tenant.id)
+          .in("id", unitIds);
+        
+        const validUnitIds = (validUnits || []).map(u => u.id);
+        const filteredUnitIds = unitIds.filter(uId => validUnitIds.includes(uId));
+
+        if (filteredUnitIds.length > 0) {
+          const associations = filteredUnitIds.map(uId => ({ barber_id: id, unit_id: uId }));
+          await supabaseAdmin!.from("barber_units").insert(associations);
+        }
       }
     }
 
-    // 3. Sincronizar Serviços
+    // 3. Sincronizar Serviços - Com validação de tenant
     if (Array.isArray(serviceIds)) {
       await supabaseAdmin!.from("barber_services").delete().eq("barber_id", id);
       if (serviceIds.length > 0) {
-        const svcAssociations = serviceIds.map(sId => ({ barber_id: id, service_id: Number(sId) }));
-        await supabaseAdmin!.from("barber_services").insert(svcAssociations);
+        const { data: validServices } = await supabaseAdmin!
+          .from("services")
+          .select("id")
+          .eq("tenant_id", tenant.id)
+          .in("id", serviceIds);
+        
+        const validServiceIds = (validServices || []).map(s => s.id);
+        const filteredServiceIds = serviceIds.filter(sId => validServiceIds.includes(Number(sId)));
+
+        if (filteredServiceIds.length > 0) {
+          const svcAssociations = filteredServiceIds.map(sId => ({ barber_id: id, service_id: Number(sId) }));
+          await supabaseAdmin!.from("barber_services").insert(svcAssociations);
+        }
       }
     }
 
