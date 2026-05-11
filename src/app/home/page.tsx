@@ -122,10 +122,10 @@ export default function RootPage() {
                   <Check className="w-5 h-5 text-primary shrink-0" />
                   <span>Painel de gestão para o barbeiro</span>
                 </li>
-                <li className="flex items-start gap-3 text-sm text-muted-foreground">
+                {/* <li className="flex items-start gap-3 text-sm text-muted-foreground">
                   <Check className="w-5 h-5 text-primary shrink-0" />
                   <span>Pagamentos via Pix e Cartão</span>
-                </li>
+                </li> */}
                 <li className="flex items-start gap-3 text-sm text-muted-foreground">
                   <Check className="w-5 h-5 text-primary shrink-0" />
                   <span>Cancelamento e remarcação online</span>
@@ -174,10 +174,10 @@ export default function RootPage() {
                   <Check className="w-5 h-5 text-primary shrink-0" />
                   <span>Painel individual para cada barbeiro</span>
                 </li>
-                <li className="flex items-start gap-3 text-sm text-muted-foreground">
+                {/* <li className="flex items-start gap-3 text-sm text-muted-foreground">
                   <Check className="w-5 h-5 text-primary shrink-0" />
                   <span>Pagamentos via Pix e Cartão</span>
-                </li>
+                </li> */}
                 <li className="flex items-start gap-3 text-sm text-muted-foreground">
                   <Check className="w-5 h-5 text-primary shrink-0" />
                   <span>Cancelamento e remarcação online</span>
@@ -227,10 +227,10 @@ export default function RootPage() {
                   <Check className="w-5 h-5 text-primary shrink-0" />
                   <span>Acessos individuais para toda a equipe</span>
                 </li>
-                <li className="flex items-start gap-3 text-sm text-muted-foreground">
+                {/* <li className="flex items-start gap-3 text-sm text-muted-foreground">
                   <Check className="w-5 h-5 text-primary shrink-0" />
                   <span>Pagamentos via Pix e Cartão</span>
-                </li>
+                </li> */}
                 <li className="flex items-start gap-3 text-sm text-muted-foreground">
                   <Check className="w-5 h-5 text-primary shrink-0" />
                   <span>Cancelamento e remarcação online</span>
@@ -289,10 +289,10 @@ export default function RootPage() {
                   <Check className="w-5 h-5 text-primary shrink-0" />
                   <span>Gestão profissional para grandes times</span>
                 </li>
-                <li className="flex items-start gap-3 text-sm text-muted-foreground">
+                {/* <li className="flex items-start gap-3 text-sm text-muted-foreground">
                   <Check className="w-5 h-5 text-primary shrink-0" />
                   <span>Pagamentos via Pix e Cartão</span>
-                </li>
+                </li> */}
                 <li className="flex items-start gap-3 text-sm text-muted-foreground">
                   <Check className="w-5 h-5 text-primary shrink-0" />
                   <span>Cancelamento e remarcação online</span>

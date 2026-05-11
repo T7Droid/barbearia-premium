@@ -446,7 +446,7 @@ export default function SettingsPage() {
           </CardContent>
         </Card>
 
-        <Card className={`bg-card border-border/50 shadow-lg border-l-4 ${settings.mpConnected ? 'border-l-green-500' : 'border-l-blue-500'}`}>
+        {/* <Card className={`bg-card border-border/50 shadow-lg border-l-4 ${settings.mpConnected ? 'border-l-green-500' : 'border-l-blue-500'}`}>
           <CardHeader className="flex flex-row items-center gap-4 pb-2">
             <div className={`w-10 h-10 rounded-full flex items-center justify-center ${settings.mpConnected ? 'bg-green-500/10' : 'bg-blue-500/10'}`}>
               <Wallet className={`w-5 h-5 ${settings.mpConnected ? 'text-green-500' : 'text-blue-500'}`} />
@@ -506,7 +506,7 @@ export default function SettingsPage() {
               </div>
             )}
           </CardContent>
-        </Card>
+        </Card> */}
 
         <Card className="bg-card border-border/50 shadow-lg">
           <CardHeader className="flex flex-row items-center gap-4">
