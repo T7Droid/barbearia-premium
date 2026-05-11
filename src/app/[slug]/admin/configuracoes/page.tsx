@@ -9,7 +9,7 @@ import { useTenant } from "@/hooks/use-tenant";
 import { useToast } from "@/hooks/use-toast";
 import { formatCurrencyFromCents, formatDateBR } from "@/lib/format";
 import { DemoStore } from "@/lib/persistence/demo-store";
-import { AlertCircle, CalendarClock, Check, Copy, CreditCard, ExternalLink, Facebook, Instagram, LayoutGrid, Loader2, MessageCircle, QrCode, Save, Send, Settings, Share2, ShieldCheck, Ticket, Wallet } from "lucide-react";
+import { AlertCircle, CalendarClock, Check, Copy, CreditCard, ExternalLink, LayoutGrid, Loader2, MessageCircle, QrCode, Save, Settings, Share2, ShieldCheck, Ticket, Wallet } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
@@ -217,16 +217,6 @@ export default function SettingsPage() {
       case 'whatsapp':
         url = `https://api.whatsapp.com/send?text=${encodeURIComponent(text + " " + bookingUrl)}`;
         break;
-      case 'facebook':
-        url = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(bookingUrl)}`;
-        break;
-      case 'telegram':
-        url = `https://t.me/share/url?url=${encodeURIComponent(bookingUrl)}&text=${encodeURIComponent(text)}`;
-        break;
-      case 'instagram':
-        handleCopyLink();
-        toast({ title: "Dica de Instagram", description: "O link foi copiado! Agora cole-o na Bio do seu perfil." });
-        return;
     }
 
     if (url) window.open(url, '_blank');
@@ -560,46 +550,24 @@ export default function SettingsPage() {
               />
             </div>
 
-            <div className="flex gap-4 w-full justify-center">
+            <div className="flex gap-6 w-full justify-center">
               <Button
                 variant="outline"
                 size="icon"
-                className="h-12 w-12 rounded-full border-green-500/30 text-green-600 hover:bg-green-50"
+                className="h-14 w-14 rounded-full border-green-500/30 text-green-600 hover:bg-green-50 transition-all hover:scale-110 active:scale-95 shadow-sm"
                 onClick={() => handleSocialShare('whatsapp')}
+                title="Compartilhar no WhatsApp"
               >
-                <MessageCircle className="w-5 h-5" />
+                <MessageCircle className="w-6 h-6" />
               </Button>
               <Button
                 variant="outline"
                 size="icon"
-                className="h-12 w-12 rounded-full border-blue-600/30 text-blue-600 hover:bg-blue-50"
-                onClick={() => handleSocialShare('facebook')}
-              >
-                <Facebook className="w-5 h-5" />
-              </Button>
-              <Button
-                variant="outline"
-                size="icon"
-                className="h-12 w-12 rounded-full border-pink-600/30 text-pink-600 hover:bg-pink-50"
-                onClick={() => handleSocialShare('instagram')}
-              >
-                <Instagram className="w-5 h-5" />
-              </Button>
-              <Button
-                variant="outline"
-                size="icon"
-                className="h-12 w-12 rounded-full border-sky-500/30 text-sky-500 hover:bg-sky-50"
-                onClick={() => handleSocialShare('telegram')}
-              >
-                <Send className="w-5 h-5" />
-              </Button>
-              <Button
-                variant="outline"
-                size="icon"
-                className="h-12 w-12 rounded-full border-primary/30 text-primary hover:bg-primary/5"
+                className="h-14 w-14 rounded-full border-primary/30 text-primary hover:bg-primary/5 transition-all hover:scale-110 active:scale-95 shadow-sm"
                 onClick={handleNativeShare}
+                title="Outras opções de compartilhamento"
               >
-                <Share2 className="w-5 h-5" />
+                <Share2 className="w-6 h-6" />
               </Button>
             </div>
 
