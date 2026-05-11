@@ -37,7 +37,7 @@ export default function RootPage() {
               </div>
             </div>
 
-            <div className="bg-card border border-border/50 p-8 rounded-3xl shadow-sm hover:shadow-md hover:border-primary/30 transition-all flex flex-col items-center text-center gap-4 h-full">
+{/* <div className="bg-card border border-border/50 p-8 rounded-3xl shadow-sm hover:shadow-md hover:border-primary/30 transition-all flex flex-col items-center text-center gap-4 h-full">
               <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center">
                 <CreditCard className="w-7 h-7 text-primary" />
               </div>
@@ -47,7 +47,7 @@ export default function RootPage() {
                   Com apenas 1 clique, você conecta o seu Mercado Pago e começa a receber pagamentos agora mesmo. <strong>Sem intermediários, sem burocracia e direto na sua conta.</strong>
                 </p>
               </div>
-            </div>
+            </div> */}
 
             <div className="bg-card border border-border/50 p-8 rounded-3xl shadow-sm hover:shadow-md hover:border-primary/30 transition-all flex flex-col items-center text-center gap-4 h-full">
               <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center">
