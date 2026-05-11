@@ -255,8 +255,8 @@ export function Layout({ children }: { children: React.ReactNode }) {
             © {new Date().getFullYear()} KingBarbers. Experiência de Barbearia de Luxo.
           </p>
           <div className="flex items-center gap-4 text-xs text-muted-foreground">
-            <Link href={getLink("/privacidade")} className="hover:text-primary transition-colors">Privacidade</Link>
-            <Link href={getLink("/termos")} className="hover:text-primary transition-colors">Termos</Link>
+            <Link href="/privacidade" className="hover:text-primary transition-colors">Privacidade</Link>
+            <Link href="/termos" className="hover:text-primary transition-colors">Termos</Link>
           </div>
         </div>
       </footer>

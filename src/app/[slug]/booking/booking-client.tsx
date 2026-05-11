@@ -663,7 +663,6 @@ function BookingContent() {
 
       const currentMpData = directMpData ? {
         ...directMpData,
-        transaction_amount: directMpData.transaction_amount * 100,
         description: combinedNames,
         payer: { email: customerInfo.email }
       } : (paymentMethod === "card" && !isPrePaid ? {
@@ -704,11 +703,11 @@ function BookingContent() {
         const finalUuid = (appointment as any)?.uuid || (appointment as any)?.data?.uuid || rawId;
         router.push(getLink(`/confirmacao/${finalUuid}`));
       } else {
-        console.warn("Agendamento confirmado, mas ID não identificado no payload. Verifique o log de DEBUG acima.", appointment);
+        console.warn("Agendamento confirmado, mas ID não identificado no payload.", appointment);
         router.push(getLink("/meu-perfil/historico"));
       }
     } catch (error: any) {
-      let errorMessage = error.response?.data?.error || error.message || "Não foi possível confirmar o agendamento.";
+      let errorMessage = error.response?.data?.error || error.response?.data?.detail || error.message || "Não foi possível confirmar o agendamento.";
       
       const isSlotOccupied = errorMessage.includes("SLOT_OCCUPIED") || 
                              (error.response?.data?.error?.includes("SLOT_OCCUPIED"));
@@ -724,7 +723,22 @@ function BookingContent() {
         return;
       }
 
-      if (errorMessage.includes("pending_waiting_transfer")) {
+      // Tratar rejeições específicas do Mercado Pago
+      if (errorMessage.includes("cc_rejected_high_risk")) {
+        errorMessage = "Pagamento recusado: transação identificada como alto risco pelo banco. Tente outro cartão ou entre em contato com seu banco.";
+      } else if (errorMessage.includes("cc_rejected_bad_filled_card_number")) {
+        errorMessage = "Número do cartão inválido. Verifique os dados e tente novamente.";
+      } else if (errorMessage.includes("cc_rejected_bad_filled_date")) {
+        errorMessage = "Data de validade inválida. Verifique os dados do cartão.";
+      } else if (errorMessage.includes("cc_rejected_bad_filled_security_code")) {
+        errorMessage = "Código de segurança (CVV) inválido. Verifique os dados do cartão.";
+      } else if (errorMessage.includes("cc_rejected_insufficient_amount")) {
+        errorMessage = "Saldo insuficiente no cartão. Tente outro cartão ou meio de pagamento.";
+      } else if (errorMessage.includes("cc_rejected_call_for_authorize")) {
+        errorMessage = "Pagamento recusado pelo banco. Entre em contato com sua operadora para autorizar a transação.";
+      } else if (errorMessage.includes("cc_rejected") || errorMessage.includes("rejected")) {
+        errorMessage = "Pagamento recusado pelo banco emissor. Tente outro cartão ou entre em contato com seu banco.";
+      } else if (errorMessage.includes("pending_waiting_transfer")) {
         errorMessage = "Aguardando confirmação do banco. Fique na tela, estamos verificando automaticamente o seu pagamento a cada 10 segundos.";
       } else if (errorMessage.includes("Pagamento não aprovado") || errorMessage.includes("não aprovado")) {
         errorMessage = "O pagamento ainda não foi aprovado. Se você já pagou, aguarde a verificação automática.";
@@ -732,9 +746,9 @@ function BookingContent() {
 
       if (!isPollingPix) {
         toast({
-          title: "Aguardando Pagamento",
+          title: paymentMethod === "card" ? "Pagamento Recusado" : "Aguardando Pagamento",
           description: errorMessage,
-          variant: "default" 
+          variant: paymentMethod === "card" ? "destructive" : "default"
         });
       }
       
