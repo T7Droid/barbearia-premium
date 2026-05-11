@@ -2,7 +2,7 @@ export const PLANS_INFO: Record<string, any> = {
   basico: { 
     name: "Básico", 
     price: "R$29/mês",
-    stripePriceId: "price_1TPn3pPjOlTa80IiTHMZD3XQ",
+    stripePriceId: "price_1TVzhnJ7vslmy7Sue8do06ui",
     stripeProductId: "prod_UOaEFhRxZQzd3h",
     barbers: 1, 
     units: 1, 
@@ -14,7 +14,7 @@ export const PLANS_INFO: Record<string, any> = {
   profissional: { 
     name: "Profissional", 
     price: "R$59/mês",
-    stripePriceId: "price_1TPnhzPjOlTa80IiebkoBuic",
+    stripePriceId: "price_1TVzhnJ7vslmy7SuyaNefYlc",
     stripeProductId: "prod_UOati7IwQ2hzzN",
     barbers: 3, 
     units: 1, 
@@ -26,7 +26,7 @@ export const PLANS_INFO: Record<string, any> = {
   premium: { 
     name: "Premium", 
     price: "R$99/mês",
-    stripePriceId: "price_1TPnjUPjOlTa80Ii60SNJsk0",
+    stripePriceId: "price_1TVzhwJ7vslmy7SuZr2xx0wR",
     stripeProductId: "prod_UOavC28NWsqkTU",
     barbers: 10, 
     units: 3, 
@@ -38,7 +38,7 @@ export const PLANS_INFO: Record<string, any> = {
   escala: { 
     name: "Escala", 
     price: "R$149/mês",
-    stripePriceId: "price_1TPnpJPjOlTa80IiYjrrqaoC",
+    stripePriceId: "price_1TVzhxJ7vslmy7SueeVYWgRQ",
     stripeProductId: "prod_UOb1QOVLfaMn9Q",
     barbers: 30, 
     units: 10, 
