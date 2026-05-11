@@ -677,7 +677,7 @@ function BookingContent() {
       const appointment = await confirmAppointment.mutateAsync({
         data: {
           sessionId: sid,
-          paymentMethodId: isPrePaid ? (originalPaymentMethod || "online") : (paymentMethod === "card" ? "mercado_pago" : (paymentMethod === "pix" ? "pix" : "offline_local")),
+          paymentMethodId: isPrePaid ? (originalPaymentMethod || "online") : (paymentMethod === "card" ? "card" : (paymentMethod === "pix" ? "pix" : "offline_local")),
           mp_data: paymentMethod === "pix" ? pixData : currentMpData
         } as any
       });
