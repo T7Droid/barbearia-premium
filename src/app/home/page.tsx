@@ -63,7 +63,7 @@ export default function RootPage() {
               </div>
             </div>
 
-            <div className="bg-card border border-border/50 p-8 rounded-3xl shadow-sm hover:shadow-md hover:border-primary/30 transition-all flex flex-col items-center text-center gap-4 h-full">
+{/* <div className="bg-card border border-border/50 p-8 rounded-3xl shadow-sm hover:shadow-md hover:border-primary/30 transition-all flex flex-col items-center text-center gap-4 h-full">
               <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center">
                 <TrendingUp className="w-7 h-7 text-primary" />
               </div>
@@ -73,7 +73,7 @@ export default function RootPage() {
                   Sistema com controle inteligente de agenda e opção para cobrança de <strong>pagamentos antecipados</strong>. O melhor remédio para reduzir cancelamentos de última hora, faltas e proteger seu faturamento.
                 </p>
               </div>
-            </div>
+            </div> */}
           </div>
 
           <div className="mt-12 flex flex-col items-center text-center gap-4 py-16 max-w-2xl mx-auto">
