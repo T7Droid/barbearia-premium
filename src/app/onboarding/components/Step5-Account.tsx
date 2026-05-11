@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useOnboarding } from "../context";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -225,7 +226,7 @@ export function Step5Account({ onFinish, isSubmitting }: Step5AccountProps) {
             className="mt-1"
           />
           <Label htmlFor="acceptedTerms" className="text-xs leading-relaxed text-muted-foreground cursor-pointer">
-            Eu li e aceito os <strong>Termos de Uso</strong> e as condições de serviço da plataforma.
+            Eu li e aceito os <Link href="/termos" target="_blank" className="font-bold underline hover:text-primary decoration-primary/30">Termos de Uso</Link> e as condições de serviço da plataforma.
           </Label>
         </div>
 
@@ -237,7 +238,7 @@ export function Step5Account({ onFinish, isSubmitting }: Step5AccountProps) {
             className="mt-1"
           />
           <Label htmlFor="acceptedPrivacy" className="text-xs leading-relaxed text-muted-foreground cursor-pointer">
-            Concordo com a <strong>Política de Privacidade</strong> e o processamento dos meus dados pessoais conforme a LGPD.
+            Concordo com a <Link href="/privacidade" target="_blank" className="font-bold underline hover:text-primary decoration-primary/30">Política de Privacidade</Link> e o processamento dos meus dados pessoais conforme a LGPD.
           </Label>
         </div>
 

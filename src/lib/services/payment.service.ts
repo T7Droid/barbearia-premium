@@ -204,6 +204,7 @@ export class PaymentService {
         id: result.id,
         status: result.status,
         detail: result.status_detail,
+        external_reference: result.external_reference
       };
     });
   }

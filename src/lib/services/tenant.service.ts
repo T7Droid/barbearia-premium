@@ -85,4 +85,19 @@ export class TenantService {
 
     return isStatusOk && isNotExpired;
   }
+
+  static async getTenantByMPUserId(mpUserId: string): Promise<Tenant | null> {
+    if (!supabaseAdmin) return null;
+
+    const { data, error } = await supabaseAdmin
+      .from("tenants")
+      .select("*, plans(*), subscriptions(*)")
+      .eq("mp_user_id", mpUserId)
+      .eq("subscriptions.status", "active")
+      .order("created_at", { foreignTable: "subscriptions", ascending: false })
+      .maybeSingle();
+
+    if (error || !data) return null;
+    return data;
+  }
 }
