@@ -262,10 +262,10 @@ export class AppointmentService {
     }
 
     const isOnlinePayment = paymentData.paymentMethodId === "mercado_pago" || paymentData.paymentMethodId === "pix";
-    const hasSuccessfulResult = paymentData.paymentResult && paymentData.paymentResult.status === "approved" && (paymentData.paymentResult.id || paymentData.paymentResult.payment_id);
+    const hasSuccessfulResult = !!(paymentData.paymentResult && paymentData.paymentResult.status === "approved" && (paymentData.paymentResult.id || paymentData.paymentResult.payment_id));
 
     // Forçar isPaid como false se for pagamento no local, independente de qualquer outro dado
-    const isPaid = (paymentData.paymentMethodId === "offline_local") ? false : (session.isPaid || (isOnlinePayment && hasSuccessfulResult));
+    const isPaid = (paymentData.paymentMethodId === "offline_local") ? false : !!(session.isPaid || (isOnlinePayment && hasSuccessfulResult));
     
     console.log(`[SERVER DEBUG] Confirmando agendamento: Método=${paymentData.paymentMethodId}, Pago=${isPaid}`);
 
