@@ -508,7 +508,7 @@ export default function SettingsPage() {
           </CardContent>
         </Card> */}
 
-        <Card className="bg-card border-border/50 shadow-lg">
+        {/* <Card className="bg-card border-border/50 shadow-lg">
           <CardHeader className="flex flex-row items-center gap-4">
             <div className="w-10 h-10 rounded-full bg-green-500/10 flex items-center justify-center">
               <CreditCard className="w-5 h-5 text-green-500" />
@@ -529,7 +529,7 @@ export default function SettingsPage() {
                 : "Desativado: O cliente terá a opção de pagar no local."}
             </p>
           </CardContent>
-        </Card>
+        </Card> */}
 
         <Card className="bg-card border-border/50 shadow-lg overflow-hidden border-t-4 border-t-primary">
           <CardHeader className="flex flex-row items-center gap-4 pb-2">
