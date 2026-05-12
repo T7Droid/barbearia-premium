@@ -37,7 +37,7 @@ export default function RootPage() {
               </div>
             </div>
 
-{/* <div className="bg-card border border-border/50 p-8 rounded-3xl shadow-sm hover:shadow-md hover:border-primary/30 transition-all flex flex-col items-center text-center gap-4 h-full">
+            <div className="bg-card border border-border/50 p-8 rounded-3xl shadow-sm hover:shadow-md hover:border-primary/30 transition-all flex flex-col items-center text-center gap-4 h-full">
               <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center">
                 <CreditCard className="w-7 h-7 text-primary" />
               </div>
@@ -47,7 +47,7 @@ export default function RootPage() {
                   Com apenas 1 clique, você conecta o seu Mercado Pago e começa a receber pagamentos agora mesmo. <strong>Sem intermediários, sem burocracia e direto na sua conta.</strong>
                 </p>
               </div>
-            </div> */}
+            </div>
 
             <div className="bg-card border border-border/50 p-8 rounded-3xl shadow-sm hover:shadow-md hover:border-primary/30 transition-all flex flex-col items-center text-center gap-4 h-full">
               <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center">
@@ -63,7 +63,7 @@ export default function RootPage() {
               </div>
             </div>
 
-{/* <div className="bg-card border border-border/50 p-8 rounded-3xl shadow-sm hover:shadow-md hover:border-primary/30 transition-all flex flex-col items-center text-center gap-4 h-full">
+            <div className="bg-card border border-border/50 p-8 rounded-3xl shadow-sm hover:shadow-md hover:border-primary/30 transition-all flex flex-col items-center text-center gap-4 h-full">
               <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center">
                 <TrendingUp className="w-7 h-7 text-primary" />
               </div>
@@ -73,7 +73,7 @@ export default function RootPage() {
                   Sistema com controle inteligente de agenda e opção para cobrança de <strong>pagamentos antecipados</strong>. O melhor remédio para reduzir cancelamentos de última hora, faltas e proteger seu faturamento.
                 </p>
               </div>
-            </div> */}
+            </div>
           </div>
 
           <div className="mt-12 flex flex-col items-center text-center gap-4 py-16 max-w-2xl mx-auto">
@@ -122,10 +122,10 @@ export default function RootPage() {
                   <Check className="w-5 h-5 text-primary shrink-0" />
                   <span>Painel de gestão para o barbeiro</span>
                 </li>
-                {/* <li className="flex items-start gap-3 text-sm text-muted-foreground">
+                <li className="flex items-start gap-3 text-sm text-muted-foreground">
                   <Check className="w-5 h-5 text-primary shrink-0" />
                   <span>Pagamentos via Pix e Cartão</span>
-                </li> */}
+                </li>
                 <li className="flex items-start gap-3 text-sm text-muted-foreground">
                   <Check className="w-5 h-5 text-primary shrink-0" />
                   <span>Cancelamento e remarcação online</span>
@@ -174,10 +174,10 @@ export default function RootPage() {
                   <Check className="w-5 h-5 text-primary shrink-0" />
                   <span>Painel individual para cada barbeiro</span>
                 </li>
-                {/* <li className="flex items-start gap-3 text-sm text-muted-foreground">
+                <li className="flex items-start gap-3 text-sm text-muted-foreground">
                   <Check className="w-5 h-5 text-primary shrink-0" />
                   <span>Pagamentos via Pix e Cartão</span>
-                </li> */}
+                </li>
                 <li className="flex items-start gap-3 text-sm text-muted-foreground">
                   <Check className="w-5 h-5 text-primary shrink-0" />
                   <span>Cancelamento e remarcação online</span>
@@ -227,10 +227,10 @@ export default function RootPage() {
                   <Check className="w-5 h-5 text-primary shrink-0" />
                   <span>Acessos individuais para toda a equipe</span>
                 </li>
-                {/* <li className="flex items-start gap-3 text-sm text-muted-foreground">
+                <li className="flex items-start gap-3 text-sm text-muted-foreground">
                   <Check className="w-5 h-5 text-primary shrink-0" />
                   <span>Pagamentos via Pix e Cartão</span>
-                </li> */}
+                </li>
                 <li className="flex items-start gap-3 text-sm text-muted-foreground">
                   <Check className="w-5 h-5 text-primary shrink-0" />
                   <span>Cancelamento e remarcação online</span>
@@ -289,10 +289,10 @@ export default function RootPage() {
                   <Check className="w-5 h-5 text-primary shrink-0" />
                   <span>Gestão profissional para grandes times</span>
                 </li>
-                {/* <li className="flex items-start gap-3 text-sm text-muted-foreground">
+                <li className="flex items-start gap-3 text-sm text-muted-foreground">
                   <Check className="w-5 h-5 text-primary shrink-0" />
                   <span>Pagamentos via Pix e Cartão</span>
-                </li> */}
+                </li>
                 <li className="flex items-start gap-3 text-sm text-muted-foreground">
                   <Check className="w-5 h-5 text-primary shrink-0" />
                   <span>Cancelamento e remarcação online</span>

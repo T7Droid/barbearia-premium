@@ -107,7 +107,11 @@ export function Layout({ children }: { children: React.ReactNode }) {
     <div className="min-h-screen bg-background flex flex-col font-sans">
       <header className="border-b border-border/40 bg-card/50 backdrop-blur-md sticky top-0 z-50">
         <div className="container mx-auto px-4 h-16 flex items-center justify-between">
-          <Link href={getLink("/")} onClick={(e) => handleLinkClick(e, "/")} className="flex items-center gap-2 group">
+          <Link 
+            href={(!tenant || isRoot) ? getLink("/") : getLink("/booking")} 
+            onClick={(e) => handleLinkClick(e, (!tenant || isRoot) ? "/" : "/booking")} 
+            className="flex items-center gap-2 group"
+          >
             {isRoot || !tenant || tenant.name === "King Barber" || tenant.name === "KingBarbers" ? (
               <Scissors className="w-6 h-6 text-primary group-hover:text-primary/80 transition-colors" />
             ) : (
