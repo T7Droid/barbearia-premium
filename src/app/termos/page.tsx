@@ -24,6 +24,7 @@ export default function TermosPage() {
             <ul className="list-decimal pl-6 space-y-3 mt-4">
               <li>Ao realizar um pagamento antecipado, os valores são direcionados diretamente para a conta do Mercado Pago configurada pelo Estabelecimento ou Barbeiro responsável.</li>
               <li>A plataforma não retém os valores destinados aos prestadores, atuando apenas como o canal tecnológico para a transação.</li>
+              <li><strong>Taxas de Processamento:</strong> Embora a KingBarbers não cobre comissões sobre os serviços prestados, o processamento de pagamentos está sujeito às <strong>taxas operacionais cobradas exclusivamente pelo Mercado Pago</strong> (como taxas de transação por PIX, Cartão de Crédito ou antecipação de recebíveis). Estas taxas são descontadas automaticamente pelo próprio Mercado Pago no momento do repasse. A KingBarbers não tem qualquer controle, ingerência ou participação sobre as taxas praticadas pelo Mercado Pago. <a href="https://www.mercadopago.com.br/knowledge-hub/tabela-taxas-tarifas_45243" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline font-medium">Consulte as taxas vigentes do Mercado Pago clicando aqui</a>.</li>
               <li>Questões relacionadas a falhas de processamento no cartão ou estornos devem ser verificadas junto ao Mercado Pago e ao Estabelecimento prestador.</li>
             </ul>
           </section>
