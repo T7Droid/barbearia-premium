@@ -385,15 +385,17 @@ export default function AppointmentHistory() {
                             <span className="text-[10px] text-muted-foreground italic">Prazo encerrado</span>
                           ) : null}
 
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            className="text-green-600 hover:bg-green-50 h-8 w-8 p-0"
-                            onClick={() => handleShare(app)}
-                            title="Enviar agendamento por WhatsApp"
-                          >
-                            <MessageCircle className="w-4 h-4" />
-                          </Button>
+                          {app.status !== "cancelled" && (
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="text-green-600 hover:bg-green-50 h-8 w-8 p-0"
+                              onClick={() => handleShare(app)}
+                              title="Enviar agendamento por WhatsApp"
+                            >
+                              <MessageCircle className="w-4 h-4" />
+                            </Button>
+                          )}
                         </div>
                       </TableCell>
                     </TableRow>
