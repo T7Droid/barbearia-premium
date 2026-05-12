@@ -324,7 +324,7 @@ export class AppointmentService {
           // 2. Usar UPSERT para garantir que o vínculo exista e atualizar os pontos NO TENANT correto
           const { data: membership } = await supabaseAdmin
             .from("tenant_memberships")
-            .select("points")
+            .select("points, role")
             .eq("user_id", session.userId)
             .eq("tenant_id", sessionDataRaw.tenant_id)
             .maybeSingle();

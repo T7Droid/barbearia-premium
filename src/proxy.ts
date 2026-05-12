@@ -58,7 +58,7 @@ export async function proxy(request: NextRequest) {
 
     const { data: tenant, error: tenantError } = await supabase
       .from("tenants")
-      .select("id, name")
+      .select("id, name, owner_id")
       .eq("slug", slug)
       .single();
 
