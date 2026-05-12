@@ -1,5 +1,5 @@
 import { supabase, supabaseAdmin } from "@/lib/supabase";
-import { isAdminEmail } from "@/lib/config/auth-config";
+
 
 export class AuthService {
   static async getCurrentUser(token: string, tenantId?: string) {
@@ -35,11 +35,9 @@ export class AuthService {
 
       if (membership) {
         userRole = membership.role;
-      } else if (tenantData?.owner_id === user.id || isAdminEmail(user.email)) {
+      } else if (tenantData?.owner_id === user.id) {
         userRole = "admin";
       }
-    } else if (isAdminEmail(user.email)) {
-      userRole = "admin";
     }
 
     console.log(`[AuthService] Final calculated role for ${tenantId}: ${userRole}`);

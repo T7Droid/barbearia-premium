@@ -25,8 +25,6 @@ export async function POST(req: Request) {
       throw new Error("Plano selecionado inválido ou não encontrado.");
     }
 
-    // Validação de segurança: No onboarding criamos 1 unidade e 1 barbeiro.
-    // Se o plano básico permitisse 0 (hipotético), aqui barraríamos.
     if (1 > planData.max_units) {
       throw new Error(`Seu plano permite no máximo ${planData.max_units} unidade(s).`);
     }
@@ -34,7 +32,6 @@ export async function POST(req: Request) {
       throw new Error(`Seu plano permite no máximo ${planData.max_barbers} barbeiro(s).`);
     }
 
-    // 1. Criar Usuário no Auth
     const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
       email: account.email,
       password: account.password,
@@ -47,17 +44,15 @@ export async function POST(req: Request) {
     }
     createdUserId = authData.user.id;
 
-    // Gerar Slug único (Mesma lógica da lib/utils para consistência)
     const slug = tenant.name
       .toLowerCase()
       .trim()
       .normalize("NFD")
-      .replace(/[\u0300-\u036f]/g, "") // Remove acentos
-      .replace(/\s+/g, "-")           // Espaços para -
-      .replace(/[^\w-]+/g, "")        // Remove tudo que não é letra, número ou hífen
-      .replace(/--+/g, "-");          // Evita hífens duplos
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/\s+/g, "-")
+      .replace(/[^\w-]+/g, "")
+      .replace(/--+/g, "-");
 
-    // 2. Criar Tenant
     const { data: tenantData, error: tenantError } = await supabaseAdmin
       .from("tenants")
       .insert([
@@ -76,7 +71,6 @@ export async function POST(req: Request) {
     }
     createdTenantId = tenantData.id;
 
-    // 2.1 Criar Assinatura Inicial (Trial de 7 dias por padrão)
     const expiresAt = new Date();
     expiresAt.setDate(expiresAt.getDate() + 7);
 
@@ -95,7 +89,6 @@ export async function POST(req: Request) {
       throw new Error(`Erro ao criar assinatura: ${subError.message}`);
     }
 
-    // 3. Criar Settings padrão
     const { error: settingsError } = await supabaseAdmin
       .from("settings")
       .insert([
@@ -122,7 +115,6 @@ export async function POST(req: Request) {
       throw new Error(`Erro ao criar configurações: ${settingsError.message}`);
     }
 
-    // 4. Criar Unidade
     const { data: unitData, error: unitError } = await supabaseAdmin
       .from("units")
       .insert([
@@ -142,7 +134,6 @@ export async function POST(req: Request) {
       throw new Error(`Erro ao criar unidade: ${unitError?.message}`);
     }
 
-    // 5. Criar Serviços
     const servicesToInsert = services.map((s: any) => ({
       tenant_id: createdTenantId,
       name: s.name,
@@ -161,16 +152,12 @@ export async function POST(req: Request) {
       throw new Error(`Erro ao criar serviços: ${servicesError?.message}`);
     }
 
-    // 6. Criar Barbeiro e sua Conta (se necessário)
-    let barberUserId = createdUserId; // Assume o Admin por padrão
-    
-    // Se for plano básico, forçamos ser a mesma pessoa (1 unidade, 1 barbeiro)
-    // Isso evita criar 2 perfis/auths diferentes.
+    let barberUserId = createdUserId;
+
     const isBasicPlan = planId === "basico";
     const isBarberDifferent = !isBasicPlan && barber.email.toLowerCase() !== account.email.toLowerCase();
 
     if (isBarberDifferent) {
-      // Criar conta para o Barbeiro colaborador
       const tempPassword = Math.random().toString(36).slice(-10) + "B1!";
       const { data: bAuthData, error: bAuthError } = await supabaseAdmin.auth.admin.createUser({
         email: barber.email,
@@ -180,14 +167,11 @@ export async function POST(req: Request) {
       });
 
       if (bAuthError || !bAuthData.user) {
-        // Se o erro for de usuário já existente, tentamos apenas recuperar o ID se for útil, 
-        // mas no onboarding idealmente são novos cadastros.
         throw new Error(`Erro ao criar conta do barbeiro: ${bAuthError?.message}`);
       }
       barberUserId = bAuthData.user.id;
       createdBarberUserId = bAuthData.user.id;
 
-      // Criar perfil de Barbeiro
       const { error: bProfileError } = await supabaseAdmin.from("profiles").upsert({
         id: barberUserId,
         full_name: barber.name,
@@ -230,7 +214,6 @@ export async function POST(req: Request) {
       throw new Error(`Erro ao criar barbeiro: ${barberError?.message}`);
     }
 
-    // 7. Vínculos (Barber -> Unit & Barber -> Services)
     const barberUnits = [{ barber_id: barberData.id, unit_id: unitData.id }];
     const barberServices = createdServices.map(s => ({ 
       barber_id: barberData.id, 
@@ -246,8 +229,6 @@ export async function POST(req: Request) {
       })))
     ]);
 
-    // 8. Criar ou Atualizar Perfil Admin
-    // Usamos upsert com onConflict explícito para garantir que o gatilho do Supabase não cause erro
     const { error: profileError } = await supabaseAdmin
       .from("profiles")
       .upsert(
@@ -268,12 +249,9 @@ export async function POST(req: Request) {
       throw new Error(`Erro ao criar perfil: ${profileError.message}`);
     }
 
-    // 9. Criar Vínculos de Cargo (Multi-Tenant Memberships)
     const memberships = [
       { user_id: createdUserId, tenant_id: createdTenantId, role: "admin" }
     ];
-
-    // Se o barbeiro for uma pessoa diferente, adicionamos o vínculo dele também
     if (isBarberDifferent && barberUserId) {
       memberships.push({
         user_id: barberUserId,
@@ -295,14 +273,11 @@ export async function POST(req: Request) {
   } catch (error: any) {
     console.error("Onboarding Error:", error);
 
-    // Rollback Manual Robusto (Lidando com Chave Estrangeira)
     if (createdTenantId) {
-      // Deletar vínculos primeiro
       await supabaseAdmin.from("barber_units").delete().eq("barber_id", (await supabaseAdmin.from("barbers").select("id").eq("tenant_id", createdTenantId)).data?.[0]?.id);
       await supabaseAdmin.from("barber_services").delete().eq("barber_id", (await supabaseAdmin.from("barbers").select("id").eq("tenant_id", createdTenantId)).data?.[0]?.id);
       await supabaseAdmin.from("service_units").delete().eq("unit_id", (await supabaseAdmin.from("units").select("id").eq("tenant_id", createdTenantId)).data?.[0]?.id);
-      
-      // Deletar entidades
+
       await supabaseAdmin.from("subscriptions").delete().eq("tenant_id", createdTenantId);
       await supabaseAdmin.from("barbers").delete().eq("tenant_id", createdTenantId);
       await supabaseAdmin.from("services").delete().eq("tenant_id", createdTenantId);
@@ -310,7 +285,6 @@ export async function POST(req: Request) {
       await supabaseAdmin.from("settings").delete().eq("tenant_id", createdTenantId);
       await supabaseAdmin.from("tenant_memberships").delete().eq("tenant_id", createdTenantId);
       
-      // Finalmente deletar o Tenant
       await supabaseAdmin.from("tenants").delete().eq("id", createdTenantId);
     }
     if (createdUserId) {

@@ -1,13 +1,10 @@
 import { NextResponse } from "next/server";
-import { ADMIN_USER, createSessionToken } from "@/lib/mock-auth";
-import { USERS_STORE } from "@/lib/mock-store";
 import { supabase, supabaseAdmin, isSupabaseConfigured } from "@/lib/supabase";
 
 export async function POST(request: Request) {
   try {
     const { email, password } = await request.json();
 
-    // 1. Supabase Auth (Mandatory for Production)
     if (!isSupabaseConfigured || !supabase) {
       return NextResponse.json({ error: "Serviço de autenticação indísponível" }, { status: 503 });
     }
@@ -21,7 +18,6 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Credenciais inválidas" }, { status: 401 });
     }
 
-    // 2. Fetch User Profile for Role verification
     const { data: profile } = await supabaseAdmin!
       .from("profiles")
       .select("role, full_name")
@@ -29,11 +25,6 @@ export async function POST(request: Request) {
       .single();
 
     let userRole = profile?.role || "client";
-
-    // Fallback de "God Mode" no login para redirecionamento imediato
-    if (data.user.email === "thyagonevesa.sa@gmail.com") {
-      userRole = "admin";
-    }
 
     const response = NextResponse.json({ 
       success: true, 
@@ -55,8 +46,6 @@ export async function POST(request: Request) {
     });
 
     return response;
-
-    return NextResponse.json({ error: "Credenciais inválidas" }, { status: 401 });
   } catch (error) {
     return NextResponse.json({ error: "Erro interno no servidor" }, { status: 500 });
   }

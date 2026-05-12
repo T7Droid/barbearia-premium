@@ -2,11 +2,6 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 
-function isAdminEmail(email?: string): boolean {
-  if (!email) return false;
-  const adminEmails = (process.env.ADMIN_EMAILS || "thyagosilvestre@gmail.com,thyago_silvestre@hotmail.com").split(",");
-  return adminEmails.includes(email.toLowerCase().trim());
-}
 
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -92,10 +87,10 @@ export async function proxy(request: NextRequest) {
           .single();
 
         let role = "client";
-        if (isAdminEmail(user.email)) {
-          role = "admin";
-        } else if (membership) {
+        if (membership) {
           role = membership.role || "client";
+        } else if (tenant.owner_id === user.id) {
+          role = "admin";
         }
 
         if (isTenantAuthPath) {
