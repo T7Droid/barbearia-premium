@@ -23,7 +23,6 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  // Mapear para camelCase e incluir units para o frontend
   const mapped = (data || []).map((s: any) => ({
     id: s.id,
     name: s.name,
@@ -47,7 +46,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Tenant não identificado" }, { status: 400 });
   }
 
-  // Verificar se o usuário é admin deste tenant (Segurança Crítica)
   const auth = await AuthService.verifySession(request, tenant.id);
   if (!auth.authenticated || auth.user?.role !== "admin") {
     return NextResponse.json({ error: "Não autorizado. Apenas administradores podem criar serviços." }, { status: 403 });
@@ -72,9 +70,7 @@ export async function POST(request: NextRequest) {
 
     if (error) throw error;
 
-    // Associar Unidades (M2M) - Com validação de tenant
     if (Array.isArray(unitIds) && unitIds.length > 0) {
-      // Validar se todas as unidades pertencem ao tenant
       const { data: validUnits } = await supabaseAdmin
         .from("units")
         .select("id")

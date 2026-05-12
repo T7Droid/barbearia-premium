@@ -3,8 +3,6 @@ import { ServiceService } from "@/lib/services/service.service";
 import { AuthService } from "@/lib/services/auth.service";
 import { TenantContext } from "@/lib/services/tenant-context";
 
-console.log(">>> [SECURITY_DEBUG] Carregando a versão ULTRA-ATUALIZADA de services/[id]/route.ts");
-
 async function checkAdmin(request: NextRequest, serviceId?: number) {
   const tenant = await TenantContext.getTenant(request);
   if (!tenant) return false;
@@ -12,9 +10,7 @@ async function checkAdmin(request: NextRequest, serviceId?: number) {
   const result = await AuthService.verifySession(request, tenant.id);
   if (!result.authenticated || result.user?.role !== "admin") return false;
 
-  // Se um serviceId foi fornecido, garantir que pertence a este tenant
   if (serviceId) {
-    // Vamos buscar direto no supabaseAdmin para checar o tenant_id.
     const { data: serviceData } = await (require("@/lib/supabase").supabaseAdmin)
       .from("services")
       .select("tenant_id")
@@ -44,7 +40,6 @@ export async function PUT(
   try {
     const body = await request.json();
     
-    // Validar unitIds se fornecidos
     if (currentTenant && Array.isArray(body.unitIds) && body.unitIds.length > 0) {
       const { data: validUnits } = await (require("@/lib/supabase").supabaseAdmin)
         .from("units")

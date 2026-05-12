@@ -4,9 +4,6 @@ import { config } from "@/lib/config";
 import { encrypt } from "@/lib/crypto";
 import https from "node:https";
 
-/**
- * Faz um POST usando node:https nativo (evita problemas de undici/fetch timeout via ngrok).
- */
 function postOAuthToken(params: Record<string, string>): Promise<any> {
   return new Promise((resolve, reject) => {
     const body = new URLSearchParams(params).toString();
@@ -55,13 +52,6 @@ export async function GET(request: NextRequest) {
   try {
     const mainAccessToken = process.env.MERCADOPAGO_ACCESS_TOKEN || "";
 
-    console.log("[MP OAuth] Exchanging code for tokens...", { 
-      appId: config.mercadopago.appId, 
-      redirectUri: config.mercadopago.redirectUri,
-      codeLength: code.length 
-    });
-
-    // Usar node:https nativo para evitar problemas de ConnectTimeout do undici via ngrok
     const data = await postOAuthToken({
       client_id: config.mercadopago.appId || "",
       client_secret: config.mercadopago.clientSecret || "",
@@ -70,13 +60,9 @@ export async function GET(request: NextRequest) {
       redirect_uri: config.mercadopago.redirectUri || ""
     });
 
-    console.log("[MP OAuth] Token exchange successful!", { user_id: data.user_id });
-
-    // Encriptar tokens sensíveis antes de salvar no banco de dados
     const encryptedAccessToken = encrypt(data.access_token);
     const encryptedRefreshToken = data.refresh_token ? encrypt(data.refresh_token) : null;
 
-    // Salvar no banco de dados para o tenant específico
     const { error: updateError } = await supabaseAdmin!
       .from("tenants")
       .update({
@@ -91,9 +77,6 @@ export async function GET(request: NextRequest) {
 
     if (updateError) throw updateError;
 
-    console.log(`[MP OAuth] Successfully connected tenant ${tenantId} (MP User: ${data.user_id})`);
-
-    // Buscar o slug do tenant para redirecionar de volta corretamente
     const { data: tenant } = await supabaseAdmin!
       .from("tenants")
       .select("slug")
@@ -102,7 +85,6 @@ export async function GET(request: NextRequest) {
 
     const redirectSlug = tenant?.slug || "default";
 
-    // Redirecionar de volta para o localhost (onde o admin tem sessão ativa)
     const baseUrl = process.env.NODE_ENV === 'development' 
       ? 'http://localhost:3000' 
       : request.nextUrl.origin;

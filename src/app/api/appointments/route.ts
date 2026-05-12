@@ -22,11 +22,8 @@ export async function GET(request: NextRequest) {
       .select("id, appointment_date, appointment_time, customer_name, customer_email, customer_phone, status, is_paid, payment_status, payment_method, paid_at, is_reschedule, reschedule_id, user_id, created_at, barber_id, barber_name, tenant_id, unit_id, unit_name, total_price, total_duration, services_json")
       .eq("tenant_id", tenant.id);
 
-    // Regras de acesso por papel:
     if (user?.role === "admin") {
-      // Admin vê tudo do tenant (já filtrado na query base)
     } else if (user?.role === "barber") {
-      // Barbeiro vê apenas os agendamentos atribuídos a ele
       const { data: barber } = await supabaseAdmin!
         .from("barbers")
         .select("id")
@@ -37,11 +34,9 @@ export async function GET(request: NextRequest) {
       if (barber) {
         query = query.eq("barber_id", barber.id);
       } else {
-        // Fallback: Se não encontrar o perfil de barbeiro, mostra apenas os dele como cliente
         query = query.eq("customer_email", user?.email);
       }
     } else {
-      // Cliente vê apenas os seus próprios agendamentos
       query = query.eq("customer_email", user?.email);
     }
 

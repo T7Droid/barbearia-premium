@@ -28,7 +28,6 @@ export async function POST(
       return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
     }
 
-    // Apenas admins podem marcar pagamentos
     if (result.user?.role !== "admin") {
       return NextResponse.json({ error: "Acesso restrito ao administrador" }, { status: 403 });
     }

@@ -36,7 +36,6 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  // Buscar e-mails separadamente para evitar erros de Join
   const userIds = (data || []).map((b: any) => b.user_id).filter(Boolean);
   let profilesMap: Record<string, string> = {};
   
@@ -51,11 +50,9 @@ export async function GET(request: NextRequest) {
     }
   }
 
-  // Verificar sessão para filtrar dados sensíveis
   const auth = await AuthService.verifySession(request, tenant.id);
   const isAdmin = auth.authenticated && auth.user?.role === "admin";
 
-  // Mapear para camelCase e incluir associações
   let mapped = (data || []).map((b: any) => {
     const isSelf = auth.authenticated && auth.user?.id === b.user_id;
     const canSeeSensitive = isAdmin || isSelf;
@@ -67,7 +64,6 @@ export async function GET(request: NextRequest) {
       imageUrl: b.image_url,
       active: b.active,
       userId: b.user_id,
-      // Só expõe e-mail e comissão se for admin ou o próprio dono do perfil
       email: canSeeSensitive ? (b.user_id ? profilesMap[b.user_id] : null) : null,
       commissionPercentage: canSeeSensitive ? (b.commission_percentage !== null && b.commission_percentage !== undefined ? b.commission_percentage : 50) : null,
       weeklyHours: b.weekly_hours,
@@ -76,13 +72,11 @@ export async function GET(request: NextRequest) {
     };
   });
 
-  // Filtrar por unidade se o parâmetro unitId for fornecido
   const unitId = request.nextUrl.searchParams.get("unitId");
   if (unitId) {
     mapped = mapped.filter((b: any) => b.units.some((u: any) => String(u.id) === String(unitId)));
   }
 
-  // Filtro adicional para garantir que o barbeiro tem tudo necessário
   if (bookableOnly) {
     mapped = mapped.filter((b: any) => b.units.length > 0 && b.services.length > 0);
   }
@@ -100,7 +94,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Tenant não identificado" }, { status: 400 });
   }
 
-  // Verificar se o usuário é admin deste tenant
   const auth = await AuthService.verifySession(request, tenant.id);
   if (!auth.authenticated || auth.user?.role !== "admin") {
     return NextResponse.json({ error: "Não autorizado" }, { status: 403 });
@@ -110,7 +103,6 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { name, description, imageUrl, active, unitIds, serviceIds, loginData, commissionPercentage } = body;
 
-    // --- NOVA VALIDAÇÃO DE PLANO E ASSINATURA ---
     const [fullTenant, isSubActive] = await Promise.all([
       TenantService.getTenantById(tenant.id),
       TenantService.isSubscriptionActive(tenant.id)
@@ -137,11 +129,9 @@ export async function POST(request: NextRequest) {
         error: `Limite de barbeiros ativos atingido para o plano ${fullTenant.plans.name}. Por favor, realize o upgrade do seu plano para cadastrar novos profissionais.` 
       }, { status: 403 });
     }
-    // --------------------------------------------
 
     let userId = null;
 
-    // 1. Criar login para o barbeiro se solicitado
     if (loginData?.email && loginData?.password) {
       const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
         email: loginData.email,
@@ -151,7 +141,6 @@ export async function POST(request: NextRequest) {
       });
 
       if (authError) {
-        // Se o erro for que o usuário já existe, tentamos apenas atualizar o perfil depois
         if (authError.message.includes("already registered")) {
            const { data: existingUser } = await supabaseAdmin.from("profiles").select("id").eq("email", loginData.email).single();
            if (existingUser) userId = existingUser.id;
@@ -161,14 +150,12 @@ export async function POST(request: NextRequest) {
       } else {
         userId = authData.user.id;
         
-        // Criar ou atualizar perfil para garantir o tenant e o cargo
         await supabaseAdmin.from("profiles").upsert({
           id: userId,
           full_name: name,
           email: loginData.email
         });
 
-        // Criar vínculo de acesso na nova tabela
         await supabaseAdmin.from("tenant_memberships").upsert({
           user_id: userId,
           tenant_id: tenant.id,
@@ -177,7 +164,6 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // 2. Buscar horários padrão do tenant para aplicar ao novo barbeiro
     const { data: settings } = await supabaseAdmin
       .from("settings")
       .select("weekly_hours")
@@ -196,7 +182,6 @@ export async function POST(request: NextRequest) {
 
     const initialWeeklyHours = settings?.weekly_hours || systemDefaultHours;
 
-    // 3. Criar o barbeiro
     const { data: barber, error } = await supabaseAdmin
       .from("barbers")
       .insert({
@@ -214,7 +199,6 @@ export async function POST(request: NextRequest) {
 
     if (error) throw error;
 
-    // 3. Associar Unidades (M2M) - Com validação de tenant
     if (Array.isArray(unitIds) && unitIds.length > 0) {
       const { data: validUnits } = await supabaseAdmin
         .from("units")
@@ -234,7 +218,6 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // 4. Associar Serviços (M2M) - Com validação de tenant
     if (Array.isArray(serviceIds) && serviceIds.length > 0) {
       const { data: validServices } = await supabaseAdmin
         .from("services")

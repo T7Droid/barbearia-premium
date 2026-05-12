@@ -13,7 +13,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Tenant não identificado" }, { status: 400 });
   }
 
-  // Verificar se o usuário é um administrador
   const auth = await AuthService.verifySession(request, tenant.id);
   if (!auth.authenticated || auth.user?.role !== "admin") {
     return NextResponse.json({ error: "Apenas administradores podem ativar seu próprio perfil profissional." }, { status: 403 });
@@ -22,7 +21,6 @@ export async function POST(request: NextRequest) {
   try {
     const { description, imageUrl } = await request.json();
 
-    // 1. Verificar se já existe um perfil de barbeiro para este usuário
     const { data: existing } = await supabaseAdmin!
       .from("barbers")
       .select("id")
@@ -34,7 +32,6 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Você já possui um perfil profissional ativo." }, { status: 400 });
     }
 
-    // 2. Buscar horários padrão do tenant
     const { data: settings } = await supabaseAdmin!
       .from("settings")
       .select("weekly_hours")
@@ -53,7 +50,6 @@ export async function POST(request: NextRequest) {
 
     const initialWeeklyHours = settings?.weekly_hours || systemDefaultHours;
 
-    // 3. Criar o registro de barbeiro
     const { data: barber, error: barberError } = await supabaseAdmin!
       .from("barbers")
       .insert({
@@ -70,7 +66,6 @@ export async function POST(request: NextRequest) {
 
     if (barberError) throw barberError;
 
-    // 4. Associar à primeira unidade encontrada do tenant
     const { data: units } = await supabaseAdmin!
       .from("units")
       .select("id")
@@ -84,7 +79,6 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // 5. Associar a todos os serviços ativos (opcional, mas bom para o admin começar)
     const { data: services } = await supabaseAdmin!
       .from("services")
       .select("id")
@@ -98,9 +92,6 @@ export async function POST(request: NextRequest) {
       }));
       await supabaseAdmin!.from("barber_services").insert(svcAssociations);
     }
-
-    // 6. Atualizar o profile para garantir que a role é consistente (pode já ser admin)
-    // Se for admin, mantemos admin pois o admin tem superpoderes.
 
     return NextResponse.json({ success: true, barber });
   } catch (error: any) {

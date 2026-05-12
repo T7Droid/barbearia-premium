@@ -25,7 +25,6 @@ export const requestNotificationPermission = async () => {
       const registrations = await navigator.serviceWorker.getRegistrations();
       for (const reg of registrations) {
         if (reg.active?.scriptURL && !reg.active.scriptURL.includes('/sw.js')) {
-          console.log('🗑️ Removendo Service Worker duplicado:', reg.active.scriptURL);
           await reg.unregister();
         }
       }
@@ -39,8 +38,6 @@ export const requestNotificationPermission = async () => {
         vapidKey: process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY,
         serviceWorkerRegistration: registration
       });
-
-      console.log("🔥 MEU FCM TOKEN ATUAL:", token);
       return token;
     }
     return null;

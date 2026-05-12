@@ -24,7 +24,6 @@ export async function PUT(
 
   const id = parseInt(idStr);
 
-  // Buscar o barbeiro para verificar o proprietário
   const { data: barberRecord } = await supabaseAdmin!
     .from("barbers")
     .select("user_id")
@@ -42,7 +41,6 @@ export async function PUT(
     const body = await request.json();
     const { name, description, imageUrl, active, unitIds, serviceIds, loginData, weeklyHours, commissionPercentage } = body;
 
-    // Proteção: Barbeiro (não admin) só pode editar descrição e foto
     if (!isAdmin && isOwner) {
       const updateFields: any = {
         description,
@@ -62,10 +60,8 @@ export async function PUT(
       return NextResponse.json(updatedBarber);
     }
 
-    // Se for Admin, segue com o fluxo completo original
     let userId = undefined;
 
-    // 1. Criar login se não tiver e for solicitado
     if (loginData?.email && loginData?.password) {
       const { data: authData, error: authError } = await supabaseAdmin!.auth.admin.createUser({
         email: loginData.email,
@@ -106,7 +102,6 @@ export async function PUT(
 
     if (error) throw error;
 
-    // 2. Sincronizar Unidades - Com validação de tenant
     if (Array.isArray(unitIds)) {
       await supabaseAdmin!.from("barber_units").delete().eq("barber_id", id);
       if (unitIds.length > 0) {
@@ -126,7 +121,6 @@ export async function PUT(
       }
     }
 
-    // 3. Sincronizar Serviços - Com validação de tenant
     if (Array.isArray(serviceIds)) {
       await supabaseAdmin!.from("barber_services").delete().eq("barber_id", id);
       if (serviceIds.length > 0) {
@@ -170,7 +164,6 @@ export async function DELETE(
   try {
     const id = parseInt(idStr);
     
-    // Garantir que o barbeiro pertence ao tenant antes de deletar
     const { error } = await supabaseAdmin!
       .from("barbers")
       .delete()

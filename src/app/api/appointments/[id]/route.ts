@@ -53,7 +53,6 @@ export async function PATCH(
     const appointment = await AppointmentService.getById(id);
     if (!appointment) return NextResponse.json({ error: "Agendamento não encontrado" }, { status: 404 });
 
-    // Verificar se o usuário é o dono do agendamento ou se é um admin
     if (result.user.role !== "admin" && appointment.userId !== result.user.id) {
       return NextResponse.json({ error: "Não autorizado" }, { status: 403 });
     }

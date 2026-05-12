@@ -40,7 +40,6 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // Mapear dados garantindo que colunas inexistentes tenham valores padrão
     const customers = profilesData.map(p => {
       return {
         id: p.id,
@@ -80,11 +79,9 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ error: "Usuário não identificado" }, { status: 400 });
     }
 
-    // Permite atualizar apenas campos específicos para segurança
     const allowedUpdates: any = {};
     if (updates.canPayAtShop !== undefined) allowedUpdates.can_pay_at_shop = updates.canPayAtShop;
 
-    // Verificar se o usuário pertence a este tenant antes de permitir a alteração
     const { data: member } = await supabaseAdmin!
       .from("tenant_memberships")
       .select("id")
