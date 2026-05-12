@@ -14,6 +14,8 @@ export class AuthService {
     console.log(`[AuthService] Determining role for ${user.email} at tenant ${tenantId}.`);
 
     // 1. Verificamos se há um cargo específico para este tenant na nova tabela
+    let membership: any = null;
+
     if (tenantId) {
       // Buscar o tenant para checar o owner_id
       const { data: tenantData } = await supabaseAdmin!
@@ -22,13 +24,15 @@ export class AuthService {
         .eq("id", tenantId)
         .single();
 
-      const { data: membership } = await supabaseAdmin!
+      const { data: mData } = await supabaseAdmin!
         .from("tenant_memberships")
         .select("role, points, cancel_count, reschedule_count, can_pay_at_shop")
         .eq("user_id", user.id)
         .eq("tenant_id", tenantId)
         .maybeSingle();
       
+      membership = mData;
+
       if (membership) {
         userRole = membership.role;
       } else if (tenantData?.owner_id === user.id || isAdminEmail(user.email)) {
