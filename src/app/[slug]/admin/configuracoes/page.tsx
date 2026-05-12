@@ -223,7 +223,7 @@ export default function SettingsPage() {
   };
 
   const handleNativeShare = async () => {
-    const text = `Agende seu horário na barbearia ${tenant.name} pelo nosso portal online! \n\nLink: ${bookingUrl}`;
+    const text = `Agende seu horário na barbearia ${tenant.name} pelo nosso portal online!`;
     const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=1000x1000&data=${encodeURIComponent(bookingUrl)}&bgcolor=ffffff&color=000000&margin=20`;
 
     if (navigator.share) {
