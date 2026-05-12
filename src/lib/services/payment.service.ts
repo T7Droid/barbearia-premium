@@ -198,7 +198,7 @@ export class PaymentService {
       const body = {
         transaction_amount: amount,
         payment_method_id: "pix",
-        description: paymentData.description || "Agendamento KingBarber",
+        description: paymentData.description || "Agendamento KingBarbers",
         external_reference: sessionId,
         payer: {
           email: paymentData.payer?.email,
