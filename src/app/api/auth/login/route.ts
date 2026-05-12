@@ -24,7 +24,7 @@ export async function POST(request: Request) {
     // 2. Fetch User Profile for Role verification
     const { data: profile } = await supabaseAdmin!
       .from("profiles")
-      .select("role, full_name, points")
+      .select("role, full_name")
       .eq("id", data.user.id)
       .single();
 
@@ -41,7 +41,7 @@ export async function POST(request: Request) {
         name: profile?.full_name || data.user.user_metadata?.full_name || data.user.email, 
         email: data.user.email, 
         role: userRole,
-        points: profile?.points || 0
+        points: 0
       },
       redirectTo: userRole === "admin" ? "/admin" : "/meu-perfil"
     });

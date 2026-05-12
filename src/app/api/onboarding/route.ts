@@ -308,7 +308,7 @@ export async function POST(req: Request) {
       await supabaseAdmin.from("services").delete().eq("tenant_id", createdTenantId);
       await supabaseAdmin.from("units").delete().eq("tenant_id", createdTenantId);
       await supabaseAdmin.from("settings").delete().eq("tenant_id", createdTenantId);
-      await supabaseAdmin.from("profiles").delete().eq("tenant_id", createdTenantId);
+      await supabaseAdmin.from("tenant_memberships").delete().eq("tenant_id", createdTenantId);
       
       // Finalmente deletar o Tenant
       await supabaseAdmin.from("tenants").delete().eq("id", createdTenantId);

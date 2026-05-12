@@ -17,7 +17,7 @@ export async function GET(request: NextRequest) {
 
     const { data: memberships, error: memberError } = await supabaseAdmin!
       .from("tenant_memberships")
-      .select("user_id, role")
+      .select("user_id, role, points, cancel_count, reschedule_count, can_pay_at_shop")
       .eq("tenant_id", tenant.id)
       .eq("role", "client");
 
@@ -41,16 +41,17 @@ export async function GET(request: NextRequest) {
     }
 
     const customers = profilesData.map(p => {
+      const m = (memberships || []).find(mem => mem.user_id === p.id);
       return {
         id: p.id,
         full_name: p.full_name,
         email: p.email || "N/D",
         phone: p.phone,
-        points: p.points || 0,
+        points: m?.points || 0,
         created_at: p.created_at,
-        reschedule_count: p.reschedule_count || 0,
-        cancel_count: p.cancel_count || 0,
-        can_pay_at_shop: p.can_pay_at_shop ?? true
+        reschedule_count: m?.reschedule_count || 0,
+        cancel_count: m?.cancel_count || 0,
+        can_pay_at_shop: m?.can_pay_at_shop ?? true
       };
     });
 
@@ -94,9 +95,10 @@ export async function PATCH(request: NextRequest) {
     }
 
     const { error } = await supabaseAdmin!
-      .from("profiles")
+      .from("tenant_memberships")
       .update(allowedUpdates)
-      .eq("id", userId);
+      .eq("user_id", userId)
+      .eq("tenant_id", tenant.id);
 
     if (error) {
       if (error.code === "42703") {

@@ -57,7 +57,6 @@ export async function POST(request: NextRequest) {
           full_name: name,
           email: email,
           phone: phone || "",
-          points: initialPoints,
           notifications_enabled: false,
           push_notifications_enabled: false,
           accepted_terms: acceptedTerms === true,
@@ -72,7 +71,8 @@ export async function POST(request: NextRequest) {
         const { error: membershipError } = await supabaseAdmin!.from("tenant_memberships").upsert({
           user_id: data.user.id,
           tenant_id: tenant.id,
-          role: "client"
+          role: "client",
+          points: initialPoints
         }, { onConflict: 'user_id,tenant_id' });
 
         if (membershipError) {

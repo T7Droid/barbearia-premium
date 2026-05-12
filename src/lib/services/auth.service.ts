@@ -24,7 +24,7 @@ export class AuthService {
 
       const { data: membership } = await supabaseAdmin!
         .from("tenant_memberships")
-        .select("role")
+        .select("role, points, cancel_count, reschedule_count, can_pay_at_shop")
         .eq("user_id", user.id)
         .eq("tenant_id", tenantId)
         .maybeSingle();
@@ -51,14 +51,14 @@ export class AuthService {
       email: user.email,
       name: profile?.full_name || user.user_metadata?.full_name || user.email,
       role: userRole,
-      points: profile?.points || 0,
+      points: membership?.points || 0,
       phone: profile?.phone || "",
       tenantId: tenantId,
       notificationsEnabled: profile?.notifications_enabled ?? false,
       pushNotificationsEnabled: profile?.push_notifications_enabled ?? false,
-      rescheduleCount: profile?.reschedule_count || 0,
-      cancelCount: profile?.cancel_count || 0,
-      canPayAtShop: profile?.can_pay_at_shop ?? true,
+      rescheduleCount: membership?.reschedule_count || 0,
+      cancelCount: membership?.cancel_count || 0,
+      canPayAtShop: membership?.can_pay_at_shop ?? true,
       fcmToken: profile?.fcm_token || ""
     };
   }

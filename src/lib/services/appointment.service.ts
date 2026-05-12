@@ -321,25 +321,25 @@ export class AppointmentService {
         if (settings.is_points_enabled) {
           const pointsToAdd = settings.points_per_appointment || 0;
 
-          // 2. Usar UPSERT para garantir que o perfil exista e atualizar os pontos NO TENANT correte
-          const { data: profile } = await supabaseAdmin
-            .from("profiles")
-            .select("points, full_name")
-            .eq("id", session.userId)
+          // 2. Usar UPSERT para garantir que o vínculo exista e atualizar os pontos NO TENANT correto
+          const { data: membership } = await supabaseAdmin
+            .from("tenant_memberships")
+            .select("points")
+            .eq("user_id", session.userId)
             .eq("tenant_id", sessionDataRaw.tenant_id)
-            .single();
+            .maybeSingle();
 
-          const currentPoints = profile?.points || 0;
+          const currentPoints = membership?.points || 0;
           const newPoints = currentPoints + pointsToAdd;
 
           const { error: upsertError } = await supabaseAdmin
-            .from("profiles")
+            .from("tenant_memberships")
             .upsert({
-              id: session.userId,
+              user_id: session.userId,
               tenant_id: sessionDataRaw.tenant_id,
               points: newPoints,
-              full_name: profile?.full_name || session.customerName
-            });
+              role: membership?.role || "client"
+            }, { onConflict: 'user_id,tenant_id' });
 
           if (upsertError) {
             console.error(`[LOYALTY] Erro ao atualizar pontos para o usuário ${session.userId} no tenant ${sessionDataRaw.tenant_id}:`, upsertError);
@@ -350,20 +350,20 @@ export class AppointmentService {
       // --- RESCHEDULE COUNTER ---
       if (session.rescheduleId) {
         try {
-          // Buscar perfil para pegar valor atual
-          const { data: profile } = await supabaseAdmin
-            .from("profiles")
+          // Buscar vínculo para pegar valor atual
+          const { data: membership } = await supabaseAdmin
+            .from("tenant_memberships")
             .select("reschedule_count")
-            .eq("id", session.userId)
+            .eq("user_id", session.userId)
             .eq("tenant_id", sessionDataRaw.tenant_id)
-            .single();
+            .maybeSingle();
 
-          const currentCount = profile?.reschedule_count || 0;
+          const currentCount = membership?.reschedule_count || 0;
 
           await supabaseAdmin
-            .from("profiles")
+            .from("tenant_memberships")
             .update({ reschedule_count: currentCount + 1 })
-            .eq("id", session.userId)
+            .eq("user_id", session.userId)
             .eq("tenant_id", sessionDataRaw.tenant_id);
             
           console.log(`[REAGENDAMENTO] Contador incrementado para usuário ${session.userId}`);
@@ -381,7 +381,6 @@ export class AppointmentService {
           .from("profiles")
           .select("fcm_token, push_notifications_enabled")
           .eq("id", session.userId)
-          .eq("tenant_id", sessionDataRaw.tenant_id)
           .single();
 
         if (profile?.fcm_token && profile?.push_notifications_enabled) {
@@ -432,19 +431,19 @@ export class AppointmentService {
       // 3. Incrementar contador de cancelamentos no perfil
       if (appData?.user_id) {
         try {
-          const { data: profile } = await supabaseAdmin
-            .from("profiles")
+          const { data: membership } = await supabaseAdmin
+            .from("tenant_memberships")
             .select("cancel_count")
-            .eq("id", appData.user_id)
+            .eq("user_id", appData.user_id)
             .eq("tenant_id", tenantId)
-            .single();
+            .maybeSingle();
 
-          const currentCount = profile?.cancel_count || 0;
+          const currentCount = membership?.cancel_count || 0;
 
           await supabaseAdmin
-            .from("profiles")
+            .from("tenant_memberships")
             .update({ cancel_count: currentCount + 1 })
-            .eq("id", appData.user_id)
+            .eq("user_id", appData.user_id)
             .eq("tenant_id", tenantId);
             
           console.log(`[CANCELAMENTO] Contador incrementado para usuário ${appData.user_id}`);
