@@ -130,6 +130,24 @@ export class PaymentService {
     }
   }
 
+  /**
+   * Obtém a URL de notificação para webhooks.
+   */
+  private static getNotificationUrl(): string {
+    // Tenta obter de variáveis de ambiente comuns ou deriva do Redirect URI do MP
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 
+                    process.env.APP_URL || 
+                    (process.env.MP_REDIRECT_URI ? new URL(process.env.MP_REDIRECT_URI).origin : "");
+    
+    if (!baseUrl) {
+        return "";
+    }
+    
+    // Garantir que a URL termina sem barra para não duplicar
+    const normalizedBase = baseUrl.endsWith("/") ? baseUrl.slice(0, -1) : baseUrl;
+    return `${normalizedBase}/api/webhooks/mercadopago`;
+  }
+
   static async processCardPayment(paymentData: any, sessionId: string, amountInCents: number, tenantId: string) {
     return this.executeWithRetry(tenantId, async (paymentClient) => {
       const amount = amountInCents / 100;
@@ -141,6 +159,8 @@ export class PaymentService {
         payment_method_id: paymentData.payment_method_id,
         external_reference: sessionId,
         payer: { ...paymentData.payer },
+        notification_url: this.getNotificationUrl(),
+        statement_descriptor: "KINGBARBER",
       };
 
       if (paymentData.issuer_id && paymentData.issuer_id !== "") {
@@ -181,6 +201,7 @@ export class PaymentService {
             number: paymentData.payer?.identification?.number?.replace(/\D/g, ""),
           },
         },
+        notification_url: this.getNotificationUrl(),
       };
 
       const result = await paymentClient.create({ 
