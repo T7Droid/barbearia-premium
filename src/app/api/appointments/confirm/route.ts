@@ -36,7 +36,9 @@ export async function POST(request: NextRequest) {
 
     // 3. Processar pagamento com o valor real do banco
     const tenantId = sessionRecord.tenant_id;
-    if (mp_data && paymentMethodId === "mercado_pago") {
+    const isCardPayment = paymentMethodId === "mercado_pago" || paymentMethodId === "card";
+
+    if (mp_data && isCardPayment) {
       paymentResult = await PaymentService.processCardPayment(mp_data, sessionId, amountInCents, tenantId, items);
     } else if (mp_data && paymentMethodId === "pix") {
       // Para o Pix, consultamos o status REAL no Mercado Pago usando o ID

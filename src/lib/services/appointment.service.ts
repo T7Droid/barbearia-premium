@@ -261,7 +261,9 @@ export class AppointmentService {
       await supabaseAdmin!.from("appointments").delete().eq("id", session.rescheduleId);
     }
 
-    const isOnlinePayment = paymentData.paymentMethodId === "mercado_pago" || paymentData.paymentMethodId === "pix";
+    const isOnlinePayment = paymentData.paymentMethodId === "mercado_pago" || 
+                            paymentData.paymentMethodId === "pix" || 
+                            paymentData.paymentMethodId === "card";
     const hasSuccessfulResult = !!(paymentData.paymentResult && paymentData.paymentResult.status === "approved" && (paymentData.paymentResult.id || paymentData.paymentResult.payment_id));
 
     // Forçar isPaid como false se for pagamento no local, independente de qualquer outro dado
