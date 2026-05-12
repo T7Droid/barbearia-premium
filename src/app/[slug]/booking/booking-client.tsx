@@ -667,6 +667,7 @@ function BookingContent() {
         payer: { email: customerInfo.email }
       } : (paymentMethod === "card" && !isPrePaid ? {
         token: mpPaymentToken,
+        device_id: mpPaymentData?.deviceId,
         payment_method_id: mpPaymentData?.payment_method_id || "master",
         installments: mpPaymentData?.installments || 1,
         transaction_amount: totalAmount,

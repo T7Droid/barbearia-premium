@@ -24,10 +24,20 @@ export async function POST(request: NextRequest) {
     const sessionData = sessionRecord.data;
     const amountInCents = sessionData.amount;
 
-    // 2. Processar pagamento com o valor real do banco
+    // 2. Mapear itens para o Mercado Pago (Melhoria de qualidade de integração)
+    const items = (sessionData.servicesJson || []).map((s: any) => ({
+      id: String(s.id),
+      title: s.name,
+      description: s.description || s.name,
+      category_id: "services",
+      quantity: 1,
+      unit_price: Number(s.price) / 100
+    }));
+
+    // 3. Processar pagamento com o valor real do banco
     const tenantId = sessionRecord.tenant_id;
     if (mp_data && paymentMethodId === "mercado_pago") {
-      paymentResult = await PaymentService.processCardPayment(mp_data, sessionId, amountInCents, tenantId);
+      paymentResult = await PaymentService.processCardPayment(mp_data, sessionId, amountInCents, tenantId, items);
     } else if (mp_data && paymentMethodId === "pix") {
       // Para o Pix, consultamos o status REAL no Mercado Pago usando o ID
       if (mp_data.id) {

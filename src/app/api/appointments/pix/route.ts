@@ -25,12 +25,23 @@ export async function POST(request: NextRequest) {
     const sessionData = sessionRecord.data;
     const amountInCents = sessionData.amount;
 
-    // 2. Gerar o Pix
+    // 2. Mapear itens para o Mercado Pago
+    const items = (sessionData.servicesJson || []).map((s: any) => ({
+      id: String(s.id),
+      title: s.name,
+      description: s.description || s.name,
+      category_id: "services",
+      quantity: 1,
+      unit_price: Number(s.price) / 100
+    }));
+
+    // 3. Gerar o Pix
     const pixResult = await PaymentService.processPixPayment(
       { payer, description: sessionData.serviceName },
       sessionId,
       amountInCents,
-      sessionRecord.tenant_id
+      sessionRecord.tenant_id,
+      items
     );
 
     return NextResponse.json(pixResult);

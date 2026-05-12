@@ -148,7 +148,7 @@ export class PaymentService {
     return `${normalizedBase}/api/webhooks/mercadopago`;
   }
 
-  static async processCardPayment(paymentData: any, sessionId: string, amountInCents: number, tenantId: string) {
+  static async processCardPayment(paymentData: any, sessionId: string, amountInCents: number, tenantId: string, items: any[] = []) {
     return this.executeWithRetry(tenantId, async (paymentClient) => {
       const amount = amountInCents / 100;
       const body: any = {
@@ -161,6 +161,14 @@ export class PaymentService {
         payer: { ...paymentData.payer },
         notification_url: this.getNotificationUrl(),
         statement_descriptor: "KINGBARBER",
+        device_id: paymentData.device_id,
+        additional_info: {
+          items: items,
+          payer: {
+            first_name: paymentData.payer?.first_name || paymentData.payer?.name?.split(" ")[0],
+            last_name: paymentData.payer?.last_name || paymentData.payer?.name?.split(" ").slice(1).join(" "),
+          }
+        }
       };
 
       if (paymentData.issuer_id && paymentData.issuer_id !== "") {
@@ -180,7 +188,7 @@ export class PaymentService {
     });
   }
 
-  static async processPixPayment(paymentData: any, sessionId: string, amountInCents: number, tenantId: string) {
+  static async processPixPayment(paymentData: any, sessionId: string, amountInCents: number, tenantId: string, items: any[] = []) {
     return this.executeWithRetry(tenantId, async (paymentClient) => {
       const amount = amountInCents / 100;
       const nameParts = (paymentData.payer?.name || "Cliente").split(" ");
@@ -202,6 +210,13 @@ export class PaymentService {
           },
         },
         notification_url: this.getNotificationUrl(),
+        additional_info: {
+          items: items,
+          payer: {
+            first_name: firstName,
+            last_name: lastName,
+          }
+        }
       };
 
       const result = await paymentClient.create({ 
