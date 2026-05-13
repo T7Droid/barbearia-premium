@@ -34,8 +34,8 @@ export async function GET() {
 
           const options = {
             body: body,
-            icon: '/icons/icon-192x192.png',
-            badge: '/icons/icon-192x192.png',
+            icon: '/icons/icone_barbearia.png',
+            badge: '/icons/icone_barbearia.png',
             image: image,
             vibrate: [100, 50, 100],
             data: data.data || data,
