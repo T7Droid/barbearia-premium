@@ -60,7 +60,7 @@ export default function PrivacidadePage() {
 
           <section>
             <h2 className="text-2xl font-serif font-semibold text-foreground mb-4 border-b border-border/50 pb-2">6. Seus Direitos (LGPD)</h2>
-            <p>Como titular dos dados, você possui direitos que podem ser exercidos a qualquer momento:</p>
+            <p className="mb-4">Como titular dos dados, você possui direitos que podem ser exercidos a qualquer momento:</p>
             <ul className="grid grid-cols-1 md:grid-cols-2 gap-2 mt-4 text-sm font-medium">
               <li className="flex items-center gap-2">✓ Confirmação da existência de tratamento</li>
               <li className="flex items-center gap-2">✓ Acesso aos dados</li>
@@ -69,6 +69,11 @@ export default function PrivacidadePage() {
               <li className="flex items-center gap-2">✓ Eliminação de dados pessoais</li>
               <li className="flex items-center gap-2">✓ Revogação do consentimento</li>
             </ul>
+            <div className="mt-6 p-4 bg-muted/30 rounded-lg border border-border/50 text-sm">
+              <p>
+                <strong>Exclusão e Retenção:</strong> Os usuários podem solicitar a exclusão de seus dados pessoais a qualquer momento. No entanto, determinadas informações poderão ser mantidas pelo período necessário para cumprimento de obrigações legais, regulatórias, fiscais, contábeis, prevenção à fraude e exercício regular de direitos em processos judiciais, administrativos ou arbitrais, nos termos da legislação aplicável. Após o decurso dos prazos legais de guarda, os dados poderão ser anonimizados para fins estatísticos.
+              </p>
+            </div>
           </section>
 
           <section className="border-t border-border/50 pt-8 mt-12">

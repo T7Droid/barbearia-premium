@@ -56,9 +56,14 @@ export default function TermosPage() {
 
           <section>
             <h2 className="text-2xl font-serif font-semibold text-foreground mb-4 border-b border-border/50 pb-2">5. Privacidade e Dados</h2>
-            <p>
+            <p className="mb-4">
               Ao realizar um agendamento, você autoriza o compartilhamento de seus dados de contato (Nome, E-mail e Telefone) com o estabelecimento e/ou profissional escolhido, para fins exclusivos de coordenação do serviço. Seus dados financeiros são processados diretamente pelo Mercado Pago, sob seus padrões de segurança.
             </p>
+            <div className="text-sm bg-muted/20 p-4 rounded-lg border border-border/50">
+              <p>
+                <strong>Exclusão de Dados:</strong> Os usuários podem solicitar a exclusão de seus dados pessoais a qualquer momento através do e-mail de suporte. No entanto, determinadas informações poderão ser mantidas para cumprimento de obrigações legais, fiscais e regulatórias, conforme detalhado em nossa <a href="/privacidade" className="text-primary hover:underline">Política de Privacidade</a>.
+              </p>
+            </div>
           </section>
 
           <section className="bg-destructive/10 p-6 rounded-xl border border-destructive/20 mt-8">
