@@ -37,6 +37,10 @@ export class NotificationService {
       // Usamos apenas 'data' para evitar que o navegador mostre uma notificação automática
       // e o Service Worker mostre outra (duplicidade). No PWA, o SW cuida de tudo.
       const message = {
+        notification: {
+          title,
+          body,
+        },
         data: {
           ...data,
           title,

@@ -18,15 +18,8 @@ export async function GET() {
     const messaging = firebase.messaging();
 
     self.addEventListener('push', (event) => {
-      
       event.waitUntil(
-        clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windowClients) => {
-          const isForeground = windowClients.some(client => client.focused);
-          
-          if (isForeground) {
-            return;
-          }
-
+        Promise.resolve().then(() => {
           let data = {};
           try {
             data = event.data ? event.data.json() : {};
