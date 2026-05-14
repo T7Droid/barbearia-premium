@@ -24,7 +24,7 @@ export async function GET(
 
     return NextResponse.json(appointment);
   } catch (error) {
-    console.error("GET /api/appointments/[id] Error:", error);
+    console.error("GET /api/appointments/[id] Error");
     return NextResponse.json({ error: "Erro interno ao buscar agendamento" }, { status: 500 });
   }
 }
@@ -65,7 +65,7 @@ export async function PATCH(
       return NextResponse.json({ error: "Falha ao cancelar agendamento" }, { status: 500 });
     }
   } catch (error) {
-    console.error("PATCH /api/appointments/[id] Error:", error);
+    console.error("PATCH /api/appointments/[id] Error");
     return NextResponse.json({ error: "Erro interno ao processar cancelamento" }, { status: 500 });
   }
 }

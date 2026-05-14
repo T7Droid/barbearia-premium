@@ -51,7 +51,6 @@ export async function POST(request: NextRequest) {
         const settings = settingsData || { is_points_enabled: true, initial_points: 20 };
         const initialPoints = (settings.is_points_enabled) ? (settings.initial_points || 0) : 0;
 
-        console.log(`[AUTH REGISTER] Atribuindo ${initialPoints} pontos iniciais para usuário ${data.user.id} no tenant ${tenant.id}`);
         
         const { error: profileError } = await supabaseAdmin!.from("profiles").update({
           full_name: name,

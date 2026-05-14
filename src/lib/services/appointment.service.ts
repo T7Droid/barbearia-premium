@@ -269,7 +269,6 @@ export class AppointmentService {
     // Forçar isPaid como false se for pagamento no local, independente de qualquer outro dado
     const isPaid = (paymentData.paymentMethodId === "offline_local") ? false : !!(session.isPaid || (isOnlinePayment && hasSuccessfulResult));
     
-    console.log(`[SERVER DEBUG] Confirmando agendamento: Método=${paymentData.paymentMethodId}, Pago=${isPaid}`);
 
     const now = new Date().toISOString();
     const appointmentData = this.mapToSupabase({
@@ -302,7 +301,6 @@ export class AppointmentService {
       .select()
       .single();
 
-    console.log("[SERVER DEBUG] Agendamento inserido no Supabase:", appointment);
 
     if (appError) throw appError;
 
@@ -366,7 +364,6 @@ export class AppointmentService {
             .eq("user_id", session.userId)
             .eq("tenant_id", sessionDataRaw.tenant_id);
             
-          console.log(`[REAGENDAMENTO] Contador incrementado para usuário ${session.userId}`);
         } catch (e) {
           console.error("[REAGENDAMENTO] Erro ao incrementar contador:", e);
         }
@@ -446,7 +443,6 @@ export class AppointmentService {
             .eq("user_id", appData.user_id)
             .eq("tenant_id", tenantId);
             
-          console.log(`[CANCELAMENTO] Contador incrementado para usuário ${appData.user_id}`);
         } catch (e) {
           console.error("[CANCELAMENTO] Erro ao incrementar contador:", e);
         }

@@ -8,7 +8,6 @@ import { payment as globalPayment, isMercadoPagoConfigured as isGlobalMPConfigur
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    console.log("Mercado Pago Webhook Received:", JSON.stringify(body));
 
     // Identificar o ID do pagamento
     const paymentId = body.data?.id || body.id || (body.resource ? body.resource.split("/").pop() : null);
@@ -19,7 +18,6 @@ export async function POST(request: NextRequest) {
     const isPaymentNotification = type === "payment" || (action && action.startsWith("payment."));
 
     if (isPaymentNotification && paymentId) {
-      console.log(`Processing payment notification: ${paymentId}`);
 
       let paymentInfo: any = null;
       let tenantId: string | null = null;
@@ -28,27 +26,22 @@ export async function POST(request: NextRequest) {
       const mpUserId = body.user_id ? String(body.user_id) : null;
       
       if (mpUserId) {
-        console.log(`Searching for tenant with MP User ID: ${mpUserId}`);
         const tenant = await TenantService.getTenantByMPUserId(mpUserId);
         if (tenant) {
-          console.log(`Found tenant ${tenant.slug} (${tenant.id}) for MP User ${mpUserId}`);
           tenantId = tenant.id;
           
           try {
             paymentInfo = await PaymentService.getPaymentStatus(paymentId, tenant.id);
-            console.log(`Payment info fetched using tenant credentials: status=${paymentInfo.status}`);
           } catch (error) {
             console.error(`Error fetching payment with tenant credentials:`, error);
           }
         } else {
-          console.log(`No tenant found for MP User ID: ${mpUserId}`);
         }
       }
 
       // 2. Fallback para o cliente global se não conseguimos via tenant
       if (!paymentInfo && isGlobalMPConfigured && globalPayment) {
         try {
-          console.log(`Attempting fallback to global credentials for payment ${paymentId}`);
           const result = await globalPayment.get({ id: paymentId });
           paymentInfo = {
             id: result.id,
@@ -56,7 +49,6 @@ export async function POST(request: NextRequest) {
             detail: result.status_detail,
             external_reference: result.external_reference
           };
-          console.log(`Payment info fetched using global credentials: status=${paymentInfo.status}`);
         } catch (error) {
           console.error(`Error fetching payment with global credentials:`, error);
         }
@@ -65,7 +57,6 @@ export async function POST(request: NextRequest) {
       // 3. Se temos as informações do pagamento, processar a confirmação
       if (paymentInfo && paymentInfo.status === "approved" && paymentInfo.external_reference) {
         const sessionId = paymentInfo.external_reference;
-        console.log(`Confirmed payment found! Session ID: ${sessionId}`);
 
         try {
           const appointment = await AppointmentService.confirm(sessionId, {
@@ -81,24 +72,20 @@ export async function POST(request: NextRequest) {
           if (appointment.customerEmail) {
             try {
               await EmailService.sendEmailConfirmacao(appointment.customerEmail, appointment.customerName);
-              console.log(`Confirmation email sent to ${appointment.customerEmail}`);
             } catch (emailError) {
               console.error("Error sending confirmation email:", emailError);
             }
           }
 
-          console.log(`Webhook: Appointment confirmed successfully for payment ${paymentId}`);
         } catch (confirmError: any) {
           // Se o agendamento já foi confirmado ou houve conflito, apenas logamos
           console.warn(`Webhook: Problem confirming appointment for session ${sessionId}:`, confirmError.message);
         }
       } else if (paymentInfo) {
-        console.log(`Payment ${paymentId} status is ${paymentInfo.status} (not approved yet or missing external_reference)`);
       } else {
         console.warn(`Could not retrieve payment info for ID ${paymentId}`);
       }
     } else {
-      console.log(`Ignored webhook: type=${type}, action=${action}, paymentId=${paymentId}`);
     }
 
     return NextResponse.json({ received: true });

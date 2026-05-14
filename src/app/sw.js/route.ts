@@ -34,8 +34,8 @@ export async function GET() {
 
           const options = {
             body: body,
-            icon: '/icons/icone_barbearia.png',
-            badge: '/icons/icone_barbearia.png',
+            icon: '/icons/notification_icon.png',
+            badge: '/icons/notification_icon.png',
             image: image,
             vibrate: [100, 50, 100],
             data: data.data || data,
@@ -49,7 +49,6 @@ export async function GET() {
     });
 
     messaging.onBackgroundMessage((payload) => {
-      console.log('[SW/Firebase] onBackgroundMessage disparado (apenas log):', payload);
     });
     const CACHE_NAME = 'kingbarber-v1';
     
@@ -77,7 +76,6 @@ export async function GET() {
     self.addEventListener('notificationclick', (event) => {
       event.notification.close();
       const data = event.notification.data;
-      console.log('[SW] Clique detectado. Dados:', data);
       
       const slug = data?.slug || 
                    data?.data?.slug || 
@@ -85,7 +83,6 @@ export async function GET() {
                    data?.notification?.data?.slug ||
                    (typeof data === 'string' && data.includes('slug') ? JSON.parse(data).slug : null);
 
-      console.log('[SW] Slug extraído para redirecionamento:', slug);
       
       const urlToOpen = slug ? \`/\${slug}/meu-perfil/historico\` : '/';
 

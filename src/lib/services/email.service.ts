@@ -8,7 +8,6 @@ const resend = config.resend.isConfigured
 export class EmailService {
   static async sendEmailConfirmacao(email: string, nome: string) {
     if (!config.resend.isConfigured || !resend) {
-      console.log(`[MOCK EMAIL] Para: ${email} | Assunto: Pagamento confirmado ✅ | Conteúdo: Olá ${nome}, seu agendamento foi confirmado.`);
       return;
     }
 
@@ -27,7 +26,6 @@ export class EmailService {
           </div>
         `,
       });
-      console.log(`E-mail de confirmação enviado para: ${email}`);
     } catch (error) {
       console.error("Erro ao enviar e-mail pelo Resend:", error);
     }

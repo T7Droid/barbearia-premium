@@ -704,7 +704,6 @@ function BookingContent() {
         const finalUuid = (appointment as any)?.uuid || (appointment as any)?.data?.uuid || rawId;
         router.push(getLink(`/confirmacao/${finalUuid}`));
       } else {
-        console.warn("Agendamento confirmado, mas ID não identificado no payload.", appointment);
         router.push(getLink("/meu-perfil/historico"));
       }
     } catch (error: any) {

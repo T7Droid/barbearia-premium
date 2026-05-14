@@ -26,7 +26,6 @@ export async function POST(request: NextRequest) {
     switch (event.type) {
       case "checkout.session.completed":
       case "invoice.paid": {
-        console.log(`[Stripe Webhook] Processing ${event.type} for id:`, session.id);
 
         // Em invoice.paid o campo é 'subscription', em checkout.session também.
         const stripeSubscriptionId = session.subscription;
@@ -35,20 +34,16 @@ export async function POST(request: NextRequest) {
         let tenantId = session.metadata?.tenantId;
         let planId = session.metadata?.planId;
 
-        console.log(`[Stripe Webhook] Initial data - tenantId: ${tenantId}, planId: ${planId}, subscriptionId: ${stripeSubscriptionId}`);
 
         // Fallback 1: Buscar na assinatura se tivermos o ID
         if (!tenantId && stripeSubscriptionId) {
-          console.log(`[Stripe Webhook] Missing tenantId, retrieving subscription ${stripeSubscriptionId}...`);
           const subscription = await stripe.subscriptions.retrieve(stripeSubscriptionId as string);
           tenantId = subscription.metadata?.tenantId;
           planId = planId || subscription.metadata?.planId;
-          console.log(`[Stripe Webhook] Data from subscription - tenantId: ${tenantId}, planId: ${planId}`);
         }
 
         // Fallback 2: Buscar pelo stripe_customer_id no banco
         if (!tenantId && stripeCustomerId) {
-          console.log(`[Stripe Webhook] Still missing tenantId, searching DB for customer ${stripeCustomerId}...`);
           const { data: tenantByCustomer } = await supabaseAdmin!
             .from("tenants")
             .select("id")
@@ -57,12 +52,10 @@ export async function POST(request: NextRequest) {
 
           if (tenantByCustomer) {
             tenantId = tenantByCustomer.id;
-            console.log(`[Stripe Webhook] Found tenant in DB: ${tenantId}`);
           }
         }
 
         if (tenantId && stripeSubscriptionId) {
-          console.log(`[Stripe Webhook] Updating tenant ${tenantId} and subscription...`);
 
           const planUuid = await getPlanUuidFromSlug(planId || "basico");
           
@@ -106,14 +99,12 @@ export async function POST(request: NextRequest) {
             .neq("stripe_subscription_id", stripeSubscriptionId);
 
           if (existingSub) {
-            console.log(`[Stripe Webhook] Updating existing subscription record`);
             const { error } = await supabaseAdmin!
               .from("subscriptions")
               .update(subPayload)
               .eq("tenant_id", tenantId);
             dbError = error;
           } else {
-            console.log(`[Stripe Webhook] Creating new subscription record`);
             const { error } = await supabaseAdmin!
               .from("subscriptions")
               .insert([subPayload]);
@@ -123,7 +114,6 @@ export async function POST(request: NextRequest) {
           if (dbError) {
             console.error(`[Stripe Webhook] DB Error:`, dbError);
           } else {
-            console.log(`[Stripe Webhook] SUCCESS: Subscription activated/upgraded for tenant ${tenantId}`);
           }
         } else {
           console.warn(`[Stripe Webhook] SKIP: Missing tenantId (${tenantId}) or subscriptionId (${stripeSubscriptionId})`);
@@ -134,15 +124,12 @@ export async function POST(request: NextRequest) {
       case "customer.subscription.updated":
       case "customer.subscription.deleted": {
         const subscription = event.data.object as any;
-        console.log(`[DEBUG_SUBSCRIPTION] ID: ${subscription.id} | Status: ${subscription.status} | CancelAtEnd: ${subscription.cancel_at_period_end} | CancelAt: ${subscription.cancel_at}`);
         let tenantId = subscription.metadata?.tenantId;
         const stripeCustomerId = subscription.customer;
 
-        console.log(`[Stripe Webhook] Subscription event ${event.type} for sub: ${subscription.id}, initial tenant: ${tenantId}`);
 
         // Fallback: Buscar pelo stripe_customer_id se o metadado estiver vazio (para assinaturas antigas)
         if (!tenantId && stripeCustomerId) {
-          console.log(`[Stripe Webhook] Missing tenantId in sub metadata, searching DB for customer ${stripeCustomerId}...`);
           const { data: tenantByCustomer } = await supabaseAdmin!
             .from("tenants")
             .select("id")
@@ -151,7 +138,6 @@ export async function POST(request: NextRequest) {
           
           if (tenantByCustomer) {
             tenantId = tenantByCustomer.id;
-            console.log(`[Stripe Webhook] Found tenant in DB for update: ${tenantId}`);
           }
         }
 
@@ -191,7 +177,6 @@ export async function POST(request: NextRequest) {
           if (updateError) {
             console.error("[Stripe Webhook] Update Error:", updateError);
           } else {
-            console.log(`[Stripe Webhook] SUCCESS: ${event.type} for tenant ${tenantId} | Plan: ${planSlug} | Saved CancelAtEnd: ${isCanceled}`);
           }
         } else {
           console.warn(`[Stripe Webhook] SKIP: Could not identify tenant for sub update ${subscription.id}`);

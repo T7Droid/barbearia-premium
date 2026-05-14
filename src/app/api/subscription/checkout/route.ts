@@ -27,7 +27,6 @@ export async function POST(request: NextRequest) {
 
     // Se o usuário já tem uma assinatura ativa, fazemos um UPGRADE em vez de novo checkout
     if (stripeSubscriptionId) {
-      console.log(`[Stripe Checkout] Upgrading existing subscription: ${stripeSubscriptionId} to ${planId}`);
       
       const subscription = await stripe.subscriptions.retrieve(stripeSubscriptionId);
       

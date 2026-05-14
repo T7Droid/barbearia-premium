@@ -58,7 +58,6 @@ export async function PUT(
 
     // --- SINCRONIZAÇÃO EM CASCATA: Unit -> Barbers ---
     if (weekly_hours && unit) {
-      console.log(`[API /api/units/${id}] Cascading update for unit: ${unit.name}`);
       
       // 1. Buscar IDs dos barbeiros vinculados a esta unidade
       const { data: links } = await supabaseAdmin
@@ -77,7 +76,6 @@ export async function PUT(
         
         if (barbers && barbers.length > 0) {
           // 3. Processar cada barbeiro
-          console.log(`[API /api/units/${id}] Preparando atualizações para ${barbers.length} barbeiros`);
           
           const barberUpdates = barbers.map(barber => {
             const bHours = barber.weekly_hours || {};
@@ -115,11 +113,8 @@ export async function PUT(
               newUnitHours[day] = bDay;
             });
 
-            console.log(`[API /api/units/${id}] Processando barbeiro ${barber.id}`);
-            console.log(`[API /api/units/${id}] Horários originais:`, JSON.stringify(bHours));
 
             newBHours[uIdStr] = newUnitHours;
-            console.log(`[API /api/units/${id}] Novos horários calculados:`, JSON.stringify(newBHours));
 
             return {
               id: barber.id,
@@ -128,7 +123,6 @@ export async function PUT(
           });
 
           // 4. Executar atualizações individuais (V2 - Sem Upsert)
-          console.log(`[API /api/units/${id}] SINCRONIZANDO V2: Iniciando atualizações para ${barberUpdates.length} barbeiros`);
           
           for (const update of barberUpdates) {
             const { error: updateError } = await supabaseAdmin
@@ -141,15 +135,11 @@ export async function PUT(
             if (updateError) {
               console.error(`[API /api/units/${id}] Erro ao atualizar barbeiro ${update.id}:`, updateError);
             } else {
-              console.log(`[API /api/units/${id}] Barbeiro ${update.id} sincronizado com sucesso.`);
             }
           }
-          console.log(`[API /api/units/${id}] Processo de sincronização finalizado.`);
         } else {
-          console.log(`[API /api/units/${id}] Nenhum barbeiro encontrado para os links fornecidos.`);
         }
       } else {
-        console.log(`[API /api/units/${id}] Nenhum barbeiro vinculado a esta unidade.`);
       }
     }
 

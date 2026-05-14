@@ -11,7 +11,6 @@ export class AuthService {
     // Lógica de papel (Role) Multi-Tenant:
     let userRole = "client";
 
-    console.log(`[AuthService] Determining role for ${user.email} at tenant ${tenantId}.`);
 
     // 1. Verificamos se há um cargo específico para este tenant na nova tabela
     let membership: any = null;
@@ -40,7 +39,6 @@ export class AuthService {
       }
     }
 
-    console.log(`[AuthService] Final calculated role for ${tenantId}: ${userRole}`);
 
     const { data: profile } = await supabaseAdmin!
       .from("profiles")
@@ -82,13 +80,11 @@ export class AuthService {
     }
 
     if (!token) {
-      console.log("[AuthService] No session_token found in cookies");
       return { authenticated: false };
     }
 
     const user = await this.getCurrentUser(token, tenantId);
     if (!user) {
-      console.log("[AuthService] Invalid session or user not found for token");
       return { authenticated: false };
     }
 

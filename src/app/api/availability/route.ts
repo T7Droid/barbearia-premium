@@ -44,7 +44,6 @@ export async function GET(request: NextRequest) {
     const daysMap = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"];
     const dayName = daysMap[targetDate.getDay()];
 
-    console.log(`[AVAILABILITY] Consultando ${date} -> Identificado como ${dayName}. Unidade: ${unitId}`);
     // Sincronização de escala concluída
 
     let dayConfig: any = { active: false, start: "09:00", end: "18:00" };
@@ -83,10 +82,8 @@ export async function GET(request: NextRequest) {
 
         if (unitBlock && unitBlock[dayName]) {
           dayConfig = unitBlock[dayName];
-          console.log(`[AVAILABILITY] Encontrado horário por unidade (${unitId}) para ${dayName}:`, dayConfig);
         } else if (schedule[dayName]) {
           dayConfig = schedule[dayName];
-          console.log(`[AVAILABILITY] Usando horário global (sem unidade) para ${dayName}:`, dayConfig);
         }
       }
     }
@@ -110,7 +107,6 @@ export async function GET(request: NextRequest) {
 
     // Se o dia não foi encontrado ou está inativo
     if (!dayConfig || !dayConfig.active || !dayConfig.start) {
-      console.log(`[AVAILABILITY] Dia ${date} (${dayName}) bloqueado para o barbeiro ${barberId}. DayConfig:`, dayConfig);
       return NextResponse.json([]);
     }
 

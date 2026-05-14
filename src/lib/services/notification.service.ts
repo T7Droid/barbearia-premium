@@ -34,8 +34,6 @@ export class NotificationService {
     if (!app || !token) return false;
 
     try {
-      // Usamos apenas 'data' para evitar que o navegador mostre uma notificação automática
-      // e o Service Worker mostre outra (duplicidade). No PWA, o SW cuida de tudo.
       const message = {
         notification: {
           title,
@@ -53,7 +51,6 @@ export class NotificationService {
       };
 
       const response = await admin.messaging().send(message);
-      console.log(`[NotificationService] Push sent successfully: ${response}`);
       return true;
     } catch (error: any) {
       console.error("[NotificationService] Erro ao enviar push:", error.message);

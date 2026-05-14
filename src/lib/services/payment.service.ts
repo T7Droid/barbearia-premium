@@ -50,7 +50,6 @@ export class PaymentService {
    * Usa o MERCADOPAGO_ACCESS_TOKEN como client_secret (padrão moderno do MP).
    */
   private static async refreshTenantToken(tenantId: string, refreshToken: string) {
-    console.log(`[Payment] Attempting to refresh token for tenant: ${tenantId}`);
     
     try {
       if (!refreshToken) throw new Error("Sem refresh token disponível");
@@ -91,7 +90,6 @@ export class PaymentService {
         })
         .eq("id", tenantId);
 
-      console.log(`[Payment] Token refreshed successfully for tenant: ${tenantId}`);
       return data.access_token; // Retorna o token em texto (para uso imediato na memória)
     } catch (error) {
       console.error(`[Payment] Failed to refresh token for tenant ${tenantId}. Disconnecting.`, error);
