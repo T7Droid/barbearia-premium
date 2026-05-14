@@ -27,8 +27,9 @@ export async function GET(request: NextRequest) {
 
     if (appointmentsError) throw appointmentsError;
 
-    const totalAppointments = appointments.length;
-    const todayAppointments = appointments.filter(a => a.appointment_date === todayStr).length;
+    const activeAppointments = appointments.filter(a => a.status !== "cancelled");
+    const totalAppointments = activeAppointments.length;
+    const todayAppointments = activeAppointments.filter(a => a.appointment_date === todayStr).length;
     
     const totalRevenue = appointments
       .filter(a => a.is_paid && a.status !== "cancelled")
