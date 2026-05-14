@@ -229,7 +229,7 @@ export default function Home() {
                   units.map((unit) => (
                     <div key={unit.id} className="space-y-1">
                       <p className="font-bold text-yellow-400 text-xs uppercase tracking-widest">{unit.name}</p>
-                      {renderBusinessHours(unit.weekly_hours)}
+                      {renderBusinessHours(unit.weeklyHours)}
                     </div>
                   ))
                 )}
