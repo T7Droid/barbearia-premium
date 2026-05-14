@@ -16,21 +16,34 @@ export async function GET(request: NextRequest) {
   }
 
   try {
+    const { searchParams } = new URL(request.url);
+    const month = searchParams.get("month");
+    const year = searchParams.get("year");
+
     const today = new Date();
     const todayStr = format(today, "yyyy-MM-dd");
 
     // Buscando agendamentos do tenant
-    const { data: appointments, error: appointmentsError } = await supabaseAdmin!
+    let query = supabaseAdmin!
       .from("appointments")
       .select("id, appointment_date, status, is_paid, payment_status, payment_method, paid_at, total_price, services_json")
       .eq("tenant_id", tenant.id);
+
+    // Se houver filtros de data, aplicamos
+    if (month && year) {
+      const monthStr = month.padStart(2, '0');
+      query = query.gte("appointment_date", `${year}-${monthStr}-01`)
+        .lte("appointment_date", `${year}-${monthStr}-31`);
+    }
+
+    const { data: appointments, error: appointmentsError } = await query;
 
     if (appointmentsError) throw appointmentsError;
 
     const activeAppointments = appointments.filter(a => a.status !== "cancelled");
     const totalAppointments = activeAppointments.length;
     const todayAppointments = activeAppointments.filter(a => a.appointment_date === todayStr).length;
-    
+
     const totalRevenue = appointments
       .filter(a => a.is_paid && a.status !== "cancelled")
       .reduce((sum, a) => sum + (Number(a.total_price) || 0), 0);

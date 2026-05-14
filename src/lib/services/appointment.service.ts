@@ -307,42 +307,7 @@ export class AppointmentService {
     if (session.userId) {
       // --- LOYALTY POINTS LOGIC ---
       if (isPaid) {
-        // 1. Fetch current settings for THIS tenant
-        const { data: settingsData } = await supabaseAdmin
-          .from("settings")
-          .select("is_points_enabled, points_per_appointment")
-          .eq("tenant_id", sessionDataRaw.tenant_id)
-          .single();
-
-        const settings = settingsData || { is_points_enabled: true, points_per_appointment: 5 };
-
-        if (settings.is_points_enabled) {
-          const pointsToAdd = settings.points_per_appointment || 0;
-
-          // 2. Usar UPSERT para garantir que o vínculo exista e atualizar os pontos NO TENANT correto
-          const { data: membership } = await supabaseAdmin
-            .from("tenant_memberships")
-            .select("points, role")
-            .eq("user_id", session.userId)
-            .eq("tenant_id", sessionDataRaw.tenant_id)
-            .maybeSingle();
-
-          const currentPoints = membership?.points || 0;
-          const newPoints = currentPoints + pointsToAdd;
-
-          const { error: upsertError } = await supabaseAdmin
-            .from("tenant_memberships")
-            .upsert({
-              user_id: session.userId,
-              tenant_id: sessionDataRaw.tenant_id,
-              points: newPoints,
-              role: membership?.role || "client"
-            }, { onConflict: 'user_id,tenant_id' });
-
-          if (upsertError) {
-            console.error(`[LOYALTY] Erro ao atualizar pontos para o usuário ${session.userId} no tenant ${sessionDataRaw.tenant_id}:`, upsertError);
-          }
-        }
+        await AppointmentService.addLoyaltyPoints(session.userId, sessionDataRaw.tenant_id);
       }
 
       // --- RESCHEDULE COUNTER ---
@@ -650,5 +615,50 @@ export class AppointmentService {
 
     if (error) throw error;
     return data || [];
+  }
+  static async addLoyaltyPoints(userId: string, tenantId: string) {
+    if (!userId || !tenantId) return;
+
+    try {
+      // 1. Buscar configurações do tenant
+      const { data: settingsData } = await supabaseAdmin
+        .from("settings")
+        .select("is_points_enabled, points_per_appointment")
+        .eq("tenant_id", tenantId)
+        .single();
+
+      const settings = settingsData || { is_points_enabled: true, points_per_appointment: 5 };
+
+      if (!settings.is_points_enabled) return;
+
+      const pointsToAdd = settings.points_per_appointment || 0;
+      if (pointsToAdd <= 0) return;
+
+      // 2. Buscar/Atualizar pontos no tenant_memberships
+      const { data: membership } = await supabaseAdmin
+        .from("tenant_memberships")
+        .select("points, role")
+        .eq("user_id", userId)
+        .eq("tenant_id", tenantId)
+        .maybeSingle();
+
+      const currentPoints = membership?.points || 0;
+      const newPoints = currentPoints + pointsToAdd;
+
+      const { error: upsertError } = await supabaseAdmin
+        .from("tenant_memberships")
+        .upsert({
+          user_id: userId,
+          tenant_id: tenantId,
+          points: newPoints,
+          role: membership?.role || "client"
+        }, { onConflict: 'user_id,tenant_id' });
+
+      if (upsertError) {
+        console.error(`[LOYALTY] Erro ao atualizar pontos para o usuário ${userId} no tenant ${tenantId}:`, upsertError);
+      }
+    } catch (error) {
+      console.error(`[LOYALTY] Erro inesperado ao somar pontos:`, error);
+    }
   }
 }
