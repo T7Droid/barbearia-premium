@@ -25,7 +25,7 @@ export function SessionWatcher() {
     window.fetch = async (...args) => {
       const response = await originalFetch(...args);
 
-      if (response.status === 401) {
+      if (response.status === 401 || response.status === 403) {
         // Ignorar se já estamos na página de login
         if (!window.location.pathname.endsWith("/login")) {
           setIsOpen(true);
