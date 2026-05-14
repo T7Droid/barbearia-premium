@@ -23,7 +23,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { useToast } from "@/hooks/use-toast";
 import { formatCurrencyFromCents } from "@/lib/format";
 import { useUserStore } from "@/lib/store/user-store";
-import { useGetStatsSummary, useListAppointments } from "@workspace/api-client-react";
+import { useListAppointments } from "@workspace/api-client-react";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { AlertCircle, Banknote, Calendar, CheckCircle2, ChevronDown, CreditCard, DollarSign, FileSpreadsheet, FileText, MapPin, Scissors, Search, Settings, Smartphone, TrendingUp, Users } from "lucide-react";
@@ -56,10 +56,7 @@ export default function Admin() {
   const [paymentMethodMap, setPaymentMethodMap] = useState<Record<number, string>>({});
   const [searchTerm, setSearchTerm] = useState("");
 
-  const { data: stats, isLoading: isLoadingStats, refetch: refetchStats } = useGetStatsSummary({
-    month: selectedMonth,
-    year: selectedYear
-  });
+
   const { data: appointments, isLoading: isLoadingAppointments, refetch: refetchAppointments } = useListAppointments({
     year: selectedYear,
     month: selectedMonth

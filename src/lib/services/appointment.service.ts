@@ -621,7 +621,7 @@ export class AppointmentService {
 
     try {
       // 1. Buscar configurações do tenant
-      const { data: settingsData } = await supabaseAdmin
+      const { data: settingsData } = await supabaseAdmin!
         .from("settings")
         .select("is_points_enabled, points_per_appointment")
         .eq("tenant_id", tenantId)
@@ -635,7 +635,7 @@ export class AppointmentService {
       if (pointsToAdd <= 0) return;
 
       // 2. Buscar/Atualizar pontos no tenant_memberships
-      const { data: membership } = await supabaseAdmin
+      const { data: membership } = await supabaseAdmin!
         .from("tenant_memberships")
         .select("points, role")
         .eq("user_id", userId)
@@ -645,7 +645,7 @@ export class AppointmentService {
       const currentPoints = membership?.points || 0;
       const newPoints = currentPoints + pointsToAdd;
 
-      const { error: upsertError } = await supabaseAdmin
+      const { error: upsertError } = await supabaseAdmin!
         .from("tenant_memberships")
         .upsert({
           user_id: userId,
