@@ -100,4 +100,20 @@ export class TenantService {
     if (error || !data) return null;
     return data;
   }
+
+  static async listAllActiveTenants(): Promise<{ slug: string }[]> {
+    if (!supabaseAdmin) return [];
+
+    const { data, error } = await supabaseAdmin
+      .from("tenants")
+      .select("slug, subscriptions!inner(status)")
+      .eq("subscriptions.status", "active");
+
+    if (error) {
+      console.error("Error listing active tenants:", error);
+      return [];
+    }
+
+    return data || [];
+  }
 }

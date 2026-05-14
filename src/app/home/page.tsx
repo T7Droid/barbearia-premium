@@ -15,9 +15,9 @@ export default function RootPage() {
 
         <div className="max-w-5xl w-full mb-16">
           <div className="mb-12 text-center flex flex-col items-center">
-            <h2 className="text-3xl md:text-5xl font-bold mb-4 text-foreground leading-tight text-center">
+            <h1 className="text-3xl md:text-5xl font-bold mb-4 text-foreground leading-tight text-center">
               Coloque sua barbearia no automático em <br className="hidden md:block" />menos de <span className="text-primary italic">2 minutos</span>
-            </h2>
+            </h1>
             <p className="text-lg text-muted-foreground leading-relaxed max-w-3xl text-center">
               Pare de perder tempo com agenda no WhatsApp, clientes desorganizados e horários vazios.
               Crie sua conta, Cadastre seus serviços e barbeiros, compartilhe seu link e receba agendamentos online agora mesmo, simples assim.
