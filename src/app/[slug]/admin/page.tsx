@@ -56,7 +56,7 @@ export default function Admin() {
   const [paymentMethodMap, setPaymentMethodMap] = useState<Record<number, string>>({});
   const [searchTerm, setSearchTerm] = useState("");
 
-  const { data: stats, isLoading: isLoadingStats } = useGetStatsSummary();
+  const { data: stats, isLoading: isLoadingStats, refetch: refetchStats } = useGetStatsSummary();
   const { data: appointments, isLoading: isLoadingAppointments, refetch: refetchAppointments } = useListAppointments({
     year: selectedYear,
     month: selectedMonth
@@ -126,13 +126,16 @@ export default function Admin() {
         throw new Error(err.error || "Erro desconhecido");
       }
       toast({ title: "Pagamento registrado! ✅", description: `Agendamento #${appointmentId} marcado como pago (${getPaymentMethodLabel(method)}).` });
+      
+      // Atualiza AMBOS os dados para manter o dashboard sincronizado
       refetchAppointments?.();
+      refetchStats?.();
     } catch (err: any) {
       toast({ title: "Erro ao registrar pagamento", description: err.message, variant: "destructive" });
     } finally {
       setPayingId(null);
     }
-  }, [tenant?.slug, paymentMethodMap, refetchAppointments, toast]);
+  }, [tenant?.slug, paymentMethodMap, refetchAppointments, refetchStats, toast]);
 
   const chartData = useMemo(() => {
     if (!appointments || appointments.length === 0) return { services: [], status: [], barbers: [] };

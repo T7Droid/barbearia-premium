@@ -35,10 +35,6 @@ export class NotificationService {
 
     try {
       const message = {
-        notification: {
-          title,
-          body,
-        },
         data: {
           ...data,
           title,
