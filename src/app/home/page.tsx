@@ -86,6 +86,9 @@ export default function RootPage() {
 
         <div className="max-w-7xl w-full mb-24 px-4">
           <div className="text-center mb-16">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 border border-primary/20 text-primary text-xs font-bold uppercase tracking-wider mb-4 animate-pulse">
+              <span>✨ Teste Grátis por 7 dias</span>
+            </div>
             <h2 className="text-3xl md:text-5xl font-bold mb-4 text-foreground">Planos que crescem com você</h2>
             <p className="text-muted-foreground text-lg max-w-2xl mx-auto">Escolha a melhor opção para o momento da sua barbearia. Sem taxas de adesão ou fidelidade.</p>
           </div>
