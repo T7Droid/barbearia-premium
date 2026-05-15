@@ -20,7 +20,7 @@ export default function RootPage() {
             </h1>
             <p className="text-lg text-muted-foreground leading-relaxed max-w-3xl text-center">
               Pare de perder tempo com agenda no WhatsApp, clientes desorganizados e horários vazios.
-              Crie sua conta, Cadastre seus serviços e barbeiros, compartilhe seu link e receba agendamentos online agora mesmo, simples assim.
+              Crie sua conta, cadastre seus serviços e barbeiros, compartilhe seu link e receba agendamentos online agora mesmo, simples assim.
             </p>
           </div>
 
