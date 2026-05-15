@@ -78,6 +78,7 @@ function BookingContent() {
   const isLogged = !!currentUser;
 
   const timeSectionRef = useRef<HTMLDivElement>(null);
+  const hasInitializedPaymentStep = useRef(false);
 
   const [units, setUnits] = useState<any[]>([]);
   const [selectedUnit, setSelectedUnit] = useState<any | null>(null);
@@ -113,11 +114,18 @@ function BookingContent() {
       
       const defaultMethod = isCardAvailable ? "card" : (isPixAvailable ? "pix" : "local");
       
-      if (paymentMethod === "card" && !isCardAvailable) setPaymentMethod(defaultMethod);
-      else if (paymentMethod === "pix" && !isPixAvailable) setPaymentMethod(defaultMethod);
-      else if (paymentMethod === "local" && !canPayLocal) setPaymentMethod(defaultMethod);
+      if (!hasInitializedPaymentStep.current) {
+        setPaymentMethod(defaultMethod);
+        hasInitializedPaymentStep.current = true;
+      } else {
+        if (paymentMethod === "card" && !isCardAvailable) setPaymentMethod(defaultMethod);
+        else if (paymentMethod === "pix" && !isPixAvailable) setPaymentMethod(defaultMethod);
+        else if (paymentMethod === "local" && !canPayLocal) setPaymentMethod(defaultMethod);
+      }
+    } else if (step < 6) {
+      hasInitializedPaymentStep.current = false;
     }
-  }, [step, tenant?.mpConnected, settings?.isPrepaymentRequired, customerInfo.cpf, currentUser?.canPayAtShop]);
+  }, [step, tenant?.mpConnected, settings?.isPrepaymentRequired, customerInfo.cpf, currentUser?.canPayAtShop, paymentMethod]);
 
   const [isPrePaid, setIsPrePaid] = useState(false);
   const [sessionId, setSessionId] = useState<string | null>(null);
@@ -1350,7 +1358,7 @@ function BookingContent() {
                         const gridColsClass = tabCount === 3 ? "grid-cols-3" : (tabCount === 2 ? "grid-cols-2" : "grid-cols-1");
                         
                         return (
-                          <Tabs defaultValue={defaultPaymentMethod} onValueChange={(v) => setPaymentMethod(v as any)} className="w-full">
+                          <Tabs value={paymentMethod} onValueChange={(v) => setPaymentMethod(v as any)} className="w-full">
                             {tabCount > 1 && (
                               <TabsList className={`grid w-full mb-6 ${gridColsClass}`}>
                           {isCardAvailable && (
