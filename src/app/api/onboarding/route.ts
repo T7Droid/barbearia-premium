@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase";
+import { EmailService } from "@/lib/services/email.service";
 
 export async function POST(req: Request) {
   if (!supabaseAdmin) {
@@ -267,6 +268,17 @@ export async function POST(req: Request) {
     if (membershipError) {
       throw new Error(`Erro ao criar vínculos de acesso: ${membershipError.message}`);
     }
+
+    await EmailService.sendAdminNotification(
+      `Nova Barbearia: ${tenant.name}`,
+      `
+        <p><strong>Nome:</strong> ${tenant.name}</p>
+        <p><strong>Slug:</strong> ${slug}</p>
+        <p><strong>Admin:</strong> ${account.fullName} (${account.email})</p>
+        <p><strong>Plano Selecionado:</strong> ${planId || 'basico'}</p>
+        <p><strong>Data:</strong> ${new Date().toLocaleString('pt-BR')}</p>
+      `
+    );
 
     return NextResponse.json({ success: true, slug });
 

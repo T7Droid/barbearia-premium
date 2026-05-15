@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { stripe } from "@/lib/stripe";
 import { supabaseAdmin } from "@/lib/supabase";
+import { EmailService } from "@/lib/services/email.service";
 import Stripe from "stripe";
 
 export async function POST(request: NextRequest) {
@@ -114,6 +115,16 @@ export async function POST(request: NextRequest) {
           if (dbError) {
             console.error(`[Stripe Webhook] DB Error:`, dbError);
           } else {
+            // Notificar Admin sobre o pagamento/vínculo de assinatura
+            await EmailService.sendAdminNotification(
+              `Pagamento Confirmado: Tenant ${tenantId}`,
+              `
+                <p><strong>Tenant ID:</strong> ${tenantId}</p>
+                <p><strong>Plano:</strong> ${planId || 'N/A'}</p>
+                <p><strong>Stripe Sub ID:</strong> ${stripeSubscriptionId}</p>
+                <p><strong>Status:</strong> ${subscription.status}</p>
+              `
+            );
           }
         } else {
           console.warn(`[Stripe Webhook] SKIP: Missing tenantId (${tenantId}) or subscriptionId (${stripeSubscriptionId})`);
@@ -177,6 +188,20 @@ export async function POST(request: NextRequest) {
           if (updateError) {
             console.error("[Stripe Webhook] Update Error:", updateError);
           } else {
+            const isDelete = event.type === "customer.subscription.deleted";
+            const subject = isDelete ? "Assinatura Cancelada" : "Assinatura Atualizada";
+            
+            await EmailService.sendAdminNotification(
+              `${subject}: Tenant ${tenantId}`,
+              `
+                <p><strong>Evento:</strong> ${event.type}</p>
+                <p><strong>Tenant ID:</strong> ${tenantId}</p>
+                <p><strong>Stripe Sub ID:</strong> ${subscription.id}</p>
+                <p><strong>Novo Status:</strong> ${subscription.status}</p>
+                <p><strong>Plano (Slug):</strong> ${planSlug || 'N/A'}</p>
+                <p><strong>Cancelamento Agendado:</strong> ${isCanceled ? 'Sim' : 'Não'}</p>
+              `
+            );
           }
         } else {
           console.warn(`[Stripe Webhook] SKIP: Could not identify tenant for sub update ${subscription.id}`);

@@ -30,4 +30,28 @@ export class EmailService {
       console.error("Erro ao enviar e-mail pelo Resend:", error);
     }
   }
+
+  static async sendAdminNotification(subject: string, html: string) {
+    if (!config.resend.isConfigured || !resend) {
+      return;
+    }
+
+    try {
+      await resend.emails.send({
+        from: "Barber Premium <onboarding@resend.dev>",
+        to: "thyagoneves.sa@gmail.com",
+        subject: `[ADMIN] ${subject}`,
+        html: `
+          <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #eee; padding: 20px; border-radius: 10px;">
+            <h2 style="color: #333; border-bottom: 2px solid #f4f4f4; padding-bottom: 10px;">Notificação do Sistema</h2>
+            ${html}
+            <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;" />
+            <p style="font-size: 12px; color: #999;">Esta é uma mensagem automática do sistema Barber Premium.</p>
+          </div>
+        `,
+      });
+    } catch (error) {
+      console.error("Erro ao enviar e-mail de notificação admin:", error);
+    }
+  }
 }
