@@ -110,10 +110,10 @@ export default function Home() {
 
         <div className="container relative z-10 px-4 text-center max-w-4xl mx-auto mt-20">
           <h1 className="text-5xl md:text-7xl font-serif font-bold text-white mb-6 tracking-tight leading-tight">
-            A Tradição do <br /><span className="text-primary italic">Corte Perfeito</span>
+            {tenant.name}
           </h1>
           <p className="text-lg md:text-xl text-gray-300 mb-10 max-w-2xl mx-auto font-light">
-            Um refúgio para o homem moderno. Sofisticação, técnica impecável e um ambiente pensado para o seu ritual de cuidados.
+            Agende seu horário online com rapidez e praticidade. Escolha seu serviço, selecione seu profissional e garanta sua vaga em poucos cliques.
           </p>
           <Button asChild size="lg" className="h-14 px-8 text-lg font-medium tracking-wide">
             <Link href={getLink("/booking")}>
@@ -130,7 +130,7 @@ export default function Home() {
             <h2 className="text-3xl md:text-4xl font-serif font-bold mb-4">Nossos Serviços</h2>
             <div className="w-16 h-1 bg-primary mx-auto mb-6"></div>
             <p className="text-muted-foreground max-w-2xl mx-auto">
-              Da barboterapia clássica ao corte executivo. Conheça nossos serviços pensados para sua melhor versão.
+              Confira nossos serviços disponíveis e escolha a melhor opção para você.
             </p>
           </div>
 

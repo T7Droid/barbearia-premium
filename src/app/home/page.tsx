@@ -9,7 +9,7 @@ export default function RootPage() {
 
         <div className="text-center max-w-3xl mb-12">
           <p className="text-xl md:text-2xl text-muted-foreground font-light">
-            Transformamos barbearias em negócios digitais de alta performance.
+          Transformamos barbearias e barbeiros independentes em negócios digitais de alta performance.
           </p>
         </div>
 
@@ -19,8 +19,7 @@ export default function RootPage() {
               Coloque sua barbearia no automático em <br className="hidden md:block" />menos de <span className="text-primary italic">2 minutos</span>
             </h1>
             <p className="text-lg text-muted-foreground leading-relaxed max-w-3xl text-center">
-              Pare de perder tempo com agenda no WhatsApp, clientes desorganizados e horários vazios.
-              Crie sua conta, cadastre seus serviços e barbeiros, compartilhe seu link e receba agendamentos online agora mesmo, simples assim.
+              Crie sua conta, cadastre seus serviços, compartilhe seu link e receba agendamentos online agora mesmo, simples assim.
             </p>
           </div>
 
@@ -32,7 +31,7 @@ export default function RootPage() {
               <div>
                 <h3 className="text-xl font-bold mb-3">Mais clientes, menos dor de cabeça</h3>
                 <p className="text-muted-foreground leading-relaxed">
-                  Seu negócio fica online e disponível <strong>24h por dia</strong>. Enquanto você trabalha, descansa ou até dorme, novos clientes encontram seus horários e agendam com você automaticamente.
+                  Seu negócio fica online e disponível <strong>24h por dia</strong>. Enquanto você trabalha, descansa ou até dorme.
                 </p>
               </div>
             </div>
@@ -102,7 +101,7 @@ export default function RootPage() {
                   </div>
                 </div>
                 <h3 className="text-xl font-bold text-foreground">Básico</h3>
-                <p className="text-sm text-muted-foreground">Para quem está começando</p>
+                <p className="text-sm text-muted-foreground">Perfeito para quem trabalha sozinho (Solo/Autônomo)</p>
               </div>
               <div className="mb-8">
                 <span className="text-4xl font-bold text-foreground">R$29</span>
@@ -175,7 +174,11 @@ export default function RootPage() {
                 </li>
                 <li className="flex items-start gap-3 text-sm text-muted-foreground">
                   <Check className="w-5 h-5 text-primary shrink-0" />
-                  <span>Painel individual para cada barbeiro</span>
+                  <span>Controle de acessos individuais (cada barbeiro vê apenas a sua própria agenda)</span>
+                </li>
+                <li className="flex items-start gap-3 text-sm text-muted-foreground">
+                  <Check className="w-5 h-5 text-primary shrink-0" />
+                  <span>Cálculo automático de comissões / relatórios financeiros</span>
                 </li>
                 <li className="flex items-start gap-3 text-sm text-muted-foreground">
                   <Check className="w-5 h-5 text-primary shrink-0" />
@@ -228,7 +231,11 @@ export default function RootPage() {
                 </li>
                 <li className="flex items-start gap-3 text-sm text-muted-foreground">
                   <Check className="w-5 h-5 text-primary shrink-0" />
-                  <span>Acessos individuais para toda a equipe</span>
+                  <span>Controle de acessos individuais (cada barbeiro vê apenas a sua própria agenda)</span>
+                </li>
+                <li className="flex items-start gap-3 text-sm text-muted-foreground">
+                  <Check className="w-5 h-5 text-primary shrink-0" />
+                  <span>Cálculo automático de comissões / relatórios financeiros</span>
                 </li>
                 <li className="flex items-start gap-3 text-sm text-muted-foreground">
                   <Check className="w-5 h-5 text-primary shrink-0" />
@@ -241,10 +248,6 @@ export default function RootPage() {
                 <li className="flex items-start gap-3 text-sm text-muted-foreground">
                   <Check className="w-5 h-5 text-primary shrink-0" />
                   <span>Link próprio e QR Code exclusivo</span>
-                </li>
-                  <li className="flex items-start gap-3 text-sm text-muted-foreground">
-                  <Check className="w-5 h-5 text-primary shrink-0" />
-                  <span>Relatórios de comissões automáticos</span>
                 </li>
                  <li className="flex items-start gap-3 text-sm text-muted-foreground">
                   <Check className="w-5 h-5 text-primary shrink-0" />
@@ -328,6 +331,25 @@ export default function RootPage() {
               <Button asChild variant="outline" className="w-full h-12 rounded-xl font-bold hover:bg-primary hover:text-white transition-all">
                 <a href="/onboarding?plan=escala">Escolher Escala</a>
               </Button>
+            </div>
+          </div>
+        </div>
+
+        {/* FAQ Section */}
+        <div className="max-w-3xl w-full mb-20 px-4">
+          <h3 className="text-2xl font-bold text-center mb-8">Perguntas Frequentes</h3>
+          <div className="space-y-4">
+            <div className="bg-card border border-border/50 p-6 rounded-2xl shadow-sm hover:border-primary/30 transition-all">
+              <h4 className="font-bold text-foreground mb-2">Não tenho ponto físico / Atendo a domicílio, posso usar?</h4>
+              <p className="text-muted-foreground text-sm leading-relaxed">
+                Sim! O King Barbers é 100% flexível. Você pode desativar o endereço fixo e configurar sua página para atendimento domiciliar ou atendimento solo em casa.
+              </p>
+            </div>
+            <div className="bg-card border border-border/50 p-6 rounded-2xl shadow-sm hover:border-primary/30 transition-all">
+              <h4 className="font-bold text-foreground mb-2">Preciso pagar alguma taxa de fidelidade?</h4>
+              <p className="text-muted-foreground text-sm leading-relaxed">
+                Não! Nosso sistema funciona como assinatura mensal, sem fidelidade ou taxas de cancelamento. Você pode cancelar ou alterar seu plano a qualquer momento de forma simples.
+              </p>
             </div>
           </div>
         </div>

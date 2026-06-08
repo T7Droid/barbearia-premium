@@ -256,7 +256,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
             </span>
           </div>
           <p className="text-sm text-muted-foreground text-center">
-            © {new Date().getFullYear()} KingBarbers. Experiência de Barbearia de Luxo.
+            © {new Date().getFullYear()} KingBarbers. Agendamento Inteligente para Barbearias.
           </p>
           <div className="flex items-center gap-4 text-xs text-muted-foreground">
             <Link href="/privacidade" className="hover:text-primary transition-colors">Privacidade</Link>

@@ -16,25 +16,25 @@ const playfair = Playfair_Display({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://kingbarber.com.br"),
-  title: "King Barber | Agende seu Horário",
-  description: "A melhor experiência em barbearia clássica e moderna. Agendamento online simples e rápido.",
+  metadataBase: new URL("https://kingbarbers.com.br"),
+  title: "King Barbers | Agendamento Online",
+  description: "Agendamento online simples e rápido.",
   alternates: {
     canonical: "/",
   },
   openGraph: {
     type: "website",
     locale: "pt_BR",
-    url: "https://kingbarber.com.br",
-    siteName: "King Barber",
-    title: "King Barber | Agende seu Horário",
-    description: "A melhor experiência em barbearia clássica e moderna. Agendamento online simples e rápido.",
+    url: "https://kingbarbers.com.br",
+    siteName: "King Barbers",
+    title: "King Barbers | Agende seu Horário",
+    description: "Agendamento online simples e rápido.",
     images: [
       {
         url: "/imagem_marketing.png",
         width: 1200,
         height: 630,
-        alt: "King Barber",
+        alt: "King Barbers",
       },
     ],
   },
@@ -45,7 +45,7 @@ export const metadata: Metadata = {
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
-    title: "King Barber",
+    title: "King Barbers",
   },
 };
 
