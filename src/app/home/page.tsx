@@ -74,13 +74,7 @@ export default function RootPage() {
               </div>
             </div>
           </div>
-
-          <div className="mt-12 flex flex-col items-center text-center gap-4 py-16 max-w-2xl mx-auto">
-            <div>
-              <h4 className="text-xl font-bold">Transforme em negócio profissional</h4>
-              <p className="text-muted-foreground mt-2 text-sm md:text-base">Tenha organização, automação e tempo livre para focar no que realmente importa: <strong>atender bem seus clientes e crescer.</strong></p>
-            </div>
-          </div>
+        
         </div>
 
         <div className="max-w-7xl w-full mb-24 px-4">
@@ -357,12 +351,8 @@ export default function RootPage() {
         <div className="bg-card border border-border/50 p-10 rounded-3xl shadow-2xl max-w-lg w-full transition-all hover:border-primary/50 hover:shadow-primary/5 relative overflow-hidden text-center z-10 group">
           <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-primary via-yellow-400 to-primary background-animate" />
 
-          <p className="text-muted-foreground mb-6 text-lg">
-            Entre em contato agora mesmo para criar a sua Barbearia Digital e receber o seu painel de gestor.
-          </p>
-
-          <p className="text-primary font-medium mb-8 italic text-sm md:text-base">
-            "Tem dificuldade para configurar? Pode nos chamar que a gente configura tudo para você sem custo adicional!"
+          <p className="text-muted-foreground mb-8 text-lg">
+            Dúvidas sobre o funcionamento ou a configuração do sistema? Fale conosco.
           </p>
 
           <Button asChild className="w-full h-16 text-lg font-bold gap-3 bg-[#25D366] hover:bg-[#128C7E] text-white border-none rounded-xl shadow-lg hover:shadow-xl transition-all hover:-translate-y-1">
@@ -382,7 +372,7 @@ export default function RootPage() {
         </p>
 
         <img 
-          src="/imagem_marketing.png" 
+          src="/marketing_image.png" 
           alt="Marketing King Barbers" 
           className="mt-8 max-w-md w-full py-12"
         />
