@@ -334,15 +334,39 @@ export default function RootPage() {
           <h3 className="text-2xl font-bold text-center mb-8">Perguntas Frequentes</h3>
           <div className="space-y-4">
             <div className="bg-card border border-border/50 p-6 rounded-2xl shadow-sm hover:border-primary/30 transition-all">
-              <h4 className="font-bold text-foreground mb-2">Não tenho ponto físico / Atendo a domicílio, posso usar?</h4>
-              <p className="text-muted-foreground text-sm leading-relaxed">
-                Sim! O King Barbers é 100% flexível. Você pode desativar o endereço fixo e configurar sua página para atendimento domiciliar ou atendimento solo em casa.
-              </p>
-            </div>
-            <div className="bg-card border border-border/50 p-6 rounded-2xl shadow-sm hover:border-primary/30 transition-all">
               <h4 className="font-bold text-foreground mb-2">Preciso pagar alguma taxa de fidelidade?</h4>
               <p className="text-muted-foreground text-sm leading-relaxed">
                 Não! Nosso sistema funciona como assinatura mensal, sem fidelidade ou taxas de cancelamento. Você pode cancelar ou alterar seu plano a qualquer momento de forma simples.
+              </p>
+            </div>
+            <div className="bg-card border border-border/50 p-6 rounded-2xl shadow-sm hover:border-primary/30 transition-all">
+              <h4 className="font-bold text-foreground mb-2">Meus clientes precisam baixar algum aplicativo para agendar?</h4>
+              <p className="text-muted-foreground text-sm leading-relaxed">
+                Não! O seu link de agendamento abre diretamente no navegador do celular ou computador do cliente, sem necessidade de instalar nada. Funciona perfeitamente integrado à bio do seu Instagram ou no link do seu WhatsApp.
+              </p>
+            </div>
+            <div className="bg-card border border-border/50 p-6 rounded-2xl shadow-sm hover:border-primary/30 transition-all">
+              <h4 className="font-bold text-foreground mb-2">Tenho equipe. Meus barbeiros parceiros podem ter acesso à própria agenda?</h4>
+              <p className="text-muted-foreground text-sm leading-relaxed">
+                Sim! Nos planos Profissional, Premium e Escala você pode cadastrar sua equipe e criar contas com acessos individuais. Cada profissional visualiza apenas seus próprios agendamentos e horários disponíveis.
+              </p>
+            </div>
+            <div className="bg-card border border-border/50 p-6 rounded-2xl shadow-sm hover:border-primary/30 transition-all">
+              <h4 className="font-bold text-foreground mb-2">Como funciona o recebimento dos pagamentos online?</h4>
+              <p className="text-muted-foreground text-sm leading-relaxed">
+                Os valores pagos pelos clientes via Pix ou Cartão de Crédito vão diretamente para a sua conta vinculada do Mercado Pago. O sistema não retém nenhuma taxa extra sobre os seus serviços.
+              </p>
+            </div>
+            <div className="bg-card border border-border/50 p-6 rounded-2xl shadow-sm hover:border-primary/30 transition-all">
+              <h4 className="font-bold text-foreground mb-2">O link de agendamento fica pronto na hora?</h4>
+              <p className="text-muted-foreground text-sm leading-relaxed">
+                Sim! Assim que você conclui o cadastro inicial, a sua página de agendamentos já está no ar. Você só precisa cadastrar seus serviços para começar a receber reservas.
+              </p>
+            </div>
+            <div className="bg-card border border-border/50 p-6 rounded-2xl shadow-sm hover:border-primary/30 transition-all">
+              <h4 className="font-bold text-foreground mb-2">Como funciona o sistema de pontos e fidelidade?</h4>
+              <p className="text-muted-foreground text-sm leading-relaxed">
+                Nos planos Profissional, Premium e Escala você pode ativar um programa de fidelidade automático. Seus clientes ganham pontos a cada agendamento e podem trocá-los por cortes ou serviços grátis, incentivando o retorno frequente.
               </p>
             </div>
           </div>
